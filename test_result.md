@@ -107,63 +107,78 @@ user_problem_statement: "Webapp per la gestione della raccolta punti dei superme
 backend:
   - task: "User Registration API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implementato sistema di registrazione con validazione email e tessera fisica univoca"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED - Tested user registration with all required fields (nome, cognome, sesso, email, telefono, localita, tessera_fisica, password). Verified unique tessera_digitale generation, QR code generation as base64 PNG, duplicate email validation, and duplicate tessera_fisica validation. All validations working correctly."
 
   - task: "User Login API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implementato sistema di login con JWT token e validazione credenziali"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED - Tested successful login with valid credentials and login failure with invalid credentials. Verified JWT token generation, user data in response, and QR code inclusion. Authentication system working correctly."
 
   - task: "Digital Card Generation"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implementato sistema di generazione tessera digitale con QR code"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED - Verified unique tessera_digitale generation during registration using UUID format. Confirmed QR code generation for tessera_digitale and validated QR code is base64 encoded PNG image. Digital card system working correctly."
 
   - task: "User Profile API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implementato endpoint per recuperare profilo utente autenticato"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED - Tested authenticated access with valid JWT token and unauthorized access without token. Verified complete user data return including QR code. Profile API working correctly with proper authentication."
 
   - task: "Points Management API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implementato endpoint per aggiungere punti alla tessera"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED - Tested adding points to user account with authentication. Verified points increment correctly from 0 to 50 points. Points management system working correctly."
 
 frontend:
   - task: "Registration Form"
