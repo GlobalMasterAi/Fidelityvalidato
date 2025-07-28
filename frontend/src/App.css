@@ -1,38 +1,267 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+:root {
+  --imagross-orange: #e85a4f;
+  --imagross-red: #d32f2f;
+  --imagross-green: #8bc34a;
+  --imagross-light-green: #a5d6a7;
+}
+
 .App {
-    text-align: center;
+  text-align: center;
 }
 
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* Custom Tailwind classes for ImaGross brand colors */
+.text-imagross-orange {
+  color: var(--imagross-orange);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.text-imagross-red {
+  color: var(--imagross-red);
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.text-imagross-green {
+  color: var(--imagross-green);
 }
 
-.App-link {
-    color: #61dafb;
+.bg-imagross-orange {
+  background-color: var(--imagross-orange);
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.bg-imagross-red {
+  background-color: var(--imagross-red);
+}
+
+.bg-imagross-green {
+  background-color: var(--imagross-green);
+}
+
+.border-imagross-orange {
+  border-color: var(--imagross-orange);
+}
+
+.border-imagross-red {
+  border-color: var(--imagross-red);
+}
+
+.border-imagross-green {
+  border-color: var(--imagross-green);
+}
+
+.from-imagross-orange {
+  --tw-gradient-from: var(--imagross-orange);
+  --tw-gradient-to: rgba(232, 90, 79, 0);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-imagross-red {
+  --tw-gradient-to: var(--imagross-red);
+}
+
+.to-imagross-green {
+  --tw-gradient-to: var(--imagross-green);
+}
+
+.ring-imagross-orange {
+  --tw-ring-color: var(--imagross-orange);
+}
+
+.ring-imagross-red {
+  --tw-ring-color: var(--imagross-red);
+}
+
+.ring-imagross-green {
+  --tw-ring-color: var(--imagross-green);
+}
+
+.hover\:text-imagross-orange:hover {
+  color: var(--imagross-orange);
+}
+
+.hover\:text-imagross-red:hover {
+  color: var(--imagross-red);
+}
+
+.hover\:text-imagross-green:hover {
+  color: var(--imagross-green);
+}
+
+.hover\:bg-imagross-orange:hover {
+  background-color: var(--imagross-orange);
+}
+
+.hover\:bg-imagross-red:hover {
+  background-color: var(--imagross-red);
+}
+
+.hover\:bg-imagross-green:hover {
+  background-color: var(--imagross-green);
+}
+
+.focus\:ring-imagross-orange:focus {
+  --tw-ring-color: var(--imagross-orange);
+}
+
+.focus\:ring-imagross-red:focus {
+  --tw-ring-color: var(--imagross-red);
+}
+
+.focus\:ring-imagross-green:focus {
+  --tw-ring-color: var(--imagross-green);
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Custom card styles */
+.loyalty-card {
+  background: linear-gradient(135deg, var(--imagross-orange), var(--imagross-red));
+  border-radius: 15px;
+  position: relative;
+  overflow: hidden;
+}
+
+.loyalty-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive design improvements */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .text-3xl {
+    font-size: 1.875rem;
+  }
+  
+  .text-2xl {
+    font-size: 1.5rem;
+  }
+}
+
+/* Loading spinner */
+.loading-spinner {
+  border: 3px solid rgba(232, 90, 79, 0.3);
+  border-top: 3px solid var(--imagross-orange);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Form focus styles */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--imagross-orange);
+  box-shadow: 0 0 0 3px rgba(232, 90, 79, 0.1);
+}
+
+/* Button hover effects */
+.btn-imagross {
+  background: linear-gradient(135deg, var(--imagross-orange), var(--imagross-red));
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.btn-imagross:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(232, 90, 79, 0.3);
+}
+
+.btn-imagross:active {
+  transform: translateY(0);
+}
+
+/* QR Code container */
+.qr-container {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.qr-container:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: scale(1.05);
+}
+
+/* Success/Error messages */
+.alert {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+/* Profile card improvements */
+.profile-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  transition: all 0.3s ease;
+}
+
+.profile-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
