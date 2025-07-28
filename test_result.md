@@ -259,3 +259,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Implementata webapp completa per ImaGross con registrazione, login, tessera digitale e QR code. Sistema backend con JWT auth e frontend con design brand ImaGross. Pronto per testing backend."
+  - agent: "testing"
+    message: "✅ BACKEND TESTING COMPLETED - All 5 backend tasks tested successfully. Created comprehensive backend_test.py with 9 test cases covering: User Registration API (with duplicate validation), User Login API (with invalid credentials test), Digital Card Generation (UUID + QR code), User Profile API (authenticated + unauthorized), and Points Management API. All tests passed 9/9. Backend APIs are fully functional and ready for production."
