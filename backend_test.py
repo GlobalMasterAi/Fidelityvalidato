@@ -1253,6 +1253,128 @@ def test_super_admin_only_endpoints():
         log_test("Super Admin Only", False, f"Exception: {str(e)}")
         return False
 
+# ============================================================================
+# EXCEL IMPORT SYSTEM TESTS
+# ============================================================================
+
+def test_excel_import_endpoint():
+    """Test Excel import system endpoint accessibility"""
+    if not admin_access_token:
+        log_test("Excel Import Endpoint", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Create a simple test CSV content (simulating Excel data)
+        import tempfile
+        import os
+        
+        # Create temporary CSV file with test data
+        csv_content = """nome,cognome,sesso,email,tel_cell,citta,card_number,indirizzo,punto_provincia,newsletter,numero_figli
+Mario,Rossi,Maschio,mario.rossi@test.it,3331234567,Milano,TEST001,Via Roma 1,MI,1,2
+Lucia,Bianchi,Femmina,lucia.bianchi@test.it,3339876543,Roma,TEST002,Via Torino 2,RM,0,1"""
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(csv_content)
+            temp_file_path = f.name
+        
+        try:
+            # Test the import endpoint
+            with open(temp_file_path, 'rb') as f:
+                files = {'file': ('test_users.csv', f, 'text/csv')}
+                data = {'data_type': 'users'}
+                
+                response = requests.post(f"{API_BASE}/admin/import/excel", 
+                                       files=files, data=data, headers=headers)
+            
+            # Clean up temp file
+            os.unlink(temp_file_path)
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Validate response structure
+                required_fields = ["message", "total_rows", "imported"]
+                missing_fields = [field for field in required_fields if field not in result]
+                if missing_fields:
+                    log_test("Excel Import Endpoint", False, f"Missing fields: {missing_fields}")
+                    return False
+                
+                # Validate data types
+                if not isinstance(result["total_rows"], int) or not isinstance(result["imported"], int):
+                    log_test("Excel Import Endpoint", False, "Invalid data types in import response")
+                    return False
+                
+                # Should have processed some rows
+                if result["total_rows"] < 1:
+                    log_test("Excel Import Endpoint", False, "No rows processed")
+                    return False
+                
+                log_test("Excel Import Endpoint", True, f"Import processed: {result['imported']}/{result['total_rows']} records")
+                return True
+                
+            else:
+                error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+                log_test("Excel Import Endpoint", False, f"Status {response.status_code}: {error_detail}")
+                return False
+                
+        except Exception as cleanup_error:
+            # Clean up temp file in case of error
+            try:
+                os.unlink(temp_file_path)
+            except:
+                pass
+            raise cleanup_error
+            
+    except Exception as e:
+        log_test("Excel Import Endpoint", False, f"Exception: {str(e)}")
+        return False
+
+def test_excel_import_unauthorized():
+    """Test Excel import requires super admin access"""
+    try:
+        # Create a simple test file
+        import tempfile
+        import os
+        
+        csv_content = "nome,cognome,email\nTest,User,test@test.it"
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(csv_content)
+            temp_file_path = f.name
+        
+        try:
+            # Test without authentication
+            with open(temp_file_path, 'rb') as f:
+                files = {'file': ('test.csv', f, 'text/csv')}
+                data = {'data_type': 'users'}
+                
+                response = requests.post(f"{API_BASE}/admin/import/excel", 
+                                       files=files, data=data)
+            
+            # Clean up temp file
+            os.unlink(temp_file_path)
+            
+            if response.status_code == 403:
+                log_test("Excel Import Unauthorized", True, "Correctly requires super admin authentication")
+                return True
+            else:
+                log_test("Excel Import Unauthorized", False, f"Should return 403, got {response.status_code}")
+                return False
+                
+        except Exception as cleanup_error:
+            # Clean up temp file in case of error
+            try:
+                os.unlink(temp_file_path)
+            except:
+                pass
+            raise cleanup_error
+            
+    except Exception as e:
+        log_test("Excel Import Unauthorized", False, f"Exception: {str(e)}")
+        return False
+
 def run_all_tests():
     """Run all backend API tests"""
     print("🚀 Starting ImaGross Loyalty System Backend API Tests")
