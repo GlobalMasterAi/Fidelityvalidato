@@ -1354,6 +1354,7 @@ const AdminPanel = () => {
     { id: 'dashboard', name: 'Dashboard', component: AdminDashboard },
     { id: 'stores', name: 'Supermercati', component: StoreManagement },
     { id: 'cashiers', name: 'Casse', component: CashierManagement },
+    { id: 'users', name: 'Utenti', component: UserManagement },
   ];
 
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || AdminDashboard;
