@@ -1891,6 +1891,15 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { admin } = useAuth();
 
+  // Check for tab in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, []);
+
   const tabs = [
     { id: 'dashboard', name: 'Dashboard', component: AdminDashboard },
     { id: 'stores', name: 'Supermercati', component: StoreManagement },
