@@ -1022,7 +1022,7 @@ const AdminDashboard = () => {
   );
 };
 
-const StoreManagement = () => {
+const StoreManagement = ({ setActiveTab }) => {
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
