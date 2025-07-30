@@ -760,6 +760,41 @@ async def get_stores_stats(current_admin = Depends(get_current_admin)):
     return result
 
 # Data Import Routes
+# Data Import Routes
+@api_router.post("/admin/regenerate-qr-codes")
+async def regenerate_all_qr_codes(current_admin = Depends(get_current_admin)):
+    """Regenerate all QR codes with full URLs"""
+    try:
+        base_url = "https://b0aec0ca-18da-4875-91c5-bc0bfbae484d.preview.emergentagent.com"
+        
+        cashiers = await db.cashiers.find().to_list(1000)
+        updated_count = 0
+        
+        for cashier in cashiers:
+            # Get store info
+            store = await db.stores.find_one({"id": cashier["store_id"]})
+            if store:
+                # Generate new QR with full URL
+                qr_data = f"{store['code']}-CASSA{cashier['cashier_number']}"
+                qr_url = f"{base_url}/register?qr={qr_data}"
+                qr_image = generate_qr_code(qr_url)
+                
+                # Update cashier record
+                await db.cashiers.update_one(
+                    {"id": cashier["id"]},
+                    {"$set": {"qr_code_image": qr_image}}
+                )
+                updated_count += 1
+        
+        return {
+            "message": f"Rigenerati {updated_count} QR codes con URL completo",
+            "total_cashiers": len(cashiers),
+            "updated": updated_count
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Errore rigenerazione QR: {str(e)}")
+
 @api_router.post("/admin/import/excel")
 async def import_excel_data(
     file: UploadFile = File(...),
