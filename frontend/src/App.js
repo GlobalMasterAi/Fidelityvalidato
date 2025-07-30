@@ -1634,6 +1634,16 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingUser, setEditingUser] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    nome: '',
+    cognome: '',
+    email: '',
+    telefono: '',
+    localita: '',
+    punti: 0,
+    active: true
+  });
   const { adminToken } = useAuth();
 
   useEffect(() => {
@@ -1651,6 +1661,54 @@ const UserManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const startEdit = (user) => {
+    setEditingUser(user.id);
+    setEditFormData({
+      nome: user.nome,
+      cognome: user.cognome,
+      email: user.email,
+      telefono: user.telefono,
+      localita: user.localita,
+      punti: user.punti,
+      active: user.active
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingUser(null);
+    setEditFormData({
+      nome: '',
+      cognome: '',
+      email: '',
+      telefono: '',
+      localita: '',
+      punti: 0,
+      active: true
+    });
+  };
+
+  const saveEdit = async (userId) => {
+    try {
+      await axios.put(`${API}/admin/users/${userId}`, editFormData, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setEditingUser(null);
+      fetchUsers(); // Refresh the list
+      alert('Utente aggiornato con successo!');
+    } catch (error) {
+      alert('Errore durante l\'aggiornamento: ' + error.response?.data?.detail);
+    }
+  };
+
+  const handleEditInputChange = (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setEditFormData({
+      ...editFormData,
+      [e.target.name]: value
+    });
   };
 
   const filteredUsers = users.filter(user => 
