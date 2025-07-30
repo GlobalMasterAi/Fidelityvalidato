@@ -1767,19 +1767,63 @@ const UserManagement = () => {
               {filteredUsers.map((user) => (
                 <tr key={user.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">{user.nome} {user.cognome}</div>
-                    <div className="text-sm text-gray-500">{user.telefono}</div>
+                    {editingUser === user.id ? (
+                      <div className="space-y-1">
+                        <input
+                          type="text"
+                          name="nome"
+                          value={editFormData.nome}
+                          onChange={handleEditInputChange}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="Nome"
+                        />
+                        <input
+                          type="text"
+                          name="cognome"
+                          value={editFormData.cognome}
+                          onChange={handleEditInputChange}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="Cognome"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="font-medium text-gray-900">{user.nome} {user.cognome}</div>
+                        <div className="text-sm text-gray-500">{user.telefono}</div>
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.email}
+                    {editingUser === user.id ? (
+                      <input
+                        type="email"
+                        name="email"
+                        value={editFormData.email}
+                        onChange={handleEditInputChange}
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                      />
+                    ) : (
+                      user.email
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {user.tessera_fisica}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                      {user.punti} punti
-                    </span>
+                    {editingUser === user.id ? (
+                      <input
+                        type="number"
+                        name="punti"
+                        value={editFormData.punti}
+                        onChange={handleEditInputChange}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                        min="0"
+                      />
+                    ) : (
+                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                        {user.punti} punti
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {user.store_name || 'N/A'}
@@ -1788,11 +1832,49 @@ const UserManagement = () => {
                     {new Date(user.created_at).toLocaleDateString('it-IT')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.active ? 'Attivo' : 'Disattivo'}
-                    </span>
+                    {editingUser === user.id ? (
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          name="active"
+                          checked={editFormData.active}
+                          onChange={handleEditInputChange}
+                          className="h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm">Attivo</span>
+                      </label>
+                    ) : (
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.active ? 'Attivo' : 'Disattivo'}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    {editingUser === user.id ? (
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => saveEdit(user.id)}
+                          className="text-green-600 hover:text-green-800"
+                        >
+                          Salva
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          Annulla
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startEdit(user)}
+                        className="text-imagross-orange hover:text-imagross-red"
+                      >
+                        Modifica
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
