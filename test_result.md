@@ -102,86 +102,107 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Webapp per la gestione della raccolta punti dei supermercati ImaGross con signup, tessera fisica, dati utente e tessera digitale univoca"
+user_problem_statement: "Sistema scalabile Super Admin Dashboard per gestione completa raccolta punti ImaGross con QR code per casse supermercati, gestione stores, cashiers e import dati Excel"
 
 backend:
-  - task: "User Registration API"
+  - task: "Super Admin Authentication System"
     implemented: true
-    working: true
+    working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implementato sistema di registrazione con validazione email e tessera fisica univoca"
-      - working: true
-        agent: "testing"
-        comment: "✅ PASSED - Tested user registration with all required fields (nome, cognome, sesso, email, telefono, localita, tessera_fisica, password). Verified unique tessera_digitale generation, QR code generation as base64 PNG, duplicate email validation, and duplicate tessera_fisica validation. All validations working correctly."
+        comment: "Implementato sistema auth super admin con username/password predefiniti: superadmin/ImaGross2024!"
 
-  - task: "User Login API"
+  - task: "Store Management API"
     implemented: true
-    working: true
+    working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implementato sistema di login con JWT token e validazione credenziali"
-      - working: true
-        agent: "testing"
-        comment: "✅ PASSED - Tested successful login with valid credentials and login failure with invalid credentials. Verified JWT token generation, user data in response, and QR code inclusion. Authentication system working correctly."
+        comment: "CRUD completo per gestione supermercati con validazione codice univoco"
 
-  - task: "Digital Card Generation"
+  - task: "Cashier Management API"
     implemented: true
-    working: true
+    working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implementato sistema di generazione tessera digitale con QR code"
-      - working: true
-        agent: "testing"
-        comment: "✅ PASSED - Verified unique tessera_digitale generation during registration using UUID format. Confirmed QR code generation for tessera_digitale and validated QR code is base64 encoded PNG image. Digital card system working correctly."
+        comment: "Sistema gestione casse con generazione QR code automatica per ogni cassa"
 
-  - task: "User Profile API"
+  - task: "QR Code Generation System"
     implemented: true
-    working: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Sistema QR code univoco per ogni cassa format: STORE_CODE-CASSANUMBER con immagine base64"
+
+  - task: "QR Registration Flow"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "API /qr/{code} per info cassa + registrazione utenti collegata a store/cashier specifico"
+
+  - task: "Enhanced User Registration"
+    implemented: true
+    working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implementato endpoint per recuperare profilo utente autenticato"
-      - working: true
-        agent: "testing"
-        comment: "✅ PASSED - Tested authenticated access with valid JWT token and unauthorized access without token. Verified complete user data return including QR code. Profile API working correctly with proper authentication."
+        comment: "Registrazione utenti con tracciamento store/cashier di origine + campi aggiuntivi Excel"
 
-  - task: "Points Management API"
+  - task: "Admin Dashboard Statistics API"
     implemented: true
-    working: true
+    working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implementato endpoint per aggiungere punti alla tessera"
-      - working: true
-        agent: "testing"
-        comment: "✅ PASSED - Tested adding points to user account with authentication. Verified points increment correctly from 0 to 50 points. Points management system working correctly."
+        comment: "API statistiche complete: users, stores, cashiers, registrations, points"
+
+  - task: "Excel Import System"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Sistema import dati utenti da file Excel con mappatura campi tracciato sito"
 
 frontend:
-  - task: "Registration Form"
+  - task: "Super Admin Dashboard UI"
     implemented: true
     working: "NA"
     file: "/app/frontend/src/App.js"
@@ -191,9 +212,9 @@ frontend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implementato form di registrazione con tutti i campi richiesti incluso tessera fisica"
+        comment: "Dashboard completo con sidebar, statistiche, gestione stores e casse"
 
-  - task: "Login Form"
+  - task: "Admin Login Interface"
     implemented: true
     working: "NA"
     file: "/app/frontend/src/App.js"
@@ -203,9 +224,9 @@ frontend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implementato form di login con autenticazione JWT"
+        comment: "Pagina login admin separata da utenti con username/password"
 
-  - task: "Digital Card Display"
+  - task: "Store Management Interface"
     implemented: true
     working: "NA"
     file: "/app/frontend/src/App.js"
@@ -215,21 +236,33 @@ frontend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implementata visualizzazione tessera digitale con QR code e punti"
+        comment: "CRUD completo stores: creazione, visualizzazione, tabella gestionale"
 
-  - task: "ImaGross Brand Design"
+  - task: "Cashier Management Interface"
     implemented: true
     working: "NA"
-    file: "/app/frontend/src/App.css"
+    file: "/app/frontend/src/App.js"
     stuck_count: 0
     priority: "high"
     needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implementato design system con colori ImaGross arancione, rosso e verde"
+        comment: "Gestione casse con visualizzazione QR, statistiche registrazioni, copy link"
 
-  - task: "User Dashboard"
+  - task: "QR Registration Page"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pagina registrazione dedicata via QR con info store/cassa e form completo"
+
+  - task: "Enhanced User Dashboard"
     implemented: true
     working: "NA"
     file: "/app/frontend/src/App.js"
@@ -239,25 +272,37 @@ frontend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implementato dashboard utente con tessera digitale e profilo"
+        comment: "Dashboard utente migliorato con info store/cassa di registrazione"
+
+  - task: "Dual Authentication System"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Sistema auth duale: utenti normali + admin con routing separato"
 
 metadata:
   created_by: "main_agent"
-  version: "1.0"
+  version: "2.0"
   test_sequence: 1
   run_ui: false
 
 test_plan:
   current_focus:
-    - "User Registration API"
-    - "User Login API"
-    - "Digital Card Generation"
+    - "Super Admin Authentication System"
+    - "Store Management API"
+    - "Cashier Management API"
+    - "QR Code Generation System"
+    - "QR Registration Flow"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "Implementata webapp completa per ImaGross con registrazione, login, tessera digitale e QR code. Sistema backend con JWT auth e frontend con design brand ImaGross. Pronto per testing backend."
-  - agent: "testing"
-    message: "✅ BACKEND TESTING COMPLETED - All 5 backend tasks tested successfully. Created comprehensive backend_test.py with 9 test cases covering: User Registration API (with duplicate validation), User Login API (with invalid credentials test), Digital Card Generation (UUID + QR code), User Profile API (authenticated + unauthorized), and Points Management API. All tests passed 9/9. Backend APIs are fully functional and ready for production."
+    message: "Implementato sistema scalabile completo: Super Admin Dashboard, gestione stores/casse, QR code per registrazioni, import Excel, dual auth system. Admin predefinito: superadmin/ImaGross2024! - Sistema pronto per testing backend."
