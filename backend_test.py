@@ -1266,23 +1266,36 @@ def test_excel_import_endpoint():
     try:
         headers = {"Authorization": f"Bearer {admin_access_token}"}
         
-        # Create a simple test CSV content (simulating Excel data)
+        # Create a simple test Excel file with pandas
         import tempfile
         import os
+        import pandas as pd
         
-        # Create temporary CSV file with test data
-        csv_content = """nome,cognome,sesso,email,tel_cell,citta,card_number,indirizzo,punto_provincia,newsletter,numero_figli
-Mario,Rossi,Maschio,mario.rossi@test.it,3331234567,Milano,TEST001,Via Roma 1,MI,1,2
-Lucia,Bianchi,Femmina,lucia.bianchi@test.it,3339876543,Roma,TEST002,Via Torino 2,RM,0,1"""
+        # Create test data
+        test_data = {
+            'nome': ['Mario', 'Lucia'],
+            'cognome': ['Rossi', 'Bianchi'],
+            'sesso': ['Maschio', 'Femmina'],
+            'email': ['mario.rossi@test.it', 'lucia.bianchi@test.it'],
+            'tel_cell': ['3331234567', '3339876543'],
+            'citta': ['Milano', 'Roma'],
+            'card_number': ['TEST001', 'TEST002'],
+            'indirizzo': ['Via Roma 1', 'Via Torino 2'],
+            'punto_provincia': ['MI', 'RM'],
+            'newsletter': [1, 0],
+            'numero_figli': [2, 1]
+        }
         
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
-            f.write(csv_content)
+        df = pd.DataFrame(test_data)
+        
+        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as f:
             temp_file_path = f.name
+            df.to_excel(temp_file_path, index=False)
         
         try:
             # Test the import endpoint
             with open(temp_file_path, 'rb') as f:
-                files = {'file': ('test_users.csv', f, 'text/csv')}
+                files = {'file': ('test_users.xlsx', f, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
                 data = {'data_type': 'users'}
                 
                 response = requests.post(f"{API_BASE}/admin/import/excel", 
