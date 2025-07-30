@@ -572,6 +572,10 @@ async def get_all_cashiers(current_admin = Depends(get_current_admin)):
     result = []
     
     for cashier in cashiers:
+        # Remove MongoDB _id field to avoid serialization issues
+        if "_id" in cashier:
+            del cashier["_id"]
+        
         store = await db.stores.find_one({"id": cashier["store_id"]})
         result.append({
             **cashier,
