@@ -637,7 +637,10 @@ async def create_cashier(cashier_data: CashierCreate, current_admin = Depends(ge
     
     # Generate QR code data and image
     qr_data = f"{store['code']}-CASSA{cashier_data.cashier_number}"
-    qr_image = generate_qr_code(qr_data)
+    # Generate full URL for QR code
+    base_url = "https://b0aec0ca-18da-4875-91c5-bc0bfbae484d.preview.emergentagent.com"
+    qr_url = f"{base_url}/register?qr={qr_data}"
+    qr_image = generate_qr_code(qr_url)
     
     cashier = Cashier(
         store_id=cashier_data.store_id,
