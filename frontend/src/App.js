@@ -1349,6 +1349,7 @@ const CashierManagement = () => {
 
   const printQR = (cashier) => {
     const printWindow = window.open('', '_blank');
+    const qrUrl = `${window.location.origin}/register?qr=${cashier.qr_code}`;
     printWindow.document.write(`
       <html>
         <head>
@@ -1356,10 +1357,11 @@ const CashierManagement = () => {
           <style>
             body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
             .qr-container { display: inline-block; border: 2px solid #000; padding: 20px; margin: 20px; background: white; }
-            .store-info { margin-bottom: 15px; font-size: 14px; font-weight: bold; }
-            .cashier-info { margin-bottom: 15px; font-size: 12px; }
+            .store-info { margin-bottom: 15px; font-size: 16px; font-weight: bold; }
+            .cashier-info { margin-bottom: 15px; font-size: 14px; }
             .qr-code { margin: 10px 0; }
-            .instructions { margin-top: 15px; font-size: 10px; color: #666; }
+            .url-info { margin: 10px 0; font-size: 10px; color: #666; word-break: break-all; }
+            .instructions { margin-top: 15px; font-size: 12px; color: #333; font-weight: bold; }
             @media print {
               body { margin: 0; padding: 10px; }
               .qr-container { page-break-inside: avoid; }
@@ -1368,16 +1370,20 @@ const CashierManagement = () => {
         </head>
         <body>
           <div class="qr-container">
-            <div class="store-info">ImaGross - ${cashier.store_name}</div>
-            <div class="cashier-info">${cashier.name} - Cassa #${cashier.cashier_number}</div>
+            <div class="store-info">🏪 ImaGross - ${cashier.store_name}</div>
+            <div class="cashier-info">💳 ${cashier.name} - Cassa #${cashier.cashier_number}</div>
             <div class="qr-code">
-              <img src="data:image/png;base64,${cashier.qr_code_image}" alt="QR Code" style="width: 150px; height: 150px;"/>
+              <img src="data:image/png;base64,${cashier.qr_code_image}" alt="QR Code" style="width: 200px; height: 200px;"/>
             </div>
-            <div style="font-size: 10px; margin-top: 10px; font-family: monospace;">
-              ${cashier.qr_code}
+            <div class="url-info">
+              URL: ${qrUrl}
             </div>
             <div class="instructions">
-              Scansiona per registrarti al programma fedeltà ImaGross
+              📱 SCANSIONA PER REGISTRARTI<br>
+              AL PROGRAMMA FEDELTÀ IMAGROSS
+            </div>
+            <div style="font-size: 8px; margin-top: 10px; color: #999;">
+              Codice: ${cashier.qr_code} | Generato: ${new Date().toLocaleDateString('it-IT')}
             </div>
           </div>
           <script>
