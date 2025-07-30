@@ -627,6 +627,10 @@ async def get_stores_stats(current_admin = Depends(get_current_admin)):
     result = []
     
     for store in stores:
+        # Remove MongoDB _id field to avoid serialization issues
+        if "_id" in store:
+            del store["_id"]
+            
         users_count = await db.users.count_documents({"store_id": store["id"]})
         cashiers_count = await db.cashiers.count_documents({"store_id": store["id"]})
         
