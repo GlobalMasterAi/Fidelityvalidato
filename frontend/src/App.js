@@ -1761,6 +1761,7 @@ const UserManagement = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supermercato</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registrato</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Azioni</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
