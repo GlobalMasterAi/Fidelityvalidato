@@ -1434,6 +1434,13 @@ def run_all_tests():
         test_super_admin_only_endpoints
     ]
     
+    print("\n📄 EXCEL IMPORT SYSTEM TESTS")
+    print("-" * 50)
+    excel_tests = [
+        test_excel_import_endpoint,
+        test_excel_import_unauthorized
+    ]
+    
     print("\n👤 USER SYSTEM TESTS")
     print("-" * 50)
     user_tests = [
