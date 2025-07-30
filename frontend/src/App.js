@@ -1270,6 +1270,8 @@ const CashierManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [regeneratingQR, setRegeneratingQR] = useState(false);
+  const [regeneratingQRId, setRegeneratingQRId] = useState(null);
+  const [selectedStore, setSelectedStore] = useState('');
   const [formData, setFormData] = useState({
     store_id: '',
     cashier_number: '',
@@ -1280,6 +1282,13 @@ const CashierManagement = () => {
   useEffect(() => {
     fetchCashiers();
     fetchStores();
+    
+    // Check for store filter in URL
+    const params = new URLSearchParams(window.location.search);
+    const storeId = params.get('store');
+    if (storeId) {
+      setSelectedStore(storeId);
+    }
   }, []);
 
   const fetchCashiers = async () => {
@@ -1319,6 +1328,22 @@ const CashierManagement = () => {
       alert('Errore durante la rigenerazione dei QR codes: ' + error.response?.data?.detail);
     } finally {
       setRegeneratingQR(false);
+    }
+  };
+
+  const regenerateSingleQR = async (cashierId) => {
+    setRegeneratingQRId(cashierId);
+    try {
+      const response = await axios.post(`${API}/admin/regenerate-qr/${cashierId}`, {}, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      alert(`QR code rigenerato per: ${response.data.qr_data}`);
+      fetchCashiers(); // Refresh the list
+    } catch (error) {
+      alert('Errore durante la rigenerazione del QR code: ' + error.response?.data?.detail);
+    } finally {
+      setRegeneratingQRId(null);
     }
   };
 
