@@ -1085,6 +1085,11 @@ const StoreManagement = () => {
     }
   };
 
+  const goToCashiers = (storeId) => {
+    // Navigate to cashiers tab with store filter
+    window.location.href = `/admin?tab=cashiers&store=${storeId}`;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
