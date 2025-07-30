@@ -1693,18 +1693,43 @@ const UserManagement = () => {
   const startEdit = (user) => {
     setEditingUser(user.id);
     setEditFormData({
-      nome: user.nome,
-      cognome: user.cognome,
-      email: user.email,
-      telefono: user.telefono,
-      localita: user.localita,
-      punti: user.punti,
-      active: user.active
+      nome: user.nome || '',
+      cognome: user.cognome || '',
+      email: user.email || '',
+      telefono: user.telefono || '',
+      localita: user.localita || '',
+      punti: user.punti || 0,
+      active: user.active !== false,
+      indirizzo: user.indirizzo || '',
+      cap: user.cap || '',
+      provincia: user.provincia || '',
+      data_nascita: user.data_nascita || '',
+      newsletter: user.newsletter || false,
+      bollini: user.bollini || 0,
+      progressivo_spesa: user.progressivo_spesa || 0,
+      consenso_dati_personali: user.consenso_dati_personali !== false,
+      consenso_dati_pubblicitari: user.consenso_dati_pubblicitari !== false,
+      consenso_profilazione: user.consenso_profilazione,
+      consenso_marketing: user.consenso_marketing,
+      coniugato: user.coniugato,
+      numero_figli: user.numero_figli || 0,
+      data_matrimonio: user.data_matrimonio || '',
+      animali_cani: user.animali_cani || false,
+      animali_gatti: user.animali_gatti || false,
+      intolleranza_lattosio: user.intolleranza_lattosio || false,
+      intolleranza_glutine: user.intolleranza_glutine || false,
+      intolleranza_nichel: user.intolleranza_nichel || false,
+      celiachia: user.celiachia || false,
+      altra_intolleranza: user.altra_intolleranza || '',
+      richiede_fattura: user.richiede_fattura || false,
+      ragione_sociale: user.ragione_sociale || ''
     });
+    setShowEditModal(true);
   };
 
   const cancelEdit = () => {
     setEditingUser(null);
+    setShowEditModal(false);
     setEditFormData({
       nome: '',
       cognome: '',
@@ -1712,7 +1737,30 @@ const UserManagement = () => {
       telefono: '',
       localita: '',
       punti: 0,
-      active: true
+      active: true,
+      indirizzo: '',
+      cap: '',
+      provincia: '',
+      data_nascita: '',
+      newsletter: false,
+      bollini: 0,
+      progressivo_spesa: 0,
+      consenso_dati_personali: true,
+      consenso_dati_pubblicitari: true,
+      consenso_profilazione: null,
+      consenso_marketing: null,
+      coniugato: null,
+      numero_figli: 0,
+      data_matrimonio: '',
+      animali_cani: false,
+      animali_gatti: false,
+      intolleranza_lattosio: false,
+      intolleranza_glutine: false,
+      intolleranza_nichel: false,
+      celiachia: false,
+      altra_intolleranza: '',
+      richiede_fattura: false,
+      ragione_sociale: ''
     });
   };
 
