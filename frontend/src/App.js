@@ -1430,6 +1430,11 @@ const CashierManagement = () => {
     printWindow.document.close();
   };
 
+  // Filter cashiers by selected store
+  const filteredCashiers = selectedStore 
+    ? cashiers.filter(cashier => cashier.store_id === selectedStore)
+    : cashiers;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -1446,12 +1451,22 @@ const CashierManagement = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Gestione Casse</h1>
         <div className="flex space-x-4">
+          <select
+            value={selectedStore}
+            onChange={(e) => setSelectedStore(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+          >
+            <option value="">Tutti i supermercati</option>
+            {stores.map(store => (
+              <option key={store.id} value={store.id}>{store.name}</option>
+            ))}
+          </select>
           <button
             onClick={regenerateAllQRCodes}
             disabled={regeneratingQR}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:opacity-50"
           >
-            {regeneratingQR ? 'Rigenerando...' : '🔄 Rigenera QR'}
+            {regeneratingQR ? 'Rigenerando...' : '🔄 Rigenera Tutti'}
           </button>
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
