@@ -555,9 +555,10 @@ def test_create_store():
     
     try:
         headers = {"Authorization": f"Bearer {admin_access_token}"}
+        unique_id = uuid.uuid4().hex[:8].upper()
         store_data = {
-            "name": "ImaGross Milano Centro",
-            "code": "IMAGROSS001",
+            "name": f"ImaGross Milano Centro {unique_id}",
+            "code": f"IMAGROSS{unique_id}",
             "address": "Via Roma 123",
             "city": "Milano",
             "province": "MI",
