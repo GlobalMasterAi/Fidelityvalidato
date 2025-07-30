@@ -608,15 +608,29 @@ def test_create_store():
 
 def test_duplicate_store_code():
     """Test unique store code validation"""
-    if not admin_access_token:
-        log_test("Duplicate Store Code", False, "No admin access token available")
+    if not admin_access_token or not test_store_id:
+        log_test("Duplicate Store Code", False, "No admin access token or store ID available")
         return False
     
     try:
         headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Get the existing store code first
+        response = requests.get(f"{API_BASE}/admin/stores", headers=headers)
+        if response.status_code != 200:
+            log_test("Duplicate Store Code", False, "Could not retrieve existing stores")
+            return False
+        
+        stores = response.json()
+        if not stores:
+            log_test("Duplicate Store Code", False, "No existing stores found")
+            return False
+        
+        existing_code = stores[0]["code"]
+        
         store_data = {
             "name": "ImaGross Milano Sud",
-            "code": "IMAGROSS001",  # Same code as previous store
+            "code": existing_code,  # Use existing code
             "address": "Via Torino 456",
             "city": "Milano",
             "province": "MI",
