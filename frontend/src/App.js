@@ -1835,7 +1835,8 @@ const UserManagement = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tessera Fisica</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Punti</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Punti/Bollini</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Spesa Totale</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supermercato</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registrato</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -1846,63 +1847,29 @@ const UserManagement = () => {
               {filteredUsers.map((user) => (
                 <tr key={user.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {editingUser === user.id ? (
-                      <div className="space-y-1">
-                        <input
-                          type="text"
-                          name="nome"
-                          value={editFormData.nome}
-                          onChange={handleEditInputChange}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                          placeholder="Nome"
-                        />
-                        <input
-                          type="text"
-                          name="cognome"
-                          value={editFormData.cognome}
-                          onChange={handleEditInputChange}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                          placeholder="Cognome"
-                        />
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="font-medium text-gray-900">{user.nome} {user.cognome}</div>
-                        <div className="text-sm text-gray-500">{user.telefono}</div>
-                      </div>
-                    )}
+                    <div className="font-medium text-gray-900">{user.nome} {user.cognome}</div>
+                    <div className="text-sm text-gray-500">
+                      {user.telefono} | {user.localita}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {editingUser === user.id ? (
-                      <input
-                        type="email"
-                        name="email"
-                        value={editFormData.email}
-                        onChange={handleEditInputChange}
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                      />
-                    ) : (
-                      user.email
-                    )}
+                    {user.email}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {user.tessera_fisica}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {editingUser === user.id ? (
-                      <input
-                        type="number"
-                        name="punti"
-                        value={editFormData.punti}
-                        onChange={handleEditInputChange}
-                        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
-                        min="0"
-                      />
-                    ) : (
+                    <div className="flex space-x-2">
                       <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                        {user.punti} punti
+                        {user.punti || 0} pts
                       </span>
-                    )}
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                        {user.bollini || 0} bollini
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    €{(user.progressivo_spesa || 0).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {user.store_name || 'N/A'}
@@ -1911,49 +1878,19 @@ const UserManagement = () => {
                     {new Date(user.created_at).toLocaleDateString('it-IT')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {editingUser === user.id ? (
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          name="active"
-                          checked={editFormData.active}
-                          onChange={handleEditInputChange}
-                          className="h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                        />
-                        <span className="ml-2 text-sm">Attivo</span>
-                      </label>
-                    ) : (
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {user.active ? 'Attivo' : 'Disattivo'}
-                      </span>
-                    )}
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {user.active ? 'Attivo' : 'Disattivo'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {editingUser === user.id ? (
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => saveEdit(user.id)}
-                          className="text-green-600 hover:text-green-800"
-                        >
-                          Salva
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
-                          Annulla
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => startEdit(user)}
-                        className="text-imagross-orange hover:text-imagross-red"
-                      >
-                        Modifica
-                      </button>
-                    )}
+                    <button
+                      onClick={() => startEdit(user)}
+                      className="text-imagross-orange hover:text-imagross-red"
+                    >
+                      Modifica Completa
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -1961,6 +1898,342 @@ const UserManagement = () => {
           </table>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Modifica Utente - {editFormData.nome} {editFormData.cognome}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                {/* Basic Info */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-800 border-b pb-2">Dati Anagrafici</h4>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                    <input
+                      type="text"
+                      name="nome"
+                      value={editFormData.nome}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cognome</label>
+                    <input
+                      type="text"
+                      name="cognome"
+                      value={editFormData.cognome}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={editFormData.email}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+                    <input
+                      type="text"
+                      name="telefono"
+                      value={editFormData.telefono}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Nascita</label>
+                    <input
+                      type="date"
+                      name="data_nascita"
+                      value={editFormData.data_nascita}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Address Info */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-800 border-b pb-2">Indirizzo</h4>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Indirizzo</label>
+                    <input
+                      type="text"
+                      name="indirizzo"
+                      value={editFormData.indirizzo}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">CAP</label>
+                    <input
+                      type="text"
+                      name="cap"
+                      value={editFormData.cap}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Località</label>
+                    <input
+                      type="text"
+                      name="localita"
+                      value={editFormData.localita}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                    <input
+                      type="text"
+                      name="provincia"
+                      value={editFormData.provincia}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Loyalty & Privacy */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-800 border-b pb-2">Fedeltà & Privacy</h4>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Punti</label>
+                    <input
+                      type="number"
+                      name="punti"
+                      value={editFormData.punti}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Bollini</label>
+                    <input
+                      type="number"
+                      name="bollini"
+                      value={editFormData.bollini}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Spesa Totale (€)</label>
+                    <input
+                      type="number"
+                      name="progressivo_spesa"
+                      value={editFormData.progressivo_spesa}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="active"
+                        checked={editFormData.active}
+                        onChange={handleEditInputChange}
+                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                      />
+                      <span className="text-sm">Account Attivo</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="newsletter"
+                        checked={editFormData.newsletter}
+                        onChange={handleEditInputChange}
+                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                      />
+                      <span className="text-sm">Newsletter</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="consenso_dati_personali"
+                        checked={editFormData.consenso_dati_personali}
+                        onChange={handleEditInputChange}
+                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                      />
+                      <span className="text-sm">Consenso Dati Personali</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="consenso_marketing"
+                        checked={editFormData.consenso_marketing}
+                        onChange={handleEditInputChange}
+                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                      />
+                      <span className="text-sm">Consenso Marketing</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Family & Animals */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-800 border-b pb-2">Famiglia & Animali</h4>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Numero Figli</label>
+                    <input
+                      type="number"
+                      name="numero_figli"
+                      value={editFormData.numero_figli}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Matrimonio</label>
+                    <input
+                      type="date"
+                      name="data_matrimonio"
+                      value={editFormData.data_matrimonio}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="coniugato"
+                        checked={editFormData.coniugato}
+                        onChange={handleEditInputChange}
+                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                      />
+                      <span className="text-sm">Coniugato/a</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="animali_cani"
+                        checked={editFormData.animali_cani}
+                        onChange={handleEditInputChange}
+                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                      />
+                      <span className="text-sm">Ha Cani</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="animali_gatti"
+                        checked={editFormData.animali_gatti}
+                        onChange={handleEditInputChange}
+                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                      />
+                      <span className="text-sm">Ha Gatti</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Intolerances & Business */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-800 border-b pb-2">Intolleranze & Business</h4>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="intolleranza_lattosio"
+                        checked={editFormData.intolleranza_lattosio}
+                        onChange={handleEditInputChange}
+                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                      />
+                      <span className="text-sm">Intolleranza Lattosio</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="intolleranza_glutine"
+                        checked={editFormData.intolleranza_glutine}
+                        onChange={handleEditInputChange}
+                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                      />
+                      <span className="text-sm">Intolleranza Glutine</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="celiachia"
+                        checked={editFormData.celiachia}
+                        onChange={handleEditInputChange}
+                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                      />
+                      <span className="text-sm">Celiachia</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="richiede_fattura"
+                        checked={editFormData.richiede_fattura}
+                        onChange={handleEditInputChange}
+                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                      />
+                      <span className="text-sm">Richiede Fattura</span>
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Altre Intolleranze</label>
+                    <input
+                      type="text"
+                      name="altra_intolleranza"
+                      value={editFormData.altra_intolleranza}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Ragione Sociale</label>
+                    <input
+                      type="text"
+                      name="ragione_sociale"
+                      value={editFormData.ragione_sociale}
+                      onChange={handleEditInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4 mt-6 pt-4 border-t">
+                <button
+                  onClick={cancelEdit}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={() => saveEdit(editingUser)}
+                  className="px-4 py-2 bg-imagross-orange text-white rounded-md hover:bg-imagross-red transition"
+                >
+                  Salva Modifiche
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
