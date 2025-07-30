@@ -876,9 +876,18 @@ async def update_user(user_id: str, user_data: dict, current_admin = Depends(get
         if not user:
             raise HTTPException(status_code=404, detail="Utente non trovato")
         
-        # Prepare update data
+        # Prepare update data - expanded fields
         update_data = {}
-        allowed_fields = ["nome", "cognome", "email", "telefono", "localita", "punti", "active"]
+        allowed_fields = [
+            "nome", "cognome", "email", "telefono", "localita", "punti", "active",
+            "indirizzo", "cap", "provincia", "data_nascita", "newsletter",
+            "bollini", "progressivo_spesa", "consenso_dati_personali", 
+            "consenso_dati_pubblicitari", "consenso_profilazione", "consenso_marketing",
+            "coniugato", "numero_figli", "data_matrimonio", "data_figlio_1", "data_figlio_2",
+            "data_figlio_3", "data_figlio_4", "data_figlio_5", "animali_cani", "animali_gatti",
+            "intolleranza_lattosio", "intolleranza_glutine", "intolleranza_nichel", 
+            "celiachia", "altra_intolleranza", "richiede_fattura", "ragione_sociale"
+        ]
         
         for field in allowed_fields:
             if field in user_data:
