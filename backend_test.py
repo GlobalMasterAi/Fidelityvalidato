@@ -1001,10 +1001,10 @@ def test_user_registration_with_qr():
             "nome": "Anna",
             "cognome": "Verdi",
             "sesso": "F",
-            "email": "anna.verdi@email.it",
+            "email": f"anna.verdi.{uuid.uuid4().hex[:8]}@email.it",
             "telefono": "+39 345 6789012",
             "localita": "Milano",
-            "tessera_fisica": "IMG002345678",
+            "tessera_fisica": f"IMG{uuid.uuid4().hex[:9].upper()}",
             "password": "AnnaPass123!",
             "store_id": test_store_id,
             "cashier_id": test_cashier_id
