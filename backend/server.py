@@ -110,6 +110,7 @@ class User(BaseModel):
     cashier_id: Optional[str] = None  # Cashier where registered
     created_at: datetime = Field(default_factory=datetime.utcnow)
     active: bool = True
+    migrated: bool = False  # For tessera migration tracking
     # Additional fields from Excel
     indirizzo: Optional[str] = None
     numero_civico: Optional[str] = None
@@ -136,6 +137,9 @@ class UserCreate(BaseModel):
     indirizzo: Optional[str] = None
     provincia: Optional[str] = None
     newsletter: bool = False
+
+class TesseraCheck(BaseModel):
+    tessera_fisica: str
 
 class Transaction(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -307,6 +311,72 @@ async def get_qr_info(qr_code: str):
         "cashier": cashier,
         "registration_url": f"/register?qr={qr_code}"
     }
+
+@api_router.post("/check-tessera")
+async def check_tessera(tessera_data: TesseraCheck):
+    """Check if tessera fisica exists and return user data"""
+    try:
+        # Check in current users
+        user = await db.users.find_one({"tessera_fisica": tessera_data.tessera_fisica})
+        
+        if user:
+            if user.get("migrated", False):
+                return {
+                    "found": True,
+                    "migrated": True,
+                    "message": "Tessera già migrata"
+                }
+            else:
+                return {
+                    "found": True,
+                    "migrated": False,
+                    "user_data": {
+                        "nome": user.get("nome", ""),
+                        "cognome": user.get("cognome", ""),
+                        "sesso": user.get("sesso", "M"),
+                        "email": user.get("email", ""),
+                        "telefono": user.get("telefono", ""),
+                        "localita": user.get("localita", ""),
+                        "indirizzo": user.get("indirizzo", ""),
+                        "provincia": user.get("provincia", "")
+                    }
+                }
+        
+        # Check in imported legacy data (simulate from Excel data)
+        # This would be replaced with actual legacy database check
+        legacy_users = {
+            "2020000000013": {
+                "nome": "Mario",
+                "cognome": "Rossi",
+                "sesso": "M",
+                "email": "mario.rossi@email.it",
+                "telefono": "+39 333 1234567",
+                "localita": "MONOPOLI",
+                "indirizzo": "VIA L. ARIOSTO",
+                "provincia": "BA"
+            }
+        }
+        
+        if tessera_data.tessera_fisica in legacy_users:
+            return {
+                "found": True,
+                "migrated": False,
+                "user_data": legacy_users[tessera_data.tessera_fisica]
+            }
+        
+        return {
+            "found": False,
+            "migrated": False,
+            "message": "Tessera non trovata"
+        }
+        
+    except Exception as e:
+        print(f"Error checking tessera: {e}")
+        return {
+            "found": False,
+            "migrated": False,
+            "message": "Errore durante la verifica"
+        }
 
 # User Authentication Routes
 @api_router.post("/register", response_model=UserResponse)
@@ -606,6 +676,30 @@ async def get_all_cashiers(current_admin = Depends(get_current_admin)):
         result.append({
             **cashier,
             "store_name": store["name"] if store else "Unknown"
+        })
+    
+    return result
+
+# User Management Routes
+@api_router.get("/admin/users", response_model=List[dict])
+async def get_all_users(current_admin = Depends(get_current_admin)):
+    users = await db.users.find().to_list(1000)
+    result = []
+    
+    for user in users:
+        if "_id" in user:
+            del user["_id"]
+        
+        # Get store name if available
+        store_name = None
+        if user.get("store_id"):
+            store = await db.stores.find_one({"id": user["store_id"]})
+            if store:
+                store_name = store["name"]
+        
+        result.append({
+            **user,
+            "store_name": store_name
         })
     
     return result

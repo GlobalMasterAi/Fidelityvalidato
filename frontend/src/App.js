@@ -87,6 +87,16 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  const checkTessera = async (tesseraFisica) => {
+    try {
+      const response = await axios.post(`${API}/check-tessera`, { tessera_fisica: tesseraFisica });
+      return response.data;
+    } catch (error) {
+      console.error('Check tessera error:', error);
+      return { found: false, migrated: false };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('adminToken');
@@ -102,6 +112,7 @@ const AuthProvider = ({ children }) => {
     login,
     adminLogin,
     register,
+    checkTessera,
     logout,
     loading,
     isAuthenticated: !!user,
@@ -150,11 +161,19 @@ const Header = () => {
   );
 };
 
-const QRRegistrationPage = () => {
+const TesseraCheckPage = () => {
+  const [step, setStep] = useState('check'); // 'check', 'register', 'import'
+  const [tesseraFisica, setTesseraFisica] = useState('');
+  const [userData, setUserData] = useState(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const [qrInfo, setQrInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { checkTessera, register } = useAuth();
+
+  const qrCode = searchParams.get('qr');
+
+  // Registration form state
   const [formData, setFormData] = useState({
     nome: '',
     cognome: '',
@@ -168,16 +187,10 @@ const QRRegistrationPage = () => {
     provincia: '',
     newsletter: false
   });
-  const { register } = useAuth();
-
-  const qrCode = searchParams.get('qr');
 
   useEffect(() => {
     if (qrCode) {
       fetchQRInfo();
-    } else {
-      setLoading(false);
-      setError('Codice QR non valido');
     }
   }, [qrCode]);
 
@@ -187,6 +200,39 @@ const QRRegistrationPage = () => {
       setQrInfo(response.data);
     } catch (error) {
       setError('Codice QR non valido o scaduto');
+    }
+  };
+
+  const handleTesseraCheck = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const result = await checkTessera(tesseraFisica);
+      
+      if (result.found) {
+        if (result.migrated) {
+          setError('Tessera già migrata. Puoi registrarti normalmente o aprire un ticket di supporto.');
+          setStep('register');
+        } else {
+          setUserData(result.user_data);
+          setFormData({
+            ...formData,
+            ...result.user_data,
+            tessera_fisica: tesseraFisica
+          });
+          setStep('import');
+        }
+      } else {
+        setStep('register');
+        setFormData({
+          ...formData,
+          tessera_fisica: tesseraFisica
+        });
+      }
+    } catch (error) {
+      setError('Errore durante la verifica della tessera');
     } finally {
       setLoading(false);
     }
@@ -219,12 +265,16 @@ const QRRegistrationPage = () => {
     }
   };
 
+  const openSupportTicket = () => {
+    alert('Funzionalità ticket di supporto sarà disponibile a breve. Contatta il customer service.');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento informazioni QR...</p>
+          <p className="mt-4 text-gray-600">Verifica tessera in corso...</p>
         </div>
       </div>
     );
@@ -235,190 +285,278 @@ const QRRegistrationPage = () => {
       <Header />
       <div className="flex items-center justify-center py-12 px-4">
         <div className="max-w-2xl w-full space-y-8">
-          {qrInfo ? (
-            <>
-              <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Benvenuto in ImaGross!
-                </h2>
-                <div className="bg-gradient-to-r from-imagross-orange to-imagross-red text-white p-4 rounded-lg">
-                  <p className="text-lg font-semibold">{qrInfo.store.name}</p>
-                  <p>{qrInfo.store.address}, {qrInfo.store.city}</p>
-                  <p className="text-sm mt-2">
-                    Cassa: {qrInfo.cashier.name} (#{qrInfo.cashier.cashier_number})
-                  </p>
-                </div>
+          {qrInfo && (
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                Benvenuto in ImaGross!
+              </h2>
+              <div className="bg-gradient-to-r from-imagross-orange to-imagross-red text-white p-4 rounded-lg">
+                <p className="text-lg font-semibold">{qrInfo.store.name}</p>
+                <p>{qrInfo.store.address}, {qrInfo.store.city}</p>
+                <p className="text-sm mt-2">
+                  Cassa: {qrInfo.cashier.name} (#{qrInfo.cashier.cashier_number})
+                </p>
               </div>
+            </div>
+          )}
 
-              {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                  {error}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
+              {error.includes('tessera già migrata') && (
+                <div className="mt-2">
+                  <button
+                    onClick={openSupportTicket}
+                    className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 transition"
+                  >
+                    Apri Ticket di Supporto
+                  </button>
                 </div>
               )}
+            </div>
+          )}
 
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
-                  Completa la tua registrazione
-                </h3>
+          {step === 'check' && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Hai già una tessera ImaGross?
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Se possiedi già una tessera fisica ImaGross, inserisci il numero per verificare i tuoi dati.
+              </p>
+              
+              <form onSubmit={handleTesseraCheck} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Numero Tessera Fisica
+                  </label>
+                  <input
+                    type="text"
+                    value={tesseraFisica}
+                    onChange={(e) => setTesseraFisica(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    placeholder="es. 2020000000013"
+                    required
+                  />
+                </div>
                 
-                <form className="space-y-4" onSubmit={handleRegister}>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nome *
-                      </label>
-                      <input
-                        type="text"
-                        name="nome"
-                        value={formData.nome}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Cognome *
-                      </label>
-                      <input
-                        type="text"
-                        name="cognome"
-                        value={formData.cognome}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Sesso *
-                    </label>
-                    <select
-                      name="sesso"
-                      value={formData.sesso}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
-                      required
-                    >
-                      <option value="M">Maschio</option>
-                      <option value="F">Femmina</option>
-                      <option value="Other">Altro</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Telefono *
-                      </label>
-                      <input
-                        type="tel"
-                        name="telefono"
-                        value={formData.telefono}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Località *
-                      </label>
-                      <input
-                        type="text"
-                        name="localita"
-                        value={formData.localita}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Indirizzo
-                    </label>
-                    <input
-                      type="text"
-                      name="indirizzo"
-                      value={formData.indirizzo}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Numero Tessera Fisica *
-                    </label>
-                    <input
-                      type="text"
-                      name="tessera_fisica"
-                      value={formData.tessera_fisica}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
-                      placeholder="es. 2020000000013"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password *
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
-                      required
-                    />
-                  </div>
-
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      name="newsletter"
-                      checked={formData.newsletter}
-                      onChange={handleInputChange}
-                      className="h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                    />
-                    <label className="ml-2 block text-sm text-gray-900">
-                      Accetto di ricevere newsletter e comunicazioni promozionali
-                    </label>
-                  </div>
-
+                <div className="flex space-x-4">
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
+                    className="flex-1 bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
                   >
-                    Registrati ora
+                    Verifica Tessera
                   </button>
-                </form>
+                  <button
+                    type="button"
+                    onClick={() => setStep('register')}
+                    className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-md hover:bg-gray-600 transition duration-200 font-medium"
+                  >
+                    Non ho tessera
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {step === 'import' && userData && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Tessera trovata! Conferma i tuoi dati
+              </h3>
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                Abbiamo trovato la tua tessera e importato i dati esistenti. Verifica e completa la registrazione.
               </div>
-            </>
-          ) : (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-center">
-              <h2 className="text-lg font-bold">Errore</h2>
-              <p>{error}</p>
+              
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                    <input
+                      type="text"
+                      name="nome"
+                      value={formData.nome}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cognome *</label>
+                    <input
+                      type="text"
+                      name="cognome"
+                      value={formData.cognome}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
+                >
+                  Completa Registrazione
+                </button>
+              </form>
+            </div>
+          )}
+
+          {step === 'register' && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Registrazione Nuovo Cliente
+              </h3>
+              
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                    <input
+                      type="text"
+                      name="nome"
+                      value={formData.nome}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cognome *</label>
+                    <input
+                      type="text"
+                      name="cognome"
+                      value={formData.cognome}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sesso *</label>
+                  <select
+                    name="sesso"
+                    value={formData.sesso}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    required
+                  >
+                    <option value="M">Maschio</option>
+                    <option value="F">Femmina</option>
+                    <option value="Other">Altro</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefono *</label>
+                    <input
+                      type="tel"
+                      name="telefono"
+                      value={formData.telefono}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Località *</label>
+                    <input
+                      type="text"
+                      name="localita"
+                      value={formData.localita}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Numero Tessera Fisica *</label>
+                  <input
+                    type="text"
+                    name="tessera_fisica"
+                    value={formData.tessera_fisica}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    placeholder="es. 2020000000013"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="newsletter"
+                    checked={formData.newsletter}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                  />
+                  <label className="ml-2 block text-sm text-gray-900">
+                    Accetto di ricevere newsletter e comunicazioni promozionali
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
+                >
+                  Registrati ora
+                </button>
+              </form>
             </div>
           )}
         </div>
@@ -1104,9 +1242,12 @@ const StoreManagement = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{store.total_cashiers}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <a href={`/admin/stores/${store.id}/cashiers`} className="text-imagross-orange hover:text-imagross-red">
+                    <button 
+                      onClick={() => window.location.href = `/admin/stores/${store.id}/cashiers`}
+                      className="text-imagross-orange hover:text-imagross-red"
+                    >
                       Gestisci Casse
-                    </a>
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -1187,6 +1328,53 @@ const CashierManagement = () => {
     } catch (error) {
       alert('Errore nella creazione della cassa: ' + error.response?.data?.detail);
     }
+  };
+
+  const printQR = (cashier) => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>QR Code - ${cashier.name}</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+            .qr-container { display: inline-block; border: 2px solid #000; padding: 20px; margin: 20px; background: white; }
+            .store-info { margin-bottom: 15px; font-size: 14px; font-weight: bold; }
+            .cashier-info { margin-bottom: 15px; font-size: 12px; }
+            .qr-code { margin: 10px 0; }
+            .instructions { margin-top: 15px; font-size: 10px; color: #666; }
+            @media print {
+              body { margin: 0; padding: 10px; }
+              .qr-container { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="qr-container">
+            <div class="store-info">ImaGross - ${cashier.store_name}</div>
+            <div class="cashier-info">${cashier.name} - Cassa #${cashier.cashier_number}</div>
+            <div class="qr-code">
+              <img src="data:image/png;base64,${cashier.qr_code_image}" alt="QR Code" style="width: 150px; height: 150px;"/>
+            </div>
+            <div style="font-size: 10px; margin-top: 10px; font-family: monospace;">
+              ${cashier.qr_code}
+            </div>
+            <div class="instructions">
+              Scansiona per registrarti al programma fedeltà ImaGross
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function() {
+                window.close();
+              };
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   if (loading) {
@@ -1335,6 +1523,128 @@ const CashierManagement = () => {
                     >
                       Copia Link
                     </button>
+                    <button
+                      onClick={() => printQR(cashier)}
+                      className="text-green-600 hover:text-green-800 ml-2"
+                    >
+                      Stampa QR
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const UserManagement = () => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const { adminToken } = useAuth();
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/users`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredUsers = users.filter(user => 
+    user.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.cognome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.tessera_fisica.includes(searchTerm)
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento utenti...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Gestione Utenti</h1>
+        <div className="flex space-x-4">
+          <input
+            type="text"
+            placeholder="Cerca utenti..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+          />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Utenti ({filteredUsers.length} di {users.length})
+          </h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tessera Fisica</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Punti</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supermercato</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registrato</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredUsers.map((user) => (
+                <tr key={user.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-medium text-gray-900">{user.nome} {user.cognome}</div>
+                    <div className="text-sm text-gray-500">{user.telefono}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {user.email}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {user.tessera_fisica}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                      {user.punti} punti
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {user.store_name || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(user.created_at).toLocaleDateString('it-IT')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {user.active ? 'Attivo' : 'Disattivo'}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -1542,7 +1852,7 @@ const AuthRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/register" element={<QRRegistrationPage />} />
+      <Route path="/register" element={<TesseraCheckPage />} />
       
       <Route 
         path="/login" 
