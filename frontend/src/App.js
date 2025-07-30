@@ -1264,6 +1264,7 @@ const CashierManagement = () => {
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [regeneratingQR, setRegeneratingQR] = useState(false);
   const [formData, setFormData] = useState({
     store_id: '',
     cashier_number: '',
@@ -1297,6 +1298,22 @@ const CashierManagement = () => {
       setStores(response.data);
     } catch (error) {
       console.error('Error fetching stores:', error);
+    }
+  };
+
+  const regenerateAllQRCodes = async () => {
+    setRegeneratingQR(true);
+    try {
+      const response = await axios.post(`${API}/admin/regenerate-qr-codes`, {}, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      alert(`QR codes rigenerati: ${response.data.updated} di ${response.data.total_cashiers}`);
+      fetchCashiers(); // Refresh the list
+    } catch (error) {
+      alert('Errore durante la rigenerazione dei QR codes: ' + error.response?.data?.detail);
+    } finally {
+      setRegeneratingQR(false);
     }
   };
 
