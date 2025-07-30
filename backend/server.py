@@ -449,6 +449,26 @@ async def get_profile(current_user = Depends(get_current_user)):
         cashier_name=cashier_name
     )
 
+@api_router.post("/add-points/{points}")
+async def add_points(points: int, current_user = Depends(get_current_user)):
+    """Add points to user account"""
+    if current_user["type"] != "user":
+        raise HTTPException(status_code=403, detail="User access required")
+    
+    user = current_user["data"]
+    
+    # Update user points
+    new_points = user.punti + points
+    await db.users.update_one(
+        {"id": user.id},
+        {"$set": {"punti": new_points}}
+    )
+    
+    return {
+        "message": f"Aggiunti {points} punti",
+        "punti_totali": new_points
+    }
+
 # Admin Authentication Routes
 @api_router.post("/admin/login", response_model=AdminLoginResponse)
 async def admin_login(login_data: AdminLogin):
