@@ -509,8 +509,8 @@ def test_create_admin_user():
     try:
         headers = {"Authorization": f"Bearer {admin_access_token}"}
         admin_data = {
-            "username": "testadmin",
-            "email": "testadmin@imagross.it",
+            "username": f"testadmin_{uuid.uuid4().hex[:8]}",
+            "email": f"testadmin_{uuid.uuid4().hex[:8]}@imagross.it",
             "password": "TestAdmin123!",
             "full_name": "Test Administrator",
             "role": "admin"
