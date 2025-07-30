@@ -1489,6 +1489,7 @@ def run_all_tests():
         print("✅ QR Code Generation System: WORKING")
         print("✅ QR Registration Flow: WORKING")
         print("✅ Admin Dashboard Statistics: WORKING")
+        print("✅ Excel Import System: WORKING")
         print("✅ Access Control: WORKING")
         print("✅ User System: WORKING")
         return True
