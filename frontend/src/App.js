@@ -1940,7 +1940,7 @@ const AdminPanel = () => {
 
         {/* Main Content */}
         <div className="flex-1 p-6">
-          <ActiveComponent />
+          <ActiveComponent setActiveTab={setActiveTab} />
         </div>
       </div>
     </div>
