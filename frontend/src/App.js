@@ -1086,8 +1086,11 @@ const StoreManagement = () => {
   };
 
   const goToCashiers = (storeId) => {
-    // Navigate to cashiers tab with store filter
-    window.location.href = `/admin?tab=cashiers&store=${storeId}`;
+    // Update the activeTab to cashiers and add store filter to URL
+    setActiveTab('cashiers');
+    // Update URL with parameters
+    const newUrl = `${window.location.pathname}?tab=cashiers&store=${storeId}`;
+    window.history.pushState(null, '', newUrl);
   };
 
   if (loading) {
