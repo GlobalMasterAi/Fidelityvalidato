@@ -35,10 +35,10 @@ TEST_USER_DATA = {
     "nome": "Marco",
     "cognome": "Rossi", 
     "sesso": "M",
-    "email": "marco.rossi@email.it",
+    "email": f"marco.rossi.{uuid.uuid4().hex[:8]}@email.it",
     "telefono": "+39 333 1234567",
     "localita": "Milano",
-    "tessera_fisica": "IMG001234567",
+    "tessera_fisica": f"IMG{uuid.uuid4().hex[:9].upper()}",
     "password": "SecurePass123!"
 }
 
@@ -46,10 +46,10 @@ TEST_USER_DATA_2 = {
     "nome": "Giulia",
     "cognome": "Bianchi",
     "sesso": "F", 
-    "email": "giulia.bianchi@email.it",
+    "email": f"giulia.bianchi.{uuid.uuid4().hex[:8]}@email.it",
     "telefono": "+39 347 9876543",
     "localita": "Roma",
-    "tessera_fisica": "IMG007654321",
+    "tessera_fisica": f"IMG{uuid.uuid4().hex[:9].upper()}",
     "password": "MyPassword456!"
 }
 
