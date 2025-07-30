@@ -1771,6 +1771,7 @@ const UserManagement = () => {
       });
       
       setEditingUser(null);
+      setShowEditModal(false);
       fetchUsers(); // Refresh the list
       alert('Utente aggiornato con successo!');
     } catch (error) {
@@ -1779,7 +1780,9 @@ const UserManagement = () => {
   };
 
   const handleEditInputChange = (e) => {
-    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    const value = e.target.type === 'checkbox' ? e.target.checked : 
+                  e.target.type === 'number' ? parseFloat(e.target.value) || 0 : 
+                  e.target.value;
     setEditFormData({
       ...editFormData,
       [e.target.name]: value
