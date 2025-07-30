@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -19,16 +19,21 @@ const useAuth = () => {
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [admin, setAdmin] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const [adminToken, setAdminToken] = useState(localStorage.getItem('adminToken'));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (token) {
       fetchProfile();
+    } else if (adminToken) {
+      // Admin is logged in
+      setLoading(false);
     } else {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, adminToken]);
 
   const fetchProfile = async () => {
     try {
@@ -58,6 +63,20 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  const adminLogin = async (username, password) => {
+    try {
+      const response = await axios.post(`${API}/admin/login`, { username, password });
+      const { access_token, admin } = response.data;
+      localStorage.setItem('adminToken', access_token);
+      setAdminToken(access_token);
+      setAdmin(admin);
+      return true;
+    } catch (error) {
+      console.error('Admin login error:', error);
+      return false;
+    }
+  };
+
   const register = async (userData) => {
     try {
       const response = await axios.post(`${API}/register`, userData);
@@ -70,17 +89,24 @@ const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('adminToken');
     setToken(null);
+    setAdminToken(null);
     setUser(null);
+    setAdmin(null);
   };
 
   const value = {
     user,
+    admin,
     login,
+    adminLogin,
     register,
     logout,
     loading,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    isAdminAuthenticated: !!admin,
+    adminToken
   };
 
   return (
@@ -92,7 +118,7 @@ const AuthProvider = ({ children }) => {
 
 // Components
 const Header = () => {
-  const { user, logout } = useAuth();
+  const { user, admin, logout } = useAuth();
   
   return (
     <header className="bg-gradient-to-r from-imagross-orange to-imagross-red text-white p-4">
@@ -103,9 +129,14 @@ const Header = () => {
             <span className="text-imagross-green block text-sm">supermercati</span>
           </div>
         </div>
-        {user && (
+        {(user || admin) && (
           <div className="flex items-center space-x-4">
-            <span className="text-sm">Ciao, {user.nome}!</span>
+            <span className="text-sm">
+              Ciao, {user ? user.nome : admin?.full_name}!
+              {admin && <span className="ml-1 bg-yellow-500 text-black px-2 py-1 rounded text-xs">
+                {admin.role === 'super_admin' ? 'SUPER ADMIN' : 'ADMIN'}
+              </span>}
+            </span>
             <button 
               onClick={logout}
               className="bg-white text-imagross-orange px-4 py-2 rounded hover:bg-gray-100 transition"
@@ -116,6 +147,283 @@ const Header = () => {
         )}
       </div>
     </header>
+  );
+};
+
+const QRRegistrationPage = () => {
+  const [searchParams] = useSearchParams();
+  const [qrInfo, setQrInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    nome: '',
+    cognome: '',
+    sesso: 'M',
+    email: '',
+    telefono: '',
+    localita: '',
+    tessera_fisica: '',
+    password: '',
+    indirizzo: '',
+    provincia: '',
+    newsletter: false
+  });
+  const { register } = useAuth();
+
+  const qrCode = searchParams.get('qr');
+
+  useEffect(() => {
+    if (qrCode) {
+      fetchQRInfo();
+    } else {
+      setLoading(false);
+      setError('Codice QR non valido');
+    }
+  }, [qrCode]);
+
+  const fetchQRInfo = async () => {
+    try {
+      const response = await axios.get(`${API}/qr/${qrCode}`);
+      setQrInfo(response.data);
+    } catch (error) {
+      setError('Codice QR non valido o scaduto');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setFormData({
+      ...formData,
+      [e.target.name]: value
+    });
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    const registrationData = {
+      ...formData,
+      store_id: qrInfo?.store?.id,
+      cashier_id: qrInfo?.cashier?.id
+    };
+    
+    const result = await register(registrationData);
+    if (result.success) {
+      alert('Registrazione completata! Ora puoi accedere.');
+      window.location.href = '/login';
+    } else {
+      setError(result.error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento informazioni QR...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <div className="flex items-center justify-center py-12 px-4">
+        <div className="max-w-2xl w-full space-y-8">
+          {qrInfo ? (
+            <>
+              <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Benvenuto in ImaGross!
+                </h2>
+                <div className="bg-gradient-to-r from-imagross-orange to-imagross-red text-white p-4 rounded-lg">
+                  <p className="text-lg font-semibold">{qrInfo.store.name}</p>
+                  <p>{qrInfo.store.address}, {qrInfo.store.city}</p>
+                  <p className="text-sm mt-2">
+                    Cassa: {qrInfo.cashier.name} (#{qrInfo.cashier.cashier_number})
+                  </p>
+                </div>
+              </div>
+
+              {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                  {error}
+                </div>
+              )}
+
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">
+                  Completa la tua registrazione
+                </h3>
+                
+                <form className="space-y-4" onSubmit={handleRegister}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Nome *
+                      </label>
+                      <input
+                        type="text"
+                        name="nome"
+                        value={formData.nome}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Cognome *
+                      </label>
+                      <input
+                        type="text"
+                        name="cognome"
+                        value={formData.cognome}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sesso *
+                    </label>
+                    <select
+                      name="sesso"
+                      value={formData.sesso}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      required
+                    >
+                      <option value="M">Maschio</option>
+                      <option value="F">Femmina</option>
+                      <option value="Other">Altro</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Telefono *
+                      </label>
+                      <input
+                        type="tel"
+                        name="telefono"
+                        value={formData.telefono}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Località *
+                      </label>
+                      <input
+                        type="text"
+                        name="localita"
+                        value={formData.localita}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Indirizzo
+                    </label>
+                    <input
+                      type="text"
+                      name="indirizzo"
+                      value={formData.indirizzo}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Numero Tessera Fisica *
+                    </label>
+                    <input
+                      type="text"
+                      name="tessera_fisica"
+                      value={formData.tessera_fisica}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      placeholder="es. 2020000000013"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Password *
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="newsletter"
+                      checked={formData.newsletter}
+                      onChange={handleInputChange}
+                      className="h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                    />
+                    <label className="ml-2 block text-sm text-gray-900">
+                      Accetto di ricevere newsletter e comunicazioni promozionali
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
+                  >
+                    Registrati ora
+                  </button>
+                </form>
+              </div>
+            </>
+          ) : (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-center">
+              <h2 className="text-lg font-bold">Errore</h2>
+              <p>{error}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -361,6 +669,724 @@ const LoginPage = () => {
               {isLogin ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
             </button>
           </div>
+
+          <div className="text-center mt-6">
+            <a 
+              href="/admin/login"
+              className="text-sm text-gray-500 hover:text-imagross-orange transition duration-200"
+            >
+              Area Amministratori
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AdminLoginPage = () => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { adminLogin } = useAuth();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    const success = await adminLogin(username, password);
+    if (!success) {
+      setError('Credenziali amministratore non valide');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <div className="flex items-center justify-center py-12 px-4">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              Accesso Amministratori
+            </h2>
+            <p className="text-gray-600">
+              Area riservata agli amministratori ImaGross
+            </p>
+          </div>
+
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
+
+          <form className="space-y-6" onSubmit={handleLogin}>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Username
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-2 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
+            >
+              Accedi come Admin
+            </button>
+          </form>
+
+          <div className="text-center">
+            <a 
+              href="/login"
+              className="text-sm text-imagross-orange hover:text-imagross-red transition duration-200"
+            >
+              ← Torna al login utenti
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Admin Dashboard Components
+const AdminDashboard = () => {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { adminToken } = useAuth();
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/stats/dashboard`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      setStats(response.data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento statistiche...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-gray-900">Dashboard Amministratore</h1>
+      
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-imagross-orange rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Utenti Totali</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.total_users}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-imagross-green rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H3.862a2 2 0 01-1.995-1.858L1 7m18 0l-2-4H3L1 7m18 0H1"/>
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Supermercati</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.total_stores}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-imagross-red rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z"/>
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Casse Attive</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.total_cashiers}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-500 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Registrazioni Settimana</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.recent_registrations}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-500 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7a1 1 0 00-1-1H5a1 1 0 00-1 1v1m8 0v8a1 1 0 01-1 1H5a1 1 0 01-1-1v-8"/>
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Punti Distribuiti</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.total_points_distributed}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const StoreManagement = () => {
+  const [stores, setStores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    code: '',
+    address: '',
+    city: '',
+    province: '',
+    phone: '',
+    manager_name: ''
+  });
+  const { adminToken } = useAuth();
+
+  useEffect(() => {
+    fetchStores();
+  }, []);
+
+  const fetchStores = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/stores`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      setStores(response.data);
+    } catch (error) {
+      console.error('Error fetching stores:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleCreateStore = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/admin/stores`, formData, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setFormData({
+        name: '',
+        code: '',
+        address: '',
+        city: '',
+        province: '',
+        phone: '',
+        manager_name: ''
+      });
+      setShowCreateForm(false);
+      fetchStores();
+      alert('Supermercato creato con successo!');
+    } catch (error) {
+      alert('Errore nella creazione del supermercato: ' + error.response?.data?.detail);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento supermercati...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Gestione Supermercati</h1>
+        <button
+          onClick={() => setShowCreateForm(!showCreateForm)}
+          className="bg-imagross-orange text-white px-4 py-2 rounded hover:bg-imagross-red transition"
+        >
+          + Nuovo Supermercato
+        </button>
+      </div>
+
+      {showCreateForm && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-bold mb-4">Crea Nuovo Supermercato</h2>
+          <form onSubmit={handleCreateStore} className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Codice</label>
+              <input
+                type="text"
+                name="code"
+                value={formData.code}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="es. IMAGROSS 1"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Indirizzo</label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Città</label>
+              <input
+                type="text"
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+              <input
+                type="text"
+                name="province"
+                value={formData.province}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Manager</label>
+              <input
+                type="text"
+                name="manager_name"
+                value={formData.manager_name}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div className="col-span-2 flex space-x-4">
+              <button
+                type="submit"
+                className="bg-imagross-orange text-white px-4 py-2 rounded hover:bg-imagross-red transition"
+              >
+                Crea Supermercato
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(false)}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
+              >
+                Annulla
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Supermercati ({stores.length})</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Codice</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Città</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Casse</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Azioni</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {stores.map((store) => (
+                <tr key={store.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-medium text-gray-900">{store.name}</div>
+                    <div className="text-sm text-gray-500">{store.address}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{store.code}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{store.city}, {store.province}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      store.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {store.status === 'active' ? 'Attivo' : 'Inattivo'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{store.total_cashiers}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <a href={`/admin/stores/${store.id}/cashiers`} className="text-imagross-orange hover:text-imagross-red">
+                      Gestisci Casse
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CashierManagement = () => {
+  const [cashiers, setCashiers] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [formData, setFormData] = useState({
+    store_id: '',
+    cashier_number: '',
+    name: ''
+  });
+  const { adminToken } = useAuth();
+
+  useEffect(() => {
+    fetchCashiers();
+    fetchStores();
+  }, []);
+
+  const fetchCashiers = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/cashiers`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      setCashiers(response.data);
+    } catch (error) {
+      console.error('Error fetching cashiers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStores = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/stores`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      setStores(response.data);
+    } catch (error) {
+      console.error('Error fetching stores:', error);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleCreateCashier = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/admin/cashiers`, {
+        ...formData,
+        cashier_number: parseInt(formData.cashier_number)
+      }, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setFormData({
+        store_id: '',
+        cashier_number: '',
+        name: ''
+      });
+      setShowCreateForm(false);
+      fetchCashiers();
+      alert('Cassa creata con successo!');
+    } catch (error) {
+      alert('Errore nella creazione della cassa: ' + error.response?.data?.detail);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento casse...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Gestione Casse</h1>
+        <button
+          onClick={() => setShowCreateForm(!showCreateForm)}
+          className="bg-imagross-orange text-white px-4 py-2 rounded hover:bg-imagross-red transition"
+        >
+          + Nuova Cassa
+        </button>
+      </div>
+
+      {showCreateForm && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-bold mb-4">Crea Nuova Cassa</h2>
+          <form onSubmit={handleCreateCashier} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Supermercato</label>
+              <select
+                name="store_id"
+                value={formData.store_id}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                required
+              >
+                <option value="">Seleziona supermercato</option>
+                {stores.map(store => (
+                  <option key={store.id} value={store.id}>{store.name} - {store.code}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Numero Cassa</label>
+              <input
+                type="number"
+                name="cashier_number"
+                value={formData.cashier_number}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                min="1"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nome Cassa</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="es. Cassa 1"
+                required
+              />
+            </div>
+            <div className="flex space-x-4">
+              <button
+                type="submit"
+                className="bg-imagross-orange text-white px-4 py-2 rounded hover:bg-imagross-red transition"
+              >
+                Crea Cassa
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(false)}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
+              >
+                Annulla
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Casse ({cashiers.length})</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supermercato</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">QR Code</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registrazioni</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Azioni</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {cashiers.map((cashier) => (
+                <tr key={cashier.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-medium text-gray-900">{cashier.name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {cashier.store_name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    #{cashier.cashier_number}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <code className="bg-gray-100 px-2 py-1 text-xs rounded">{cashier.qr_code}</code>
+                      <img 
+                        src={`data:image/png;base64,${cashier.qr_code_image}`}
+                        alt="QR Code"
+                        className="w-8 h-8"
+                        title={`QR: ${cashier.qr_code}`}
+                      />
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {cashier.total_registrations}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      cashier.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {cashier.is_active ? 'Attiva' : 'Inattiva'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button
+                      onClick={() => {
+                        const url = `${window.location.origin}/register?qr=${cashier.qr_code}`;
+                        navigator.clipboard.writeText(url);
+                        alert('Link di registrazione copiato!');
+                      }}
+                      className="text-imagross-orange hover:text-imagross-red"
+                    >
+                      Copia Link
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AdminPanel = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const { admin } = useAuth();
+
+  const tabs = [
+    { id: 'dashboard', name: 'Dashboard', component: AdminDashboard },
+    { id: 'stores', name: 'Supermercati', component: StoreManagement },
+    { id: 'cashiers', name: 'Casse', component: CashierManagement },
+  ];
+
+  const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || AdminDashboard;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <div className="flex">
+        {/* Sidebar */}
+        <div className="w-64 bg-white shadow-sm">
+          <div className="p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Admin Panel</h2>
+            <nav className="space-y-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition ${
+                    activeTab === tab.id
+                      ? 'bg-imagross-orange text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  {tab.name}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 p-6">
+          <ActiveComponent />
         </div>
       </div>
     </div>
@@ -386,6 +1412,9 @@ const Dashboard = () => {
                   <div>
                     <h3 className="text-xl font-bold">ImaGross</h3>
                     <p className="text-sm opacity-90">LOYALTY CARD</p>
+                    {user.store_name && (
+                      <p className="text-xs opacity-75 mt-1">{user.store_name}</p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold">{user.punti}</p>
@@ -442,6 +1471,18 @@ const Dashboard = () => {
                   <span className="text-gray-600">Tessera Fisica:</span>
                   <span className="font-medium">{user.tessera_fisica}</span>
                 </div>
+                {user.store_name && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Supermercato:</span>
+                    <span className="font-medium">{user.store_name}</span>
+                  </div>
+                )}
+                {user.cashier_name && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Registrato via:</span>
+                    <span className="font-medium">{user.cashier_name}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-600">Membro dal:</span>
                   <span className="font-medium">
@@ -485,7 +1526,7 @@ const App = () => {
 };
 
 const AuthRoutes = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, isAdminAuthenticated, loading } = useAuth();
 
   if (loading) {
     return (
@@ -500,17 +1541,31 @@ const AuthRoutes = () => {
 
   return (
     <Routes>
+      <Route path="/register" element={<QRRegistrationPage />} />
+      
       <Route 
         path="/login" 
         element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} 
       />
+      
+      <Route 
+        path="/admin/login" 
+        element={isAdminAuthenticated ? <Navigate to="/admin" /> : <AdminLoginPage />} 
+      />
+      
+      <Route 
+        path="/admin/*" 
+        element={isAdminAuthenticated ? <AdminPanel /> : <Navigate to="/admin/login" />} 
+      />
+      
       <Route 
         path="/dashboard" 
         element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} 
       />
+      
       <Route 
         path="/" 
-        element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} 
+        element={<Navigate to={isAuthenticated ? "/dashboard" : (isAdminAuthenticated ? "/admin" : "/login")} />} 
       />
     </Routes>
   );

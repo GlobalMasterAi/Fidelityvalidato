@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -16,6 +16,8 @@ import qrcode
 import io
 import base64
 from enum import Enum
+import pandas as pd
+import json
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -41,7 +43,56 @@ class Gender(str, Enum):
     F = "F"
     OTHER = "Other"
 
-# Models
+class UserRole(str, Enum):
+    USER = "user"
+    ADMIN = "admin"
+    SUPER_ADMIN = "super_admin"
+
+class StoreStatus(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    MAINTENANCE = "maintenance"
+
+# Enhanced Models
+class Store(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    code: str  # IMAGROSS 1, IMAGROSS 2, etc.
+    address: str
+    city: str
+    province: str
+    phone: str
+    status: StoreStatus = StoreStatus.ACTIVE
+    manager_name: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    total_cashiers: int = 0
+
+class StoreCreate(BaseModel):
+    name: str
+    code: str
+    address: str
+    city: str
+    province: str
+    phone: str
+    manager_name: Optional[str] = None
+
+class Cashier(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    store_id: str
+    cashier_number: int
+    name: str
+    qr_code: str
+    qr_code_image: str  # Base64 image
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    total_registrations: int = 0
+
+class CashierCreate(BaseModel):
+    store_id: str
+    cashier_number: int
+    name: str
+
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     nome: str
@@ -54,8 +105,20 @@ class User(BaseModel):
     tessera_digitale: str = Field(default_factory=lambda: str(uuid.uuid4()))
     punti: int = 0
     password_hash: str
+    role: UserRole = UserRole.USER
+    store_id: Optional[str] = None  # Store where registered
+    cashier_id: Optional[str] = None  # Cashier where registered
     created_at: datetime = Field(default_factory=datetime.utcnow)
     active: bool = True
+    # Additional fields from Excel
+    indirizzo: Optional[str] = None
+    numero_civico: Optional[str] = None
+    provincia: Optional[str] = None
+    newsletter: bool = False
+    coniugato: Optional[bool] = None
+    numero_figli: int = 0
+    animali: Optional[str] = None
+    intolleranze: Optional[str] = None
 
 class UserCreate(BaseModel):
     nome: str
@@ -66,9 +129,49 @@ class UserCreate(BaseModel):
     localita: str
     tessera_fisica: str
     password: str
+    # Optional registration context
+    store_id: Optional[str] = None
+    cashier_id: Optional[str] = None
+    # Additional optional fields
+    indirizzo: Optional[str] = None
+    provincia: Optional[str] = None
+    newsletter: bool = False
+
+class Transaction(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    store_id: str
+    cashier_id: Optional[str] = None
+    scontrino_number: str
+    date: datetime
+    total_amount: float
+    points_earned: int
+    items: List[dict] = []
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class AdminUser(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    username: str
+    email: EmailStr
+    password_hash: str
+    role: UserRole
+    full_name: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    active: bool = True
+
+class AdminUserCreate(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+    full_name: str
+    role: UserRole = UserRole.ADMIN
 
 class UserLogin(BaseModel):
     email: EmailStr
+    password: str
+
+class AdminLogin(BaseModel):
+    username: str
     password: str
 
 class UserResponse(BaseModel):
@@ -84,11 +187,18 @@ class UserResponse(BaseModel):
     punti: int
     created_at: datetime
     qr_code: str
+    store_name: Optional[str] = None
+    cashier_name: Optional[str] = None
 
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+
+class AdminLoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+    admin: dict
 
 # Helper functions
 def hash_password(password: str) -> str:
@@ -112,22 +222,87 @@ def generate_qr_code(data: str) -> str:
     buf.seek(0)
     return base64.b64encode(buf.getvalue()).decode()
 
+def calculate_points(amount: float) -> int:
+    # 1 punto ogni 10 euro
+    return int(amount / 10)
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
         user_id: str = payload.get("sub")
+        user_type: str = payload.get("type", "user")
+        
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         
-        user = await db.users.find_one({"id": user_id})
-        if user is None:
-            raise HTTPException(status_code=401, detail="User not found")
-        
-        return User(**user)
+        if user_type == "admin":
+            admin = await db.admins.find_one({"id": user_id})
+            if admin is None:
+                raise HTTPException(status_code=401, detail="Admin not found")
+            return {"type": "admin", "data": AdminUser(**admin)}
+        else:
+            user = await db.users.find_one({"id": user_id})
+            if user is None:
+                raise HTTPException(status_code=401, detail="User not found")
+            return {"type": "user", "data": User(**user)}
+            
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    current_user = await get_current_user(credentials)
+    if current_user["type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    admin = current_user["data"]
+    if admin.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Admin role required")
+    
+    return admin
+
+async def get_super_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    admin = await get_current_admin(credentials)
+    if admin.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    return admin
+
+# Initialize Super Admin
+async def init_super_admin():
+    existing_admin = await db.admins.find_one({"role": "super_admin"})
+    if not existing_admin:
+        super_admin = AdminUser(
+            username="superadmin",
+            email="superadmin@imagross.it",
+            password_hash=hash_password("ImaGross2024!"),
+            role=UserRole.SUPER_ADMIN,
+            full_name="Super Administrator"
+        )
+        await db.admins.insert_one(super_admin.dict())
+        print("Super admin created - Username: superadmin, Password: ImaGross2024!")
+
 # Routes
+
+# Public Routes
+@api_router.get("/")
+async def root():
+    return {"message": "ImaGross Loyalty API v2.0 - Scalable System"}
+
+@api_router.get("/qr/{qr_code}")
+async def get_qr_info(qr_code: str):
+    """Get information about a QR code (store and cashier info)"""
+    cashier = await db.cashiers.find_one({"qr_code": qr_code})
+    if not cashier:
+        raise HTTPException(status_code=404, detail="QR code not found")
+    
+    store = await db.stores.find_one({"id": cashier["store_id"]})
+    
+    return {
+        "store": store,
+        "cashier": cashier,
+        "registration_url": f"/register?qr={qr_code}"
+    }
+
+# User Authentication Routes
 @api_router.post("/register", response_model=UserResponse)
 async def register(user_data: UserCreate):
     # Check if user already exists
@@ -139,6 +314,22 @@ async def register(user_data: UserCreate):
     existing_tessera = await db.users.find_one({"tessera_fisica": user_data.tessera_fisica})
     if existing_tessera:
         raise HTTPException(status_code=400, detail="Tessera fisica già registrata")
+    
+    # If registering via QR code, validate cashier
+    store_name = None
+    cashier_name = None
+    if user_data.store_id and user_data.cashier_id:
+        store = await db.stores.find_one({"id": user_data.store_id})
+        cashier = await db.cashiers.find_one({"id": user_data.cashier_id})
+        if store:
+            store_name = store["name"]
+        if cashier:
+            cashier_name = cashier["name"]
+            # Update cashier registration count
+            await db.cashiers.update_one(
+                {"id": user_data.cashier_id},
+                {"$inc": {"total_registrations": 1}}
+            )
     
     # Create user
     user_dict = user_data.dict()
@@ -163,7 +354,9 @@ async def register(user_data: UserCreate):
         tessera_digitale=user.tessera_digitale,
         punti=user.punti,
         created_at=user.created_at,
-        qr_code=qr_code
+        qr_code=qr_code,
+        store_name=store_name,
+        cashier_name=cashier_name
     )
 
 @api_router.post("/login", response_model=LoginResponse)
@@ -175,8 +368,20 @@ async def login(login_data: UserLogin):
     if not user["active"]:
         raise HTTPException(status_code=401, detail="Account disattivato")
     
-    access_token = create_access_token(data={"sub": user["id"]})
+    access_token = create_access_token(data={"sub": user["id"], "type": "user"})
     qr_code = generate_qr_code(user["tessera_digitale"])
+    
+    # Get store and cashier names
+    store_name = None
+    cashier_name = None
+    if user.get("store_id"):
+        store = await db.stores.find_one({"id": user["store_id"]})
+        if store:
+            store_name = store["name"]
+    if user.get("cashier_id"):
+        cashier = await db.cashiers.find_one({"id": user["cashier_id"]})
+        if cashier:
+            cashier_name = cashier["name"]
     
     user_response = UserResponse(
         id=user["id"],
@@ -190,7 +395,9 @@ async def login(login_data: UserLogin):
         tessera_digitale=user["tessera_digitale"],
         punti=user["punti"],
         created_at=user["created_at"],
-        qr_code=qr_code
+        qr_code=qr_code,
+        store_name=store_name,
+        cashier_name=cashier_name
     )
     
     return LoginResponse(
@@ -200,35 +407,294 @@ async def login(login_data: UserLogin):
     )
 
 @api_router.get("/profile", response_model=UserResponse)
-async def get_profile(current_user: User = Depends(get_current_user)):
-    qr_code = generate_qr_code(current_user.tessera_digitale)
+async def get_profile(current_user = Depends(get_current_user)):
+    if current_user["type"] != "user":
+        raise HTTPException(status_code=403, detail="User access required")
+    
+    user = current_user["data"]
+    qr_code = generate_qr_code(user.tessera_digitale)
+    
+    # Get store and cashier names
+    store_name = None
+    cashier_name = None
+    if user.store_id:
+        store = await db.stores.find_one({"id": user.store_id})
+        if store:
+            store_name = store["name"]
+    if user.cashier_id:
+        cashier = await db.cashiers.find_one({"id": user.cashier_id})
+        if cashier:
+            cashier_name = cashier["name"]
     
     return UserResponse(
-        id=current_user.id,
-        nome=current_user.nome,
-        cognome=current_user.cognome,
-        sesso=current_user.sesso,
-        email=current_user.email,
-        telefono=current_user.telefono,
-        localita=current_user.localita,
-        tessera_fisica=current_user.tessera_fisica,
-        tessera_digitale=current_user.tessera_digitale,
-        punti=current_user.punti,
-        created_at=current_user.created_at,
-        qr_code=qr_code
+        id=user.id,
+        nome=user.nome,
+        cognome=user.cognome,
+        sesso=user.sesso,
+        email=user.email,
+        telefono=user.telefono,
+        localita=user.localita,
+        tessera_fisica=user.tessera_fisica,
+        tessera_digitale=user.tessera_digitale,
+        punti=user.punti,
+        created_at=user.created_at,
+        qr_code=qr_code,
+        store_name=store_name,
+        cashier_name=cashier_name
     )
 
-@api_router.post("/add-points/{points}")
-async def add_points(points: int, current_user: User = Depends(get_current_user)):
-    await db.users.update_one(
-        {"id": current_user.id},
-        {"$inc": {"punti": points}}
+# Admin Authentication Routes
+@api_router.post("/admin/login", response_model=AdminLoginResponse)
+async def admin_login(login_data: AdminLogin):
+    admin = await db.admins.find_one({"username": login_data.username})
+    if not admin or not verify_password(login_data.password, admin["password_hash"]):
+        raise HTTPException(status_code=401, detail="Credenziali non valide")
+    
+    if not admin["active"]:
+        raise HTTPException(status_code=401, detail="Account disattivato")
+    
+    access_token = create_access_token(data={"sub": admin["id"], "type": "admin"})
+    
+    admin_data = {
+        "id": admin["id"],
+        "username": admin["username"],
+        "email": admin["email"],
+        "role": admin["role"],
+        "full_name": admin["full_name"],
+        "created_at": admin["created_at"]
+    }
+    
+    return AdminLoginResponse(
+        access_token=access_token,
+        token_type="bearer",
+        admin=admin_data
     )
-    return {"message": f"Aggiunti {points} punti", "punti_totali": current_user.punti + points}
 
-@api_router.get("/")
-async def root():
-    return {"message": "ImaGross Loyalty API"}
+# Super Admin Routes
+@api_router.post("/admin/create", response_model=dict)
+async def create_admin(admin_data: AdminUserCreate, current_admin = Depends(get_super_admin)):
+    # Check if admin already exists
+    existing_admin = await db.admins.find_one({"$or": [
+        {"username": admin_data.username},
+        {"email": admin_data.email}
+    ]})
+    if existing_admin:
+        raise HTTPException(status_code=400, detail="Admin già esistente")
+    
+    # Create admin
+    admin_dict = admin_data.dict()
+    admin_dict["password_hash"] = hash_password(admin_data.password)
+    del admin_dict["password"]
+    
+    admin = AdminUser(**admin_dict)
+    await db.admins.insert_one(admin.dict())
+    
+    return {"message": "Admin creato con successo", "admin_id": admin.id}
+
+# Store Management Routes
+@api_router.post("/admin/stores", response_model=Store)
+async def create_store(store_data: StoreCreate, current_admin = Depends(get_current_admin)):
+    # Check if store code already exists
+    existing_store = await db.stores.find_one({"code": store_data.code})
+    if existing_store:
+        raise HTTPException(status_code=400, detail="Codice supermercato già esistente")
+    
+    store = Store(**store_data.dict())
+    await db.stores.insert_one(store.dict())
+    
+    return store
+
+@api_router.get("/admin/stores", response_model=List[Store])
+async def get_stores(current_admin = Depends(get_current_admin)):
+    stores = await db.stores.find().to_list(1000)
+    return [Store(**store) for store in stores]
+
+@api_router.put("/admin/stores/{store_id}", response_model=Store)
+async def update_store(store_id: str, store_data: StoreCreate, current_admin = Depends(get_current_admin)):
+    store = await db.stores.find_one({"id": store_id})
+    if not store:
+        raise HTTPException(status_code=404, detail="Supermercato non trovato")
+    
+    update_data = store_data.dict()
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.stores.update_one({"id": store_id}, {"$set": update_data})
+    updated_store = await db.stores.find_one({"id": store_id})
+    
+    return Store(**updated_store)
+
+# Cashier Management Routes
+@api_router.post("/admin/cashiers", response_model=Cashier)
+async def create_cashier(cashier_data: CashierCreate, current_admin = Depends(get_current_admin)):
+    # Verify store exists
+    store = await db.stores.find_one({"id": cashier_data.store_id})
+    if not store:
+        raise HTTPException(status_code=404, detail="Supermercato non trovato")
+    
+    # Check if cashier number already exists for this store
+    existing_cashier = await db.cashiers.find_one({
+        "store_id": cashier_data.store_id,
+        "cashier_number": cashier_data.cashier_number
+    })
+    if existing_cashier:
+        raise HTTPException(status_code=400, detail="Numero cassa già esistente per questo supermercato")
+    
+    # Generate QR code data and image
+    qr_data = f"{store['code']}-CASSA{cashier_data.cashier_number}"
+    qr_image = generate_qr_code(qr_data)
+    
+    cashier = Cashier(
+        store_id=cashier_data.store_id,
+        cashier_number=cashier_data.cashier_number,
+        name=cashier_data.name,
+        qr_code=qr_data,
+        qr_code_image=qr_image
+    )
+    
+    await db.cashiers.insert_one(cashier.dict())
+    
+    # Update store total cashiers count
+    await db.stores.update_one(
+        {"id": cashier_data.store_id},
+        {"$inc": {"total_cashiers": 1}}
+    )
+    
+    return cashier
+
+@api_router.get("/admin/stores/{store_id}/cashiers", response_model=List[Cashier])
+async def get_store_cashiers(store_id: str, current_admin = Depends(get_current_admin)):
+    cashiers = await db.cashiers.find({"store_id": store_id}).to_list(1000)
+    return [Cashier(**cashier) for cashier in cashiers]
+
+@api_router.get("/admin/cashiers", response_model=List[dict])
+async def get_all_cashiers(current_admin = Depends(get_current_admin)):
+    cashiers = await db.cashiers.find().to_list(1000)
+    result = []
+    
+    for cashier in cashiers:
+        store = await db.stores.find_one({"id": cashier["store_id"]})
+        result.append({
+            **cashier,
+            "store_name": store["name"] if store else "Unknown"
+        })
+    
+    return result
+
+# Statistics and Analytics Routes
+@api_router.get("/admin/stats/dashboard")
+async def get_dashboard_stats(current_admin = Depends(get_current_admin)):
+    total_users = await db.users.count_documents({})
+    total_stores = await db.stores.count_documents({})
+    total_cashiers = await db.cashiers.count_documents({})
+    total_transactions = await db.transactions.count_documents({})
+    
+    # Recent registrations (last 7 days)
+    from datetime import timedelta
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    recent_registrations = await db.users.count_documents({
+        "created_at": {"$gte": week_ago}
+    })
+    
+    # Total points distributed
+    pipeline = [
+        {"$group": {"_id": None, "total_points": {"$sum": "$punti"}}}
+    ]
+    points_result = await db.users.aggregate(pipeline).to_list(1)
+    total_points = points_result[0]["total_points"] if points_result else 0
+    
+    return {
+        "total_users": total_users,
+        "total_stores": total_stores,
+        "total_cashiers": total_cashiers,
+        "total_transactions": total_transactions,
+        "recent_registrations": recent_registrations,
+        "total_points_distributed": total_points
+    }
+
+@api_router.get("/admin/stats/stores")
+async def get_stores_stats(current_admin = Depends(get_current_admin)):
+    stores = await db.stores.find().to_list(1000)
+    result = []
+    
+    for store in stores:
+        users_count = await db.users.count_documents({"store_id": store["id"]})
+        cashiers_count = await db.cashiers.count_documents({"store_id": store["id"]})
+        
+        result.append({
+            **store,
+            "users_registered": users_count,
+            "active_cashiers": cashiers_count
+        })
+    
+    return result
+
+# Data Import Routes
+@api_router.post("/admin/import/excel")
+async def import_excel_data(
+    file: UploadFile = File(...),
+    data_type: str = "users",  # "users" or "transactions"
+    current_admin = Depends(get_super_admin)
+):
+    try:
+        contents = await file.read()
+        
+        # Save temporarily
+        temp_path = f"/tmp/{file.filename}"
+        with open(temp_path, "wb") as f:
+            f.write(contents)
+        
+        # Read Excel
+        df = pd.read_excel(temp_path)
+        
+        imported_count = 0
+        
+        if data_type == "users":
+            for _, row in df.iterrows():
+                # Map Excel columns to our user model
+                user_data = {
+                    "nome": str(row.get("nome", "")),
+                    "cognome": str(row.get("cognome", "")),
+                    "sesso": "M" if row.get("sesso") == "Maschio" else "F",
+                    "email": str(row.get("email", f"import_{uuid.uuid4()}@imagross.it")),
+                    "telefono": str(row.get("tel_cell", "")),
+                    "localita": str(row.get("citta", "")),
+                    "tessera_fisica": str(row.get("card_number", "")),
+                    "password_hash": hash_password("imported123"),
+                    "tessera_digitale": str(uuid.uuid4()),
+                    "punti": 0,
+                    "role": "user",
+                    "active": True,
+                    "indirizzo": str(row.get("indirizzo", "")),
+                    "provincia": str(row.get("punto_provincia", "")),
+                    "newsletter": bool(row.get("newsletter", 0)),
+                    "numero_figli": int(row.get("numero_figli", 0)),
+                    "created_at": datetime.utcnow()
+                }
+                
+                # Check if user already exists
+                existing = await db.users.find_one({
+                    "$or": [
+                        {"email": user_data["email"]},
+                        {"tessera_fisica": user_data["tessera_fisica"]}
+                    ]
+                })
+                
+                if not existing and user_data["tessera_fisica"]:
+                    user = User(**user_data)
+                    await db.users.insert_one(user.dict())
+                    imported_count += 1
+        
+        # Clean up
+        os.remove(temp_path)
+        
+        return {
+            "message": f"Importati {imported_count} record",
+            "total_rows": len(df),
+            "imported": imported_count
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Errore import: {str(e)}")
 
 # Include the router in the main app
 app.include_router(api_router)
@@ -247,6 +713,10 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def startup_event():
+    await init_super_admin()
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
