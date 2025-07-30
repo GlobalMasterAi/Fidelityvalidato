@@ -109,17 +109,53 @@ class User(BaseModel):
     store_id: Optional[str] = None  # Store where registered
     cashier_id: Optional[str] = None  # Cashier where registered
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
     active: bool = True
     migrated: bool = False  # For tessera migration tracking
-    # Additional fields from Excel
+    
+    # Expanded fields from JSON anagrafica
+    stato_tessera: str = "01"  # stato_tes
     indirizzo: Optional[str] = None
+    cap: Optional[str] = None
     numero_civico: Optional[str] = None
     provincia: Optional[str] = None
+    data_nascita: Optional[str] = None  # data_nas
     newsletter: bool = False
+    data_creazione: Optional[str] = None  # data_creazione from JSON
+    data_ultima_spesa: Optional[str] = None  # data_ult_sc
+    progressivo_spesa: float = 0.0  # prog_spesa
+    bollini: int = 0
+    
+    # Privacy settings
+    consenso_dati_personali: bool = True  # dati_pers
+    consenso_dati_pubblicitari: bool = True  # dati_pubb
+    consenso_profilazione: Optional[bool] = None  # profilazione
+    consenso_marketing: Optional[bool] = None  # marketing
+    
+    # Family data
     coniugato: Optional[bool] = None
+    data_matrimonio: Optional[str] = None  # data_coniugato
     numero_figli: int = 0
-    animali: Optional[str] = None
-    intolleranze: Optional[str] = None
+    data_figlio_1: Optional[str] = None
+    data_figlio_2: Optional[str] = None
+    data_figlio_3: Optional[str] = None
+    data_figlio_4: Optional[str] = None
+    data_figlio_5: Optional[str] = None
+    
+    # Animals
+    animali_cani: bool = False  # animali_1
+    animali_gatti: bool = False  # animali_2
+    
+    # Food intolerances
+    intolleranza_lattosio: bool = False  # lattosio
+    intolleranza_glutine: bool = False  # glutine
+    intolleranza_nichel: bool = False  # nichel
+    celiachia: bool = False
+    altra_intolleranza: Optional[str] = None  # altro_intolleranza
+    
+    # Business data
+    richiede_fattura: bool = False  # fattura
+    ragione_sociale: Optional[str] = None
 
 class UserCreate(BaseModel):
     nome: str
