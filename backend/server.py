@@ -294,7 +294,13 @@ async def get_qr_info(qr_code: str):
     if not cashier:
         raise HTTPException(status_code=404, detail="QR code not found")
     
+    # Remove MongoDB _id field to avoid serialization issues
+    if "_id" in cashier:
+        del cashier["_id"]
+    
     store = await db.stores.find_one({"id": cashier["store_id"]})
+    if store and "_id" in store:
+        del store["_id"]
     
     return {
         "store": store,
