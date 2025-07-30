@@ -1246,9 +1246,10 @@ def test_super_admin_only_endpoints():
         headers = {"Authorization": f"Bearer {admin_access_token}"}
         
         # Test creating admin (super admin only)
+        unique_id = uuid.uuid4().hex[:8]
         admin_data = {
-            "username": "testadmin2",
-            "email": "testadmin2@imagross.it", 
+            "username": f"testadmin2_{unique_id}",
+            "email": f"testadmin2_{unique_id}@imagross.it", 
             "password": "TestAdmin123!",
             "full_name": "Test Administrator 2"
         }
