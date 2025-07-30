@@ -1256,15 +1256,65 @@ def test_super_admin_only_endpoints():
 def run_all_tests():
     """Run all backend API tests"""
     print("🚀 Starting ImaGross Loyalty System Backend API Tests")
-    print("=" * 60)
+    print("=" * 80)
     
     # Test API connectivity first
     if not test_api_root():
         print("❌ API not accessible, stopping tests")
         return False
     
-    # Core functionality tests
-    tests = [
+    print("\n🔐 SUPER ADMIN AUTHENTICATION TESTS")
+    print("-" * 50)
+    admin_auth_tests = [
+        test_admin_login,
+        test_admin_login_invalid,
+        test_create_admin_user
+    ]
+    
+    print("\n🏪 STORE MANAGEMENT API TESTS")
+    print("-" * 50)
+    store_tests = [
+        test_create_store,
+        test_duplicate_store_code,
+        test_get_stores,
+        test_update_store
+    ]
+    
+    print("\n💰 CASHIER MANAGEMENT API TESTS")
+    print("-" * 50)
+    cashier_tests = [
+        test_create_cashier,
+        test_duplicate_cashier_number,
+        test_get_store_cashiers,
+        test_get_all_cashiers
+    ]
+    
+    print("\n📱 QR CODE GENERATION & REGISTRATION FLOW TESTS")
+    print("-" * 50)
+    qr_tests = [
+        test_qr_info_retrieval,
+        test_qr_invalid_code,
+        test_user_registration_with_qr,
+        test_cashier_registration_count
+    ]
+    
+    print("\n📊 ADMIN DASHBOARD STATISTICS TESTS")
+    print("-" * 50)
+    stats_tests = [
+        test_dashboard_statistics,
+        test_stores_statistics
+    ]
+    
+    print("\n🔒 ACCESS CONTROL TESTS")
+    print("-" * 50)
+    access_tests = [
+        test_admin_endpoints_without_auth,
+        test_super_admin_only_endpoints
+    ]
+    
+    print("\n👤 USER SYSTEM TESTS")
+    print("-" * 50)
+    user_tests = [
         test_user_registration,
         test_duplicate_email_validation, 
         test_duplicate_tessera_validation,
@@ -1276,21 +1326,45 @@ def run_all_tests():
         test_digital_card_generation
     ]
     
+    # Run all test suites
+    all_tests = (admin_auth_tests + store_tests + cashier_tests + 
+                qr_tests + stats_tests + access_tests + user_tests)
+    
     passed = 0
-    total = len(tests)
+    total = len(all_tests)
+    failed_tests = []
     
-    for test_func in tests:
-        if test_func():
-            passed += 1
+    for test_func in all_tests:
+        try:
+            if test_func():
+                passed += 1
+            else:
+                failed_tests.append(test_func.__name__)
+        except Exception as e:
+            print(f"❌ {test_func.__name__}: Exception - {str(e)}")
+            failed_tests.append(test_func.__name__)
     
-    print("\n" + "=" * 60)
-    print(f"📊 Test Results: {passed}/{total} tests passed")
+    print("\n" + "=" * 80)
+    print(f"📊 FINAL TEST RESULTS: {passed}/{total} tests passed")
+    
+    if failed_tests:
+        print(f"\n❌ Failed Tests ({len(failed_tests)}):")
+        for test_name in failed_tests:
+            print(f"   • {test_name}")
     
     if passed == total:
-        print("🎉 All tests passed! Backend API is working correctly.")
+        print("\n🎉 ALL TESTS PASSED! ImaGross Super Admin Dashboard Backend is working correctly.")
+        print("✅ Super Admin Authentication System: WORKING")
+        print("✅ Store Management API: WORKING") 
+        print("✅ Cashier Management API: WORKING")
+        print("✅ QR Code Generation System: WORKING")
+        print("✅ QR Registration Flow: WORKING")
+        print("✅ Admin Dashboard Statistics: WORKING")
+        print("✅ Access Control: WORKING")
+        print("✅ User System: WORKING")
         return True
     else:
-        print(f"⚠️  {total - passed} tests failed. Check the issues above.")
+        print(f"\n⚠️  {total - passed} tests failed. Check the issues above.")
         return False
 
 if __name__ == "__main__":
