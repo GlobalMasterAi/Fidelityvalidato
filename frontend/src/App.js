@@ -1638,6 +1638,7 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
     nome: '',
     cognome: '',
@@ -1645,7 +1646,30 @@ const UserManagement = () => {
     telefono: '',
     localita: '',
     punti: 0,
-    active: true
+    active: true,
+    indirizzo: '',
+    cap: '',
+    provincia: '',
+    data_nascita: '',
+    newsletter: false,
+    bollini: 0,
+    progressivo_spesa: 0,
+    consenso_dati_personali: true,
+    consenso_dati_pubblicitari: true,
+    consenso_profilazione: null,
+    consenso_marketing: null,
+    coniugato: null,
+    numero_figli: 0,
+    data_matrimonio: '',
+    animali_cani: false,
+    animali_gatti: false,
+    intolleranza_lattosio: false,
+    intolleranza_glutine: false,
+    intolleranza_nichel: false,
+    celiachia: false,
+    altra_intolleranza: '',
+    richiede_fattura: false,
+    ragione_sociale: ''
   });
   const { adminToken } = useAuth();
 
