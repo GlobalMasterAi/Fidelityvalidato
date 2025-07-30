@@ -1409,12 +1409,21 @@ const CashierManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Gestione Casse</h1>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="bg-imagross-orange text-white px-4 py-2 rounded hover:bg-imagross-red transition"
-        >
-          + Nuova Cassa
-        </button>
+        <div className="flex space-x-4">
+          <button
+            onClick={regenerateAllQRCodes}
+            disabled={regeneratingQR}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:opacity-50"
+          >
+            {regeneratingQR ? 'Rigenerando...' : '🔄 Rigenera QR'}
+          </button>
+          <button
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            className="bg-imagross-orange text-white px-4 py-2 rounded hover:bg-imagross-red transition"
+          >
+            + Nuova Cassa
+          </button>
+        </div>
       </div>
 
       {showCreateForm && (
