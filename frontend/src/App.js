@@ -1248,7 +1248,7 @@ const StoreManagement = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{store.total_cashiers}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button 
-                      onClick={() => window.location.href = `/admin/stores/${store.id}/cashiers`}
+                      onClick={() => goToCashiers(store.id)}
                       className="text-imagross-orange hover:text-imagross-red"
                     >
                       Gestisci Casse
