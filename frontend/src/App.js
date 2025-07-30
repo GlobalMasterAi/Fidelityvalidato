@@ -1541,7 +1541,9 @@ const CashierManagement = () => {
 
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Casse ({cashiers.length})</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Casse ({filteredCashiers.length}{selectedStore ? ` filtrate di ${cashiers.length} totali` : ''})
+          </h2>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -1557,7 +1559,7 @@ const CashierManagement = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {cashiers.map((cashier) => (
+              {filteredCashiers.map((cashier) => (
                 <tr key={cashier.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="font-medium text-gray-900">{cashier.name}</div>
@@ -1589,23 +1591,34 @@ const CashierManagement = () => {
                       {cashier.is_active ? 'Attiva' : 'Inattiva'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button
-                      onClick={() => {
-                        const url = `${window.location.origin}/register?qr=${cashier.qr_code}`;
-                        navigator.clipboard.writeText(url);
-                        alert('Link di registrazione copiato!');
-                      }}
-                      className="text-imagross-orange hover:text-imagross-red"
-                    >
-                      Copia Link
-                    </button>
-                    <button
-                      onClick={() => printQR(cashier)}
-                      className="text-green-600 hover:text-green-800 ml-2"
-                    >
-                      Stampa QR
-                    </button>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex flex-col space-y-1">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => {
+                            const url = `${window.location.origin}/register?qr=${cashier.qr_code}`;
+                            navigator.clipboard.writeText(url);
+                            alert('Link di registrazione copiato!');
+                          }}
+                          className="text-imagross-orange hover:text-imagross-red"
+                        >
+                          Copia Link
+                        </button>
+                        <button
+                          onClick={() => printQR(cashier)}
+                          className="text-green-600 hover:text-green-800"
+                        >
+                          Stampa
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => regenerateSingleQR(cashier.id)}
+                        disabled={regeneratingQRId === cashier.id}
+                        className="text-blue-600 hover:text-blue-800 disabled:opacity-50 text-xs"
+                      >
+                        {regeneratingQRId === cashier.id ? 'Rigenerando...' : '🔄 Rigenera QR'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
