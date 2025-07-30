@@ -795,6 +795,81 @@ async def regenerate_all_qr_codes(current_admin = Depends(get_current_admin)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Errore rigenerazione QR: {str(e)}")
 
+@api_router.post("/admin/regenerate-qr/{cashier_id}")
+async def regenerate_single_qr_code(cashier_id: str, current_admin = Depends(get_current_admin)):
+    """Regenerate single QR code with full URL"""
+    try:
+        base_url = "https://b0aec0ca-18da-4875-91c5-bc0bfbae484d.preview.emergentagent.com"
+        
+        # Get cashier
+        cashier = await db.cashiers.find_one({"id": cashier_id})
+        if not cashier:
+            raise HTTPException(status_code=404, detail="Cassa non trovata")
+        
+        # Get store info
+        store = await db.stores.find_one({"id": cashier["store_id"]})
+        if not store:
+            raise HTTPException(status_code=404, detail="Supermercato non trovato")
+        
+        # Generate new QR with full URL
+        qr_data = f"{store['code']}-CASSA{cashier['cashier_number']}"
+        qr_url = f"{base_url}/register?qr={qr_data}"
+        qr_image = generate_qr_code(qr_url)
+        
+        # Update cashier record
+        await db.cashiers.update_one(
+            {"id": cashier_id},
+            {"$set": {"qr_code_image": qr_image}}
+        )
+        
+        return {
+            "message": "QR code rigenerato con successo",
+            "cashier_id": cashier_id,
+            "qr_data": qr_data
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Errore rigenerazione QR: {str(e)}")
+
+@api_router.put("/admin/users/{user_id}")
+async def update_user(user_id: str, user_data: dict, current_admin = Depends(get_current_admin)):
+    """Update user information"""
+    try:
+        # Get existing user
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="Utente non trovato")
+        
+        # Prepare update data
+        update_data = {}
+        allowed_fields = ["nome", "cognome", "email", "telefono", "localita", "punti", "active"]
+        
+        for field in allowed_fields:
+            if field in user_data:
+                update_data[field] = user_data[field]
+        
+        # Add update timestamp
+        update_data["updated_at"] = datetime.utcnow()
+        
+        # Update user
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": update_data}
+        )
+        
+        # Get updated user
+        updated_user = await db.users.find_one({"id": user_id})
+        if "_id" in updated_user:
+            del updated_user["_id"]
+        
+        return {
+            "message": "Utente aggiornato con successo",
+            "user": updated_user
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Errore aggiornamento utente: {str(e)}")
+
 @api_router.post("/admin/import/excel")
 async def import_excel_data(
     file: UploadFile = File(...),
