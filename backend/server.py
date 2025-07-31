@@ -326,6 +326,121 @@ async def get_super_admin(credentials: HTTPAuthorizationCredentials = Depends(se
         raise HTTPException(status_code=403, detail="Super admin access required")
     return admin
 
+# Load scontrini data
+SCONTRINI_DATA = []
+
+async def load_scontrini_data():
+    """Load scontrini data from JSON file"""
+    global SCONTRINI_DATA
+    try:
+        with open('/app/SCONTRINI_da_Gen2025.json', 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        if 'TECLI' in data:
+            SCONTRINI_DATA = data['TECLI']
+            print(f"Loaded {len(SCONTRINI_DATA)} scontrini records")
+            
+            # Statistics
+            total_importo = sum(float(record.get('IMPORTO_SCONTRINO', 0)) for record in SCONTRINI_DATA)
+            total_bollini = sum(float(record.get('N_BOLLINI', 0)) for record in SCONTRINI_DATA)
+            unique_customers = len(set(record.get('CODICE_CLIENTE', '') for record in SCONTRINI_DATA))
+            unique_stores = len(set(record.get('DITTA', '') for record in SCONTRINI_DATA))
+            
+            print(f"Scontrini statistics: €{total_importo:,.2f}, {total_bollini:,.0f} bollini, {unique_customers} customers, {unique_stores} stores")
+        else:
+            print("No TECLI data found in scontrini file")
+            SCONTRINI_DATA = []
+            
+    except Exception as e:
+        print(f"Error loading scontrini data: {e}")
+        SCONTRINI_DATA = []
+
+def get_dashboard_analytics():
+    """Get comprehensive dashboard analytics"""
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+    
+    # Base stats from scontrini
+    total_revenue = sum(float(record.get('IMPORTO_SCONTRINO', 0)) for record in SCONTRINI_DATA)
+    total_transactions = len(SCONTRINI_DATA)
+    total_bollini = sum(float(record.get('N_BOLLINI', 0)) for record in SCONTRINI_DATA)
+    unique_customers = len(set(record.get('CODICE_CLIENTE', '') for record in SCONTRINI_DATA))
+    
+    # Revenue by store
+    revenue_by_store = defaultdict(float)
+    transactions_by_store = defaultdict(int)
+    for record in SCONTRINI_DATA:
+        store_id = record.get('DITTA', '')
+        revenue_by_store[store_id] += float(record.get('IMPORTO_SCONTRINO', 0))
+        transactions_by_store[store_id] += 1
+    
+    # Daily revenue trend (last 30 days of data)
+    daily_revenue = defaultdict(float)
+    daily_transactions = defaultdict(int)
+    for record in SCONTRINI_DATA:
+        date_str = record.get('DATA_SCONTRINO', '')
+        if len(date_str) == 8:  # YYYYMMDD format
+            daily_revenue[date_str] += float(record.get('IMPORTO_SCONTRINO', 0))
+            daily_transactions[date_str] += 1
+    
+    # Top customers by spending
+    customer_spending = defaultdict(float)
+    customer_transactions = defaultdict(int)
+    for record in SCONTRINI_DATA:
+        customer_id = record.get('CODICE_CLIENTE', '')
+        customer_spending[customer_id] += float(record.get('IMPORTO_SCONTRINO', 0))
+        customer_transactions[customer_id] += 1
+    
+    # Sort and get top 10
+    top_customers = sorted(customer_spending.items(), key=lambda x: x[1], reverse=True)[:10]
+    
+    # Payment methods analysis
+    payment_methods = defaultdict(int)
+    for record in SCONTRINI_DATA:
+        payment = record.get('TIPO_PAGAM1', '')
+        if payment:
+            payment_methods[payment] += 1
+    
+    # Hourly distribution
+    hourly_distribution = defaultdict(int)
+    for record in SCONTRINI_DATA:
+        hour = record.get('ORA_SCONTRINO', 0)
+        if isinstance(hour, int) and hour > 0:
+            hour_formatted = hour // 100  # Convert from HHMM to just HH
+            if 0 <= hour_formatted <= 23:
+                hourly_distribution[hour_formatted] += 1
+    
+    return {
+        "summary": {
+            "total_revenue": round(total_revenue, 2),
+            "total_transactions": total_transactions,
+            "total_bollini": int(total_bollini),
+            "unique_customers": unique_customers,
+            "avg_transaction": round(total_revenue / total_transactions if total_transactions > 0 else 0, 2),
+            "avg_bollini_per_transaction": round(total_bollini / total_transactions if total_transactions > 0 else 0, 2)
+        },
+        "revenue_by_store": [
+            {"store_id": store_id, "revenue": round(revenue, 2), "transactions": transactions_by_store[store_id]}
+            for store_id, revenue in sorted(revenue_by_store.items(), key=lambda x: x[1], reverse=True)
+        ],
+        "daily_trend": [
+            {"date": date, "revenue": round(revenue, 2), "transactions": daily_transactions[date]}
+            for date, revenue in sorted(daily_revenue.items())
+        ][-30:],  # Last 30 days
+        "top_customers": [
+            {"customer_id": customer_id, "total_spent": round(spent, 2), "transactions": customer_transactions[customer_id]}
+            for customer_id, spent in top_customers
+        ],
+        "payment_methods": [
+            {"method": method, "count": count}
+            for method, count in sorted(payment_methods.items(), key=lambda x: x[1], reverse=True)
+        ],
+        "hourly_distribution": [
+            {"hour": hour, "transactions": count}
+            for hour, count in sorted(hourly_distribution.items())
+        ]
+    }
+
 # Load fidelity data
 FIDELITY_DATA = {}
 
