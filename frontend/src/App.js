@@ -2474,10 +2474,6 @@ const QRRegistrationPage = () => {
 };
 
 const AdminPanel = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const { admin } = useAuth();
-
-  const startEdit = (user) => {
     setEditingUser(user.id);
     setEditFormData({
       nome: user.nome || '',
