@@ -2582,7 +2582,65 @@ const UserManagement = () => {
 
   const handleUserClick = (user) => {
     setSelectedUser(user);
+    setEditUserForm(user);
+    setIsEditingUser(false);
     setShowUserModal(true);
+  };
+
+  const handleEditUser = () => {
+    setIsEditingUser(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingUser(false);
+    setEditUserForm(selectedUser);
+  };
+
+  const handleSaveUser = async () => {
+    try {
+      setSavingUser(true);
+      
+      // Prepare update data for the registered user
+      const updateData = {
+        nome: editUserForm.nome,
+        cognome: editUserForm.cognome,
+        email: editUserForm.email,
+        telefono: editUserForm.telefono,
+        localita: editUserForm.localita,
+        indirizzo: editUserForm.indirizzo,
+        provincia: editUserForm.provincia,
+        sesso: editUserForm.sesso
+      };
+
+      // Find the registered user by tessera_fisica and update
+      const response = await axios.put(`${API}/admin/user-profile/${editUserForm.tessera_fisica}`, updateData, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+
+      if (response.status === 200) {
+        // Update the local state
+        setSelectedUser({...selectedUser, ...updateData});
+        setUsers(users.map(user => 
+          user.tessera_fisica === editUserForm.tessera_fisica 
+            ? {...user, ...updateData}
+            : user
+        ));
+        setIsEditingUser(false);
+        alert('Profilo utente aggiornato con successo!');
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert('Errore nell\'aggiornamento del profilo utente. Verifica che l\'utente sia registrato nella piattaforma.');
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setEditUserForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const formatDate = (dateStr) => {
