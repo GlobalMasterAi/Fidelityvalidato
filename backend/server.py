@@ -306,7 +306,75 @@ async def get_super_admin(credentials: HTTPAuthorizationCredentials = Depends(se
         raise HTTPException(status_code=403, detail="Super admin access required")
     return admin
 
-# Initialize Super Admin
+# Load fidelity data
+FIDELITY_DATA = {}
+
+async def load_fidelity_data():
+    """Load fidelity data from JSON file"""
+    global FIDELITY_DATA
+    try:
+        import json
+        with open('/app/fidelity_complete.json', 'r', encoding='latin-1') as f:
+            # Parse the file more carefully
+            content = f.read()
+            # Clean up any potential issues
+            if content.startswith('[') and content.endswith(']'):
+                data = json.loads(content)
+                # Index by card_number for fast lookup
+                FIDELITY_DATA = {item['card_number']: item for item in data if item.get('card_number')}
+                print(f"Loaded {len(FIDELITY_DATA)} fidelity records")
+            else:
+                print("Invalid JSON format")
+    except Exception as e:
+        print(f"Error loading fidelity data: {e}")
+        FIDELITY_DATA = {}
+
+def get_fidelity_user_data(card_number: str) -> dict:
+    """Get user data from fidelity JSON by card number"""
+    if card_number in FIDELITY_DATA:
+        raw_data = FIDELITY_DATA[card_number]
+        
+        # Map JSON fields to our User model
+        return {
+            "nome": raw_data.get("nome", "").strip(),
+            "cognome": raw_data.get("cognome", "").strip(),
+            "sesso": "F" if raw_data.get("sesso", "").upper() == "F" else "M",
+            "email": raw_data.get("email", "").strip(),
+            "telefono": raw_data.get("n_telefono", "").strip(),
+            "localita": raw_data.get("localita", "").strip(),
+            "indirizzo": raw_data.get("indirizzo", "").strip(),
+            "cap": raw_data.get("cap", "").strip(),
+            "provincia": raw_data.get("provincia", "").strip(),
+            "data_nascita": raw_data.get("data_nas", "").strip(),
+            "data_creazione": raw_data.get("data_creazione", "").strip(),
+            "data_ultima_spesa": raw_data.get("data_ult_sc", "").strip(),
+            "progressivo_spesa": float(raw_data.get("prog_spesa", "0") or "0"),
+            "bollini": int(raw_data.get("bollini", "0") or "0"),
+            "consenso_dati_personali": raw_data.get("dati_pers", "") == "1",
+            "consenso_dati_pubblicitari": raw_data.get("dati_pubb", "") == "1",
+            "consenso_profilazione": raw_data.get("profilazione", "") == "1" if raw_data.get("profilazione", "") != "" else None,
+            "consenso_marketing": raw_data.get("marketing", "") == "1" if raw_data.get("marketing", "") != "" else None,
+            "coniugato": raw_data.get("coniugato", "") == "1" if raw_data.get("coniugato", "") != "" else None,
+            "data_matrimonio": raw_data.get("data_coniugato", "").strip(),
+            "numero_figli": int(raw_data.get("numero_figli", "0") or "0"),
+            "data_figlio_1": raw_data.get("data_figlio_1", "").strip(),
+            "data_figlio_2": raw_data.get("data_figlio_2", "").strip(),
+            "data_figlio_3": raw_data.get("data_figlio_3", "").strip(),
+            "data_figlio_4": raw_data.get("data_figlio_4", "").strip(),
+            "data_figlio_5": raw_data.get("data_figlio_5", "").strip(),
+            "animali_cani": raw_data.get("animali_1", "") == "1",
+            "animali_gatti": raw_data.get("animali_2", "") == "1",
+            "intolleranza_lattosio": raw_data.get("lattosio", "") == "1",
+            "intolleranza_glutine": raw_data.get("glutine", "") == "1",
+            "intolleranza_nichel": raw_data.get("nichel", "") == "1",
+            "celiachia": raw_data.get("celiachia", "") == "1",
+            "altra_intolleranza": raw_data.get("altro_intolleranza", "").strip(),
+            "richiede_fattura": raw_data.get("fattura", "") == "1",
+            "ragione_sociale": raw_data.get("ragione_sociale", "").strip(),
+            "stato_tessera": raw_data.get("stato_tes", "01"),
+            "negozio": raw_data.get("negozio", "").strip()
+        }
+    return None
 async def init_super_admin():
     existing_admin = await db.admins.find_one({"role": "super_admin"})
     if not existing_admin:
