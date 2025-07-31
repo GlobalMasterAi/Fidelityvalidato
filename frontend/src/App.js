@@ -1013,7 +1013,43 @@ const Dashboard = () => {
     }
   };
 
-  const fetchPersonalAnalytics = async () => {
+  const handleProfileSave = async () => {
+    try {
+      setProfileLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`${API}/user/profile`, profileForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProfile(response.data);
+      setEditingProfile(false);
+      alert('Profilo aggiornato con successo!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Errore nell\'aggiornamento del profilo');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleProfileInputChange = (field, value) => {
+    setProfileForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr || dateStr.length !== 8) return '';
+    const year = dateStr.slice(0, 4);
+    const month = dateStr.slice(4, 6);
+    const day = dateStr.slice(6, 8);
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateBack = (dateStr) => {
+    if (!dateStr) return '';
+    return dateStr.replace(/-/g, '');
+  };
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API}/user/personal-analytics`, {
