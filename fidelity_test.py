@@ -122,7 +122,7 @@ def test_check_tessera_chiara_abatangelo():
             
             user_data = data["user_data"]
             
-            # Check specific CHIARA ABATANGELO data
+            # Check specific CHIARA ABATANGELO data (from actual JSON file)
             expected_data = {
                 "nome": "CHIARA",
                 "cognome": "ABATANGELO", 
