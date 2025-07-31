@@ -420,7 +420,7 @@ async def get_qr_info(qr_code: str):
 async def check_tessera(tessera_data: TesseraCheck):
     """Check if tessera fisica exists and return user data"""
     try:
-        # Check in current users
+        # Check in current users first
         user = await db.users.find_one({"tessera_fisica": tessera_data.tessera_fisica})
         
         if user:
@@ -431,6 +431,7 @@ async def check_tessera(tessera_data: TesseraCheck):
                     "message": "Tessera già migrata"
                 }
             else:
+                # User exists but not migrated
                 return {
                     "found": True,
                     "migrated": False,
@@ -446,26 +447,15 @@ async def check_tessera(tessera_data: TesseraCheck):
                     }
                 }
         
-        # Check in imported legacy data (simulate from Excel data)
-        # This would be replaced with actual legacy database check
-        legacy_users = {
-            "2020000000013": {
-                "nome": "Mario",
-                "cognome": "Rossi",
-                "sesso": "M",
-                "email": "mario.rossi@email.it",
-                "telefono": "+39 333 1234567",
-                "localita": "MONOPOLI",
-                "indirizzo": "VIA L. ARIOSTO",
-                "provincia": "BA"
-            }
-        }
+        # Check in fidelity data
+        fidelity_data = get_fidelity_user_data(tessera_data.tessera_fisica)
         
-        if tessera_data.tessera_fisica in legacy_users:
+        if fidelity_data:
             return {
                 "found": True,
                 "migrated": False,
-                "user_data": legacy_users[tessera_data.tessera_fisica]
+                "user_data": fidelity_data,
+                "source": "fidelity_json"
             }
         
         return {
