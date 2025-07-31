@@ -331,6 +331,21 @@ frontend:
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: Dual authentication system working with separate login flows for users (/login) and admins (/admin/login), proper routing and redirects, admin area link available on user login page, logout functionality working for both user types, proper session management and authentication state handling."
 
+  - task: "Fidelity Card Import Frontend Integration"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/App.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fixed critical Fidelity.json parsing bug, implemented robust JSON parser with 30,287 records loaded, European decimal format conversion working"
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL ISSUE: Frontend routing problem prevents access to TesseraCheckPage. /register route redirects to /login instead of showing fidelity card import interface. Backend API working perfectly - CHIARA ABATANGELO (2020000028284) data imports correctly with all expected fields (nome, cognome, email, telefono, localita, indirizzo, progressivo_spesa €100.01, bollini 0). Error handling and migration status detection working. URGENT: Fix frontend routing to enable complete fidelity card import user flow."
+
 metadata:
   created_by: "main_agent"
   version: "2.0"
