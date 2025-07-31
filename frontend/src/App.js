@@ -2813,11 +2813,8 @@ const StoreManagement = ({ setActiveTab }) => {
 };
 
 const Dashboard = () => {
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      min="0"
-                      step="0.01"
-                    />
+  return <div>Dashboard Component</div>;
+};
                   </div>
                   <div className="space-y-2">
                     <label className="flex items-center">
