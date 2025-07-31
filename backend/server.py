@@ -548,6 +548,28 @@ async def load_fidelity_data():
         print(f"Error loading fidelity data: {e}")
         FIDELITY_DATA = {}
 
+def safe_float_convert(value: str, default: float = 0.0) -> float:
+    """Safely convert string to float, handling European decimal format"""
+    if not value or value.strip() == "":
+        return default
+    try:
+        # Replace comma with dot for European decimal format
+        value = str(value).strip().replace(',', '.')
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+def safe_int_convert(value: str, default: int = 0) -> int:
+    """Safely convert string to int"""
+    if not value or value.strip() == "":
+        return default
+    try:
+        # Handle float strings first (like "0.0")
+        value = str(value).strip().replace(',', '.')
+        return int(float(value))
+    except (ValueError, TypeError):
+        return default
+
 def get_fidelity_user_data(card_number: str) -> dict:
     """Get user data from fidelity JSON by card number"""
     if card_number in FIDELITY_DATA:
@@ -567,15 +589,15 @@ def get_fidelity_user_data(card_number: str) -> dict:
             "data_nascita": raw_data.get("data_nas", "").strip(),
             "data_creazione": raw_data.get("data_creazione", "").strip(),
             "data_ultima_spesa": raw_data.get("data_ult_sc", "").strip(),
-            "progressivo_spesa": float(raw_data.get("prog_spesa", "0") or "0"),
-            "bollini": int(raw_data.get("bollini", "0") or "0"),
+            "progressivo_spesa": safe_float_convert(raw_data.get("prog_spesa", "0")),
+            "bollini": safe_int_convert(raw_data.get("bollini", "0")),
             "consenso_dati_personali": raw_data.get("dati_pers", "") == "1",
             "consenso_dati_pubblicitari": raw_data.get("dati_pubb", "") == "1",
             "consenso_profilazione": raw_data.get("profilazione", "") == "1" if raw_data.get("profilazione", "") != "" else None,
             "consenso_marketing": raw_data.get("marketing", "") == "1" if raw_data.get("marketing", "") != "" else None,
             "coniugato": raw_data.get("coniugato", "") == "1" if raw_data.get("coniugato", "") != "" else None,
             "data_matrimonio": raw_data.get("data_coniugato", "").strip(),
-            "numero_figli": int(raw_data.get("numero_figli", "0") or "0"),
+            "numero_figli": safe_int_convert(raw_data.get("numero_figli", "0")),
             "data_figlio_1": raw_data.get("data_figlio_1", "").strip(),
             "data_figlio_2": raw_data.get("data_figlio_2", "").strip(),
             "data_figlio_3": raw_data.get("data_figlio_3", "").strip(),
