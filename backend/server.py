@@ -1238,6 +1238,80 @@ async def get_all_cashiers(current_admin = Depends(get_current_admin)):
     return result
 
 # User Management Routes
+@api_router.get("/admin/fidelity-users")
+async def get_fidelity_users(
+    page: int = 1,
+    limit: int = 50,
+    search: str = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Get paginated fidelity users data"""
+    # Verify admin token
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+        if payload.get("role") != "super_admin":
+            raise HTTPException(status_code=403, detail="Accesso negato")
+    except:
+        raise HTTPException(status_code=401, detail="Token non valido")
+    
+    try:
+        # Convert FIDELITY_DATA to list of users
+        all_users = []
+        for card_number, user_data in FIDELITY_DATA.items():
+            user_record = {
+                "tessera_fisica": card_number,
+                "nome": user_data.get("nome", "").strip(),
+                "cognome": user_data.get("cognome", "").strip(),
+                "email": user_data.get("email", "").strip(),
+                "telefono": user_data.get("n_telefono", "").strip(),
+                "localita": user_data.get("localita", "").strip(),
+                "indirizzo": user_data.get("indirizzo", "").strip(),
+                "provincia": user_data.get("provincia", "").strip(),
+                "sesso": user_data.get("sesso", "M"),
+                "data_nascita": user_data.get("data_nas", "").strip(),
+                "data_creazione": user_data.get("data_creazione", "").strip(),
+                "progressivo_spesa": safe_float_convert(user_data.get("prog_spesa", "0")),
+                "bollini": safe_int_convert(user_data.get("bollini", "0")),
+                "negozio": user_data.get("negozio", "").strip(),
+                "stato_tessera": user_data.get("stato_tes", "").strip(),
+                "source": "fidelity_json"
+            }
+            all_users.append(user_record)
+        
+        # Apply search filter if provided
+        if search:
+            search_lower = search.lower()
+            all_users = [
+                user for user in all_users 
+                if (search_lower in user["tessera_fisica"].lower() or
+                    search_lower in user["nome"].lower() or
+                    search_lower in user["cognome"].lower() or
+                    search_lower in user["email"].lower() or
+                    search_lower in user["telefono"].lower())
+            ]
+        
+        # Sort by progressivo_spesa descending
+        all_users.sort(key=lambda x: x["progressivo_spesa"], reverse=True)
+        
+        # Pagination
+        total = len(all_users)
+        start = (page - 1) * limit
+        end = start + limit
+        paginated_users = all_users[start:end]
+        
+        return {
+            "users": paginated_users,
+            "total": total,
+            "page": page,
+            "pages": (total + limit - 1) // limit,
+            "has_next": end < total,
+            "has_prev": page > 1
+        }
+        
+    except Exception as e:
+        print(f"Error getting fidelity users: {e}")
+        raise HTTPException(status_code=500, detail="Errore nel recupero degli utenti fidelity")
+
 @api_router.get("/admin/users", response_model=List[dict])
 async def get_all_users(current_admin = Depends(get_current_admin)):
     users = await db.users.find().to_list(1000)
