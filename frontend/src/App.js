@@ -1001,7 +1001,37 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, [selectedTimeRange, selectedStore]);
 
-  const fetchDashboardData = async () => {
+  const fetchCustomerDetails = async (customerId) => {
+    try {
+      setLoading(true);
+      // Prima cerchiamo nei dati fidelity
+      const fidelityResponse = await axios.post(`${API}/check-tessera`, 
+        { tessera_fisica: customerId },
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+      
+      // Poi cerchiamo nelle transazioni per ottenere storico spese
+      const transactionsResponse = await axios.get(`${API}/admin/scontrini?customer_id=${customerId}&limit=100`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setCustomerDetails({
+        fidelity: fidelityResponse.data,
+        transactions: transactionsResponse.data.scontrini || [],
+        summary: transactionsResponse.data
+      });
+      setShowCustomerModal(true);
+    } catch (error) {
+      console.error('Error fetching customer details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCustomerClick = (customerId) => {
+    setSelectedCustomer(customerId);
+    fetchCustomerDetails(customerId);
+  };
     try {
       setLoading(true);
       const [statsResponse, analyticsResponse] = await Promise.all([
