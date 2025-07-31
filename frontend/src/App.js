@@ -2851,41 +2851,115 @@ const UserManagement = () => {
               <div className="bg-gray-50 rounded-lg p-6">
                 <h4 className="text-lg font-semibold text-gray-900 mb-4">Dati Anagrafici</h4>
                 <div className="space-y-3">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Nome:</span>
-                    <span className="text-gray-900">{selectedUser.nome || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="text"
+                        value={editUserForm.nome || ''}
+                        onChange={(e) => handleInputChange('nome', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.nome || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Cognome:</span>
-                    <span className="text-gray-900">{selectedUser.cognome || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="text"
+                        value={editUserForm.cognome || ''}
+                        onChange={(e) => handleInputChange('cognome', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.cognome || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Sesso:</span>
-                    <span className="text-gray-900">{selectedUser.sesso === 'F' ? 'Femmina' : 'Maschio'}</span>
+                    {isEditingUser ? (
+                      <select
+                        value={editUserForm.sesso || ''}
+                        onChange={(e) => handleInputChange('sesso', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      >
+                        <option value="M">Maschio</option>
+                        <option value="F">Femmina</option>
+                      </select>
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.sesso === 'F' ? 'Femmina' : 'Maschio'}</span>
+                    )}
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-600">Data Nascita:</span>
                     <span className="text-gray-900">{formatDate(selectedUser.data_nascita)}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Email:</span>
-                    <span className="text-gray-900">{selectedUser.email || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="email"
+                        value={editUserForm.email || ''}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.email || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Telefono:</span>
-                    <span className="text-gray-900">{selectedUser.telefono || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="tel"
+                        value={editUserForm.telefono || ''}
+                        onChange={(e) => handleInputChange('telefono', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.telefono || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Indirizzo:</span>
-                    <span className="text-gray-900">{selectedUser.indirizzo || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="text"
+                        value={editUserForm.indirizzo || ''}
+                        onChange={(e) => handleInputChange('indirizzo', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.indirizzo || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Località:</span>
-                    <span className="text-gray-900">{selectedUser.localita || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="text"
+                        value={editUserForm.localita || ''}
+                        onChange={(e) => handleInputChange('localita', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.localita || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Provincia:</span>
-                    <span className="text-gray-900">{selectedUser.provincia || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="text"
+                        value={editUserForm.provincia || ''}
+                        onChange={(e) => handleInputChange('provincia', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.provincia || 'N/D'}</span>
+                    )}
                   </div>
                 </div>
               </div>
