@@ -1133,16 +1133,20 @@ const AdminDashboard = () => {
               <div style={{ width: '100%', height: 300 }}>
                 <ResponsiveContainer>
                   <LineChart data={analytics.daily_trend}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis 
                       dataKey="date" 
+                      stroke="#374151"
+                      fontSize={12}
                       tickFormatter={(date) => {
                         const d = new Date(date.slice(0,4), date.slice(4,6)-1, date.slice(6,8));
                         return d.toLocaleDateString('it-IT', { month: 'short', day: 'numeric' });
                       }}
                     />
-                    <YAxis tickFormatter={(value) => `€${value}`} />
+                    <YAxis stroke="#374151" fontSize={12} tickFormatter={(value) => `€${value}`} />
                     <Tooltip 
+                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                      labelStyle={{ color: '#374151' }}
                       labelFormatter={(date) => {
                         const d = new Date(date.slice(0,4), date.slice(4,6)-1, date.slice(6,8));
                         return d.toLocaleDateString('it-IT');
@@ -1166,12 +1170,16 @@ const AdminDashboard = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance per Punto Vendita</h3>
               <div style={{ width: '100%', height: 300 }}>
                 <ResponsiveContainer>
-                  <BarChart data={analytics.revenue_by_store.slice(0, 8)}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="store_id" />
-                    <YAxis tickFormatter={(value) => `€${value}`} />
-                    <Tooltip formatter={(value) => [`€${value}`, 'Fatturato']} />
-                    <Bar dataKey="revenue" fill="#10B981" />
+                  <BarChart data={analytics.revenue_by_store.slice(0, 8)} margin={{ bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="store_id" stroke="#374151" fontSize={12} />
+                    <YAxis stroke="#374151" fontSize={12} tickFormatter={(value) => `€${value}`} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                      labelStyle={{ color: '#374151' }}
+                      formatter={(value) => [`€${value}`, 'Fatturato']} 
+                    />
+                    <Bar dataKey="revenue" fill="#10B981" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
