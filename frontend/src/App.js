@@ -1194,10 +1194,14 @@ const AdminDashboard = () => {
               <div style={{ width: '100%', height: 300 }}>
                 <ResponsiveContainer>
                   <AreaChart data={analytics.hourly_distribution}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="hour" tickFormatter={(hour) => `${hour}:00`} />
-                    <YAxis />
-                    <Tooltip labelFormatter={(hour) => `Ora: ${hour}:00`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="hour" stroke="#374151" fontSize={12} tickFormatter={(hour) => `${hour}:00`} />
+                    <YAxis stroke="#374151" fontSize={12} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                      labelStyle={{ color: '#374151' }}
+                      labelFormatter={(hour) => `Ora: ${hour}:00`} 
+                    />
                     <Area 
                       type="monotone" 
                       dataKey="transactions" 
@@ -1225,12 +1229,16 @@ const AdminDashboard = () => {
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="count"
+                      fontSize={12}
                     >
                       {analytics.payment_methods.slice(0, 6).map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={['#F97316', '#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444'][index % 6]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                      labelStyle={{ color: '#374151' }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
