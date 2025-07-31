@@ -1218,6 +1218,78 @@ async def get_dashboard_stats(current_admin = Depends(get_current_admin)):
         "total_points_distributed": total_points
     }
 
+@api_router.get("/admin/analytics")
+async def get_admin_analytics(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get comprehensive analytics for admin dashboard"""
+    # Verify admin token
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+        if payload.get("role") != "super_admin":
+            raise HTTPException(status_code=403, detail="Accesso negato")
+    except:
+        raise HTTPException(status_code=401, detail="Token non valido")
+    
+    try:
+        analytics = get_dashboard_analytics()
+        return analytics
+    except Exception as e:
+        print(f"Error getting analytics: {e}")
+        raise HTTPException(status_code=500, detail="Errore nel recupero delle analytics")
+
+@api_router.get("/admin/scontrini")
+async def get_scontrini_data(
+    page: int = 1,
+    limit: int = 50,
+    store_id: str = None,
+    customer_id: str = None,
+    date_from: str = None,
+    date_to: str = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Get paginated scontrini data with filters"""
+    # Verify admin token
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+        if payload.get("role") != "super_admin":
+            raise HTTPException(status_code=403, detail="Accesso negato")
+    except:
+        raise HTTPException(status_code=401, detail="Token non valido")
+    
+    try:
+        # Apply filters
+        filtered_data = SCONTRINI_DATA.copy()
+        
+        if store_id:
+            filtered_data = [s for s in filtered_data if s.get('DITTA') == store_id]
+        
+        if customer_id:
+            filtered_data = [s for s in filtered_data if s.get('CODICE_CLIENTE') == customer_id]
+        
+        if date_from:
+            filtered_data = [s for s in filtered_data if s.get('DATA_SCONTRINO', '') >= date_from]
+        
+        if date_to:
+            filtered_data = [s for s in filtered_data if s.get('DATA_SCONTRINO', '') <= date_to]
+        
+        # Pagination
+        total = len(filtered_data)
+        start = (page - 1) * limit
+        end = start + limit
+        paginated_data = filtered_data[start:end]
+        
+        return {
+            "scontrini": paginated_data,
+            "total": total,
+            "page": page,
+            "pages": (total + limit - 1) // limit,
+            "has_next": end < total,
+            "has_prev": page > 1
+        }
+        
+    except Exception as e:
+        print(f"Error getting scontrini: {e}")
+        raise HTTPException(status_code=500, detail="Errore nel recupero degli scontrini")
+
 @api_router.get("/admin/stats/stores")
 async def get_stores_stats(current_admin = Depends(get_current_admin)):
     stores = await db.stores.find().to_list(1000)
