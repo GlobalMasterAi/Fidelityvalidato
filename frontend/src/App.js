@@ -1049,6 +1049,8 @@ const Dashboard = () => {
   const formatDateBack = (dateStr) => {
     if (!dateStr) return '';
     return dateStr.replace(/-/g, '');
+  };
+
   const fetchPersonalAnalytics = async () => {
     try {
       const token = localStorage.getItem('token');
