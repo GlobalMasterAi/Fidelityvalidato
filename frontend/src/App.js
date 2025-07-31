@@ -2547,6 +2547,9 @@ const UserManagement = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [isEditingUser, setIsEditingUser] = useState(false);
+  const [editUserForm, setEditUserForm] = useState({});
+  const [savingUser, setSavingUser] = useState(false);
   const { adminToken } = useAuth();
 
   const limit = 20;
