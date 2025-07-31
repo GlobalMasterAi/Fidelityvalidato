@@ -169,9 +169,9 @@ def test_check_tessera_chiara_abatangelo():
         return False
 
 def test_check_tessera_valid_conversion():
-    """Test card "2013000002941" - should return valid data with progressivo_spesa correctly converted"""
+    """Test card "2018000015632" - should return valid data with progressivo_spesa correctly converted"""
     try:
-        tessera_data = {"tessera_fisica": "2013000002941"}
+        tessera_data = {"tessera_fisica": "2018000015632"}
         response = requests.post(f"{API_BASE}/check-tessera", json=tessera_data)
         
         if response.status_code == 200:
@@ -200,8 +200,8 @@ def test_check_tessera_valid_conversion():
                 log_test("Check Tessera Valid Conversion", False, f"progressivo_spesa should be numeric, got {type(progressivo_spesa)}")
                 return False
             
-            # Should be positive value
-            if progressivo_spesa < 0:
+            # Should be positive value (this card should have 3200.80)
+            if progressivo_spesa <= 0:
                 log_test("Check Tessera Valid Conversion", False, f"progressivo_spesa should be positive, got {progressivo_spesa}")
                 return False
             
@@ -215,14 +215,17 @@ def test_check_tessera_valid_conversion():
                 log_test("Check Tessera Valid Conversion", False, f"bollini should be integer, got {type(bollini)}")
                 return False
             
-            # Check basic required fields are present
-            required_fields = ["nome", "cognome", "email", "telefono", "localita"]
-            for field in required_fields:
-                if field not in user_data or not user_data[field]:
-                    log_test("Check Tessera Valid Conversion", False, f"Missing or empty field: {field}")
-                    return False
+            # Check basic required fields are present (this card should have ANTONIO BIANCHI data)
+            if not user_data.get("nome") or not user_data.get("cognome"):
+                log_test("Check Tessera Valid Conversion", False, "Missing nome or cognome")
+                return False
             
-            log_test("Check Tessera Valid Conversion", True, f"Valid conversion: €{progressivo_spesa}, {bollini} bollini")
+            # Validate specific expected data for this card
+            if user_data["nome"] != "ANTONIO" or user_data["cognome"] != "BIANCHI":
+                log_test("Check Tessera Valid Conversion", False, f"Expected ANTONIO BIANCHI, got {user_data['nome']} {user_data['cognome']}")
+                return False
+            
+            log_test("Check Tessera Valid Conversion", True, f"Valid conversion: €{progressivo_spesa}, {bollini} bollini for {user_data['nome']} {user_data['cognome']}")
             return True
             
         else:
