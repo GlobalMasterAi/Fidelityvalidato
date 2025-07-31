@@ -282,17 +282,20 @@ def test_check_tessera_not_found():
         return False
 
 def test_check_tessera_migrated():
-    """Test already migrated card "2013000002194" - should return migrated status"""
+    """Test already migrated card - should return migrated status"""
     try:
+        # Use a unique tessera number for this test
+        test_tessera = f"TEST{uuid.uuid4().hex[:8].upper()}"
+        
         # First, let's register this user to simulate migration
         user_data = {
-            "nome": "GIUSEPPE",
-            "cognome": "ROSSI",
+            "nome": "MARIO",
+            "cognome": "BIANCHI",
             "sesso": "M",
-            "email": f"giuseppe.rossi.{uuid.uuid4().hex[:8]}@email.it",
-            "telefono": "0804567890",
-            "localita": "MONOPOLI",
-            "tessera_fisica": "2013000002194",
+            "email": f"mario.bianchi.{uuid.uuid4().hex[:8]}@email.it",
+            "telefono": "3331234567",
+            "localita": "MILANO",
+            "tessera_fisica": test_tessera,
             "password": "TestPass123!"
         }
         
@@ -300,11 +303,11 @@ def test_check_tessera_migrated():
         register_response = requests.post(f"{API_BASE}/register", json=user_data)
         
         if register_response.status_code != 200:
-            log_test("Check Tessera Migrated", False, "Failed to register user for migration test")
+            log_test("Check Tessera Migrated", False, f"Failed to register user for migration test: {register_response.json().get('detail', 'Unknown error')}")
             return False
         
         # Now check the tessera - should show as migrated
-        tessera_data = {"tessera_fisica": "2013000002194"}
+        tessera_data = {"tessera_fisica": test_tessera}
         response = requests.post(f"{API_BASE}/check-tessera", json=tessera_data)
         
         if response.status_code == 200:
