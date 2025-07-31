@@ -319,40 +319,48 @@ const TesseraCheckPage = () => {
           {step === 'check' && (
             <div className="bg-white rounded-lg shadow-lg p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4">
-                Hai già una tessera ImaGross?
+                🎯 Benvenuto nel programma fedeltà ImaGross!
               </h3>
               <p className="text-gray-600 mb-6">
-                Se possiedi già una tessera fisica ImaGross, inserisci il numero per verificare i tuoi dati.
+                Hai già una tessera fisica ImaGross? Inserisci il numero per importare automaticamente i tuoi dati, 
+                oppure procedi con una nuova registrazione.
               </p>
               
               <form onSubmit={handleTesseraCheck} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Numero Tessera Fisica
+                    Numero Tessera Fisica (opzionale)
                   </label>
                   <input
                     type="text"
                     value={tesseraFisica}
                     onChange={(e) => setTesseraFisica(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
-                    placeholder="es. 2020000000013"
-                    required
+                    placeholder="es. 2013000002194"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Se non hai una tessera fisica, verrà generata automaticamente
+                  </p>
                 </div>
                 
-                <div className="flex space-x-4">
-                  <button
-                    type="submit"
-                    className="flex-1 bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
-                  >
-                    Verifica Tessera
-                  </button>
+                <div className="flex flex-col space-y-4">
+                  {tesseraFisica && (
+                    <button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
+                    >
+                      🔍 Verifica e Importa Dati Tessera
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => setStep('register')}
-                    className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-md hover:bg-gray-600 transition duration-200 font-medium"
+                    onClick={() => {
+                      setTesseraFisica('');
+                      setStep('register');
+                    }}
+                    className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition duration-200 font-medium"
                   >
-                    Non ho tessera
+                    ✨ Nuova Registrazione (senza tessera esistente)
                   </button>
                 </div>
               </form>
