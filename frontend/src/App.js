@@ -3222,7 +3222,7 @@ const CustomerSegmentation = () => {
   );
 };
 
-const App = () => {
+const AuthRoutes = () => {
   const { isAuthenticated, isAdminAuthenticated, loading } = useAuth();
 
   if (loading) {
@@ -3237,36 +3237,42 @@ const App = () => {
   }
 
   return (
+    <Routes>
+      <Route path="/register" element={<TesseraCheckPage />} />
+      
+      <Route 
+        path="/login" 
+        element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} 
+      />
+      
+      <Route 
+        path="/admin/login" 
+        element={isAdminAuthenticated ? <Navigate to="/admin" /> : <AdminLoginPage />} 
+      />
+      
+      <Route 
+        path="/admin/*" 
+        element={isAdminAuthenticated ? <AdminPanel /> : <Navigate to="/admin/login" />} 
+      />
+      
+      <Route 
+        path="/dashboard" 
+        element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} 
+      />
+      
+      <Route 
+        path="/" 
+        element={<Navigate to={isAuthenticated ? "/dashboard" : (isAdminAuthenticated ? "/admin" : "/login")} />} 
+      />
+    </Routes>
+  );
+};
+
+const App = () => {
+  return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/register" element={<TesseraCheckPage />} />
-          
-          <Route 
-            path="/login" 
-            element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} 
-          />
-          
-          <Route 
-            path="/admin/login" 
-            element={isAdminAuthenticated ? <Navigate to="/admin" /> : <AdminLoginPage />} 
-          />
-          
-          <Route 
-            path="/admin/*" 
-            element={isAdminAuthenticated ? <AdminPanel /> : <Navigate to="/admin/login" />} 
-          />
-          
-          <Route 
-            path="/dashboard" 
-            element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} 
-          />
-          
-          <Route 
-            path="/" 
-            element={<Navigate to={isAuthenticated ? "/dashboard" : (isAdminAuthenticated ? "/admin" : "/login")} />} 
-          />
-        </Routes>
+        <AuthRoutes />
       </BrowserRouter>
     </AuthProvider>
   );
