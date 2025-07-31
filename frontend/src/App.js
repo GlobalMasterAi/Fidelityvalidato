@@ -992,6 +992,9 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTimeRange, setSelectedTimeRange] = useState('30d');
   const [selectedStore, setSelectedStore] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerDetails, setCustomerDetails] = useState(null);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
   const { adminToken } = useAuth();
 
   useEffect(() => {
