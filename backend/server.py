@@ -18,6 +18,7 @@ import base64
 from enum import Enum
 import pandas as pd
 import json
+from collections import defaultdict, Counter
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
