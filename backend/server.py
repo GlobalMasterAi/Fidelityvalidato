@@ -521,6 +521,155 @@ def calculate_rfm_segmentation():
     
     return rfm_data
 
+@api_router.get("/user/profile")
+async def get_user_profile(current_user = Depends(get_current_user)):
+    """Get complete user profile with all fidelity data"""
+    try:
+        if current_user["type"] != "user":
+            raise HTTPException(status_code=403, detail="User access required")
+        
+        user_data = current_user["data"]
+        tessera_fisica = user_data.tessera_fisica
+        
+        # Get fidelity data if available
+        fidelity_data = FIDELITY_DATA.get(tessera_fisica, {})
+        
+        # Merge user data with fidelity data
+        complete_profile = {
+            # Basic user info
+            "id": user_data.id,
+            "nome": user_data.nome,
+            "cognome": user_data.cognome,
+            "email": user_data.email,
+            "telefono": user_data.telefono,
+            "localita": user_data.localita,
+            "tessera_fisica": user_data.tessera_fisica,
+            "tessera_digitale": user_data.tessera_digitale,
+            "punti": user_data.punti or 0,
+            "created_at": user_data.created_at,
+            
+            # Enhanced data from fidelity or user record
+            "sesso": getattr(user_data, 'sesso', fidelity_data.get('sesso', 'M')),
+            "data_nascita": getattr(user_data, 'data_nascita', fidelity_data.get('data_nas', '')),
+            "indirizzo": getattr(user_data, 'indirizzo', fidelity_data.get('indirizzo', '')),
+            "cap": getattr(user_data, 'cap', fidelity_data.get('cap', '')),
+            "provincia": getattr(user_data, 'provincia', fidelity_data.get('provincia', '')),
+            
+            # Loyalty data
+            "bollini": getattr(user_data, 'bollini', safe_int_convert(fidelity_data.get('bollini', '0'))),
+            "progressivo_spesa": getattr(user_data, 'progressivo_spesa', safe_float_convert(fidelity_data.get('prog_spesa', '0'))),
+            "data_ultima_spesa": fidelity_data.get('data_ult_sc', ''),
+            
+            # Consensi
+            "consenso_dati_personali": getattr(user_data, 'consenso_dati_personali', fidelity_data.get('dati_pers') == '1'),
+            "consenso_dati_pubblicitari": getattr(user_data, 'consenso_dati_pubblicitari', fidelity_data.get('dati_pubb') == '1'),
+            "consenso_profilazione": getattr(user_data, 'consenso_profilazione', fidelity_data.get('profilazione') == '1' if fidelity_data.get('profilazione') != '' else None),
+            "consenso_marketing": getattr(user_data, 'consenso_marketing', fidelity_data.get('marketing') == '1' if fidelity_data.get('marketing') != '' else None),
+            "newsletter": getattr(user_data, 'newsletter', False),
+            
+            # Famiglia
+            "coniugato": getattr(user_data, 'coniugato', fidelity_data.get('coniugato') == '1' if fidelity_data.get('coniugato') != '' else None),
+            "data_matrimonio": getattr(user_data, 'data_matrimonio', fidelity_data.get('data_coniugato', '')),
+            "numero_figli": getattr(user_data, 'numero_figli', safe_int_convert(fidelity_data.get('numero_figli', '0'))),
+            "data_figlio_1": fidelity_data.get('data_figlio_1', ''),
+            "data_figlio_2": fidelity_data.get('data_figlio_2', ''),
+            "data_figlio_3": fidelity_data.get('data_figlio_3', ''),
+            "data_figlio_4": fidelity_data.get('data_figlio_4', ''),
+            "data_figlio_5": fidelity_data.get('data_figlio_5', ''),
+            
+            # Animali
+            "animali_cani": getattr(user_data, 'animali_cani', fidelity_data.get('animali_1') == '1' if fidelity_data.get('animali_1') != '' else None),
+            "animali_gatti": getattr(user_data, 'animali_gatti', fidelity_data.get('animali_2') == '1' if fidelity_data.get('animali_2') != '' else None),
+            
+            # Intolleranze
+            "intolleranza_lattosio": getattr(user_data, 'intolleranza_lattosio', fidelity_data.get('lattosio') == '1' if fidelity_data.get('lattosio') != '' else None),
+            "intolleranza_glutine": getattr(user_data, 'intolleranza_glutine', fidelity_data.get('glutine') == '1' if fidelity_data.get('glutine') != '' else None),
+            "intolleranza_nichel": getattr(user_data, 'intolleranza_nichel', fidelity_data.get('nichel') == '1' if fidelity_data.get('nichel') != '' else None),
+            "celiachia": getattr(user_data, 'celiachia', fidelity_data.get('celiachia') == '1' if fidelity_data.get('celiachia') != '' else None),
+            "altre_intolleranze": getattr(user_data, 'altre_intolleranze', fidelity_data.get('altro_intolleranza', '')),
+            
+            # Business
+            "richiede_fattura": getattr(user_data, 'richiede_fattura', fidelity_data.get('fattura') == '1' if fidelity_data.get('fattura') != '' else None),
+            "ragione_sociale": getattr(user_data, 'ragione_sociale', fidelity_data.get('ragione_sociale', '')),
+            
+            # Additional info
+            "negozio_origine": fidelity_data.get('negozio', ''),
+            "stato_tessera": fidelity_data.get('stato_tes', ''),
+            "data_creazione_tessera": fidelity_data.get('data_creazione', ''),
+            
+            # Account status
+            "active": getattr(user_data, 'active', True)
+        }
+        
+        return complete_profile
+        
+    except Exception as e:
+        print(f"Error getting user profile: {e}")
+        raise HTTPException(status_code=500, detail="Errore nel recupero del profilo")
+
+@api_router.put("/user/profile")
+async def update_user_profile(profile_data: dict, current_user = Depends(get_current_user)):
+    """Update user profile with complete data"""
+    try:
+        if current_user["type"] != "user":
+            raise HTTPException(status_code=403, detail="User access required")
+        
+        user_data = current_user["data"]
+        user_id = user_data.id
+        
+        # Prepare update data
+        update_data = {}
+        
+        # Basic fields that can be updated
+        updatable_fields = [
+            'nome', 'cognome', 'telefono', 'localita', 'sesso', 'data_nascita',
+            'indirizzo', 'cap', 'provincia', 'consenso_dati_personali', 
+            'consenso_dati_pubblicitari', 'consenso_profilazione', 'consenso_marketing',
+            'newsletter', 'coniugato', 'data_matrimonio', 'numero_figli',
+            'animali_cani', 'animali_gatti', 'intolleranza_lattosio', 
+            'intolleranza_glutine', 'intolleranza_nichel', 'celiachia',
+            'altre_intolleranze', 'richiede_fattura', 'ragione_sociale'
+        ]
+        
+        for field in updatable_fields:
+            if field in profile_data:
+                update_data[field] = profile_data[field]
+        
+        # Convert boolean strings to actual booleans
+        boolean_fields = [
+            'consenso_dati_personali', 'consenso_dati_pubblicitari', 
+            'consenso_profilazione', 'consenso_marketing', 'newsletter',
+            'coniugato', 'animali_cani', 'animali_gatti', 'intolleranza_lattosio',
+            'intolleranza_glutine', 'intolleranza_nichel', 'celiachia', 'richiede_fattura'
+        ]
+        
+        for field in boolean_fields:
+            if field in update_data:
+                if isinstance(update_data[field], str):
+                    update_data[field] = update_data[field].lower() in ['true', '1', 'yes']
+                elif update_data[field] is None:
+                    pass  # Keep None values
+        
+        # Convert numeric fields
+        if 'numero_figli' in update_data:
+            update_data['numero_figli'] = int(update_data['numero_figli']) if update_data['numero_figli'] else 0
+        
+        # Update user in database
+        result = await db.users.update_one(
+            {"id": user_id},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Nessuna modifica effettuata")
+        
+        # Return updated profile
+        return await get_user_profile(current_user)
+        
+    except Exception as e:
+        print(f"Error updating user profile: {e}")
+        raise HTTPException(status_code=500, detail="Errore nell'aggiornamento del profilo")
+
 @api_router.get("/user/personal-analytics")
 async def get_user_personal_analytics(current_user = Depends(get_current_user)):
     """Get comprehensive personal analytics for the user"""
