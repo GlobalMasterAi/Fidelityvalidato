@@ -370,13 +370,33 @@ const TesseraCheckPage = () => {
           {step === 'import' && userData && (
             <div className="bg-white rounded-lg shadow-lg p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4">
-                Tessera trovata! Conferma i tuoi dati
+                🎉 Tessera trovata! Dati importati automaticamente
               </h3>
               <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                Abbiamo trovato la tua tessera e importato i dati esistenti. Verifica e completa la registrazione.
+                <div className="flex items-center">
+                  <span className="text-green-600 text-xl mr-2">✅</span>
+                  <div>
+                    <strong>Importazione completata!</strong><br/>
+                    Tessera: {tesseraFisica} | 
+                    Bollini: {userData.bollini || 0} | 
+                    Spesa totale: €{(userData.progressivo_spesa || 0).toFixed(2)}
+                  </div>
+                </div>
               </div>
               
               <form onSubmit={handleRegister} className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-md mb-4">
+                  <h4 className="font-medium text-gray-800 mb-2">📋 Dati importati dal sistema fedeltà:</h4>
+                  <div className="text-sm text-gray-600 grid grid-cols-2 gap-2">
+                    <div><strong>Nome:</strong> {formData.nome}</div>
+                    <div><strong>Cognome:</strong> {formData.cognome}</div>
+                    <div><strong>Telefono:</strong> {formData.telefono}</div>
+                    <div><strong>Località:</strong> {formData.localita}</div>
+                    <div><strong>Indirizzo:</strong> {formData.indirizzo}</div>
+                    <div><strong>Provincia:</strong> {formData.provincia}</div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
@@ -403,34 +423,72 @@ const TesseraCheckPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email * (aggiorna se necessario)</label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    placeholder="Inserisci la tua email"
                     required
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+                    <input
+                      type="tel"
+                      name="telefono"
+                      value={formData.telefono}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Località</label>
+                    <input
+                      type="text"
+                      name="localita"
+                      value={formData.localita}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password per accesso digitale *</label>
                   <input
                     type="password"
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                    placeholder="Crea una password per accedere online"
                     required
                   />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="newsletter"
+                    checked={formData.newsletter}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+                  />
+                  <label className="ml-2 block text-sm text-gray-900">
+                    Mantieni le preferenze newsletter esistenti
+                  </label>
                 </div>
 
                 <button
                   type="submit"
                   className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
                 >
-                  Completa Registrazione
+                  🚀 Completa Migrazione Digitale
                 </button>
               </form>
             </div>
