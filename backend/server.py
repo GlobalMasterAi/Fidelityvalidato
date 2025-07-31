@@ -654,11 +654,15 @@ async def update_user_profile(profile_data: dict, current_user = Depends(get_cur
         if 'numero_figli' in update_data:
             update_data['numero_figli'] = int(update_data['numero_figli']) if update_data['numero_figli'] else 0
         
+        print(f"Updating user {user_id} with data: {update_data}")
+        
         # Update user in database
         result = await db.users.update_one(
             {"id": user_id},
             {"$set": update_data}
         )
+        
+        print(f"Update result - acknowledged: {result.acknowledged}, matched: {result.matched_count}, modified: {result.modified_count}")
         
         if not result.acknowledged:
             raise HTTPException(status_code=500, detail="Errore nella scrittura al database")
