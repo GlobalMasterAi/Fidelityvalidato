@@ -2540,64 +2540,274 @@ const AdminPanel = () => {
     </div>
   );
 };
-      provincia: user.provincia || '',
-      data_nascita: user.data_nascita || '',
-      newsletter: user.newsletter || false,
-      bollini: user.bollini || 0,
-      progressivo_spesa: user.progressivo_spesa || 0,
-      consenso_dati_personali: user.consenso_dati_personali !== false,
-      consenso_dati_pubblicitari: user.consenso_dati_pubblicitari !== false,
-      consenso_profilazione: user.consenso_profilazione,
-      consenso_marketing: user.consenso_marketing,
-      coniugato: user.coniugato,
-      numero_figli: user.numero_figli || 0,
-      data_matrimonio: user.data_matrimonio || '',
-      animali_cani: user.animali_cani || false,
-      animali_gatti: user.animali_gatti || false,
-      intolleranza_lattosio: user.intolleranza_lattosio || false,
-      intolleranza_glutine: user.intolleranza_glutine || false,
-      intolleranza_nichel: user.intolleranza_nichel || false,
-      celiachia: user.celiachia || false,
-      altra_intolleranza: user.altra_intolleranza || '',
-      richiede_fattura: user.richiede_fattura || false,
-      ragione_sociale: user.ragione_sociale || ''
-    });
-    setShowEditModal(true);
+
+const CustomerSegmentation = () => {
+  const [segmentationData, setSegmentationData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedSegment, setSelectedSegment] = useState(null);
+  const [showCustomersModal, setShowCustomersModal] = useState(false);
+  const { adminToken } = useAuth();
+
+  useEffect(() => {
+    fetchSegmentationData();
+  }, []);
+
+  const fetchSegmentationData = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/admin/customer-segmentation`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      setSegmentationData(response.data);
+    } catch (error) {
+      console.error('Error fetching segmentation data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const cancelEdit = () => {
-    setEditingUser(null);
-    setShowEditModal(false);
-    setEditFormData({
-      nome: '',
-      cognome: '',
-      email: '',
-      telefono: '',
-      localita: '',
-      punti: 0,
-      active: true,
-      indirizzo: '',
-      cap: '',
-      provincia: '',
-      data_nascita: '',
-      newsletter: false,
-      bollini: 0,
-      progressivo_spesa: 0,
-      consenso_dati_personali: true,
-      consenso_dati_pubblicitari: true,
-      consenso_profilazione: null,
-      consenso_marketing: null,
-      coniugato: null,
-      numero_figli: 0,
-      data_matrimonio: '',
-      animali_cani: false,
-      animali_gatti: false,
-      intolleranza_lattosio: false,
-      intolleranza_glutine: false,
-      intolleranza_nichel: false,
-      celiachia: false,
-      altra_intolleranza: '',
-      richiede_fattura: false,
+  const handleSegmentClick = (segment) => {
+    setSelectedSegment(segment);
+    setShowCustomersModal(true);
+  };
+
+  const getSegmentCustomers = () => {
+    if (!selectedSegment || !segmentationData) return [];
+    return segmentationData.customers.filter(c => c.segment === selectedSegment.name);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Analisi segmentazione clienti...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!segmentationData) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">Errore nel caricamento dei dati di segmentazione</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Segmentazione Clienti RFM</h1>
+          <p className="text-gray-600 mt-1">
+            Analisi di {segmentationData.total_customers.toLocaleString()} clienti basata su Recency, Frequency, Monetary
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-bold text-imagross-green">
+            €{segmentationData.total_analyzed_value.toLocaleString()}
+          </div>
+          <div className="text-sm text-gray-500">Valore totale analizzato</div>
+        </div>
+      </div>
+
+      {/* Segments Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {segmentationData.segments_summary.map((segment, index) => (
+          <div
+            key={segment.name}
+            onClick={() => handleSegmentClick(segment)}
+            className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow border-l-4"
+            style={{ borderLeftColor: segment.color }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-gray-900 text-sm">{segment.name}</h3>
+              <div 
+                className="w-4 h-4 rounded-full"
+                style={{ backgroundColor: segment.color }}
+              ></div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Clienti:</span>
+                <span className="font-semibold">{segment.count.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Valore Tot:</span>
+                <span className="font-semibold text-imagross-green">€{segment.total_value.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Valore Medio:</span>
+                <span className="font-semibold">€{segment.avg_value}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Freq. Media:</span>
+                <span className="font-semibold">{segment.avg_frequency}</span>
+              </div>
+            </div>
+            
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs text-gray-500 leading-tight">{segment.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* RFM Analysis Chart */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Distribuzione Segmenti</h3>
+        <div style={{ width: '100%', height: 400 }}>
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie
+                data={segmentationData.segments_summary}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, count, percent }) => `${name}: ${count} (${(percent * 100).toFixed(1)}%)`}
+                outerRadius={120}
+                fill="#8884d8"
+                dataKey="count"
+              >
+                {segmentationData.segments_summary.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                formatter={(value, name) => [value, 'Clienti']}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Segment Value Comparison */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Valore per Segmento</h3>
+        <div style={{ width: '100%', height: 300 }}>
+          <ResponsiveContainer>
+            <BarChart data={segmentationData.segments_summary} margin={{ bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis 
+                dataKey="name" 
+                stroke="#374151" 
+                fontSize={10}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis stroke="#374151" fontSize={12} tickFormatter={(value) => `€${value.toLocaleString()}`} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                formatter={(value) => [`€${value.toLocaleString()}`, 'Valore Totale']}
+              />
+              <Bar dataKey="total_value" radius={[4, 4, 0, 0]}>
+                {segmentationData.segments_summary.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Customer Details Modal */}
+      {showCustomersModal && selectedSegment && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-5 border w-11/12 max-w-6xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">
+                Clienti Segmento: {selectedSegment.name}
+              </h3>
+              <button
+                onClick={() => setShowCustomersModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: selectedSegment.color + '20' }}>
+              <p className="text-sm text-gray-700">{selectedSegment.description}</p>
+              <div className="mt-2 flex space-x-6 text-sm">
+                <span><strong>Clienti:</strong> {selectedSegment.count}</span>
+                <span><strong>Valore Medio:</strong> €{selectedSegment.avg_value}</span>
+                <span><strong>Frequenza Media:</strong> {selectedSegment.avg_frequency}</span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto max-h-96">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">RFM Score</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recency</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Frequency</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monetary</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contatti</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {getSegmentCustomers().slice(0, 50).map((customer, index) => (
+                    <tr key={customer.customer_id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {customer.nome} {customer.cognome}
+                        </div>
+                        <div className="text-xs text-gray-500">{customer.customer_id}</div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                          {customer.rfm_score}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {customer.recency} giorni
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {customer.frequency} acquisti
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-imagross-green">
+                        €{customer.monetary.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div>{customer.email || 'N/D'}</div>
+                        <div>{customer.telefono || 'N/D'}</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {getSegmentCustomers().length > 50 && (
+                <div className="p-4 text-center text-gray-500 text-sm">
+                  Mostrati primi 50 clienti di {getSegmentCustomers().length}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowCustomersModal(false)}
+                className="px-6 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+              >
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const StoreManagement = ({ setActiveTab }) => {
       ragione_sociale: ''
     });
   };
