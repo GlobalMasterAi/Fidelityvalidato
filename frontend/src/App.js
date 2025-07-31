@@ -1325,6 +1325,362 @@ const ProfileManagement = ({ profile, user, onRefresh }) => {
   );
 };
 
+const RewardsSection = ({ analytics, profile }) => {
+  const [availableRewards, setAvailableRewards] = useState([]);
+  const [redeemedRewards, setRedeemedRewards] = useState([]);
+  const [activeTab, setActiveTab] = useState('available');
+
+  useEffect(() => {
+    generateRewards();
+  }, [analytics, profile]);
+
+  const generateRewards = () => {
+    if (!analytics || !profile) return;
+
+    const userLevel = analytics.loyalty_level;
+    const totalSpent = analytics.total_spending || 0;
+    const bollini = profile.bollini || 0;
+
+    // Generate dynamic rewards based on user data
+    const rewards = [
+      {
+        id: 1,
+        title: "Sconto 10% sul prossimo acquisto",
+        description: "Valido su tutti i prodotti, minimo €20",
+        type: "discount",
+        value: "10%",
+        cost: 50,
+        bolliniRequired: 50,
+        available: bollini >= 50,
+        category: "Sconti",
+        validUntil: "2025-12-31",
+        icon: "💰"
+      },
+      {
+        id: 2,
+        title: "Prodotto omaggio",
+        description: "Scegli un prodotto fino a €5",
+        type: "free_product",
+        value: "€5",
+        cost: 100,
+        bolliniRequired: 100,
+        available: bollini >= 100,
+        category: "Omaggi",
+        validUntil: "2025-12-31",
+        icon: "🎁"
+      },
+      {
+        id: 3,
+        title: "Sconto VIP 20%",
+        description: "Sconto esclusivo per clienti " + userLevel,
+        type: "vip_discount",
+        value: "20%",
+        cost: 150,
+        bolliniRequired: 150,
+        available: bollini >= 150 && ['Gold', 'Platinum'].includes(userLevel),
+        category: "VIP",
+        validUntil: "2025-12-31",
+        icon: "⭐"
+      },
+      {
+        id: 4,
+        title: "Buono spesa €10",
+        description: "Valido su tutti i reparti",
+        type: "voucher",
+        value: "€10",
+        cost: 200,
+        bolliniRequired: 200,
+        available: bollini >= 200,
+        category: "Buoni",
+        validUntil: "2025-12-31",
+        icon: "🎫"
+      },
+      {
+        id: 5,
+        title: "Spedizione gratuita",
+        description: "Per acquisti online",
+        type: "free_shipping",
+        value: "Gratis",
+        cost: 30,
+        bolliniRequired: 30,
+        available: bollini >= 30,
+        category: "Servizi",
+        validUntil: "2025-12-31",
+        icon: "🚚"
+      },
+      {
+        id: 6,
+        title: "Evento esclusivo VIP",
+        description: "Accesso prioritario alle anteprime",
+        type: "vip_event",
+        value: "Esclusivo",
+        cost: 300,
+        bolliniRequired: 300,
+        available: bollini >= 300 && userLevel === 'Platinum',
+        category: "Eventi",
+        validUntil: "2025-12-31",
+        icon: "🎊"
+      }
+    ];
+
+    // Offerte speciali basate sul livello
+    const specialOffers = [
+      {
+        id: 100,
+        title: "Benvenuto nuovo cliente!",
+        description: "Sconto 5% sul primo acquisto",
+        type: "welcome",
+        value: "5%",
+        cost: 0,
+        bolliniRequired: 0,
+        available: totalSpent < 50,
+        category: "Speciali",
+        validUntil: "2025-12-31",
+        icon: "👋"
+      },
+      {
+        id: 101,
+        title: "Cliente fedele",
+        description: "Grazie per la tua fedeltà - Sconto 15%",
+        type: "loyalty",
+        value: "15%",
+        cost: 0,
+        bolliniRequired: 0,
+        available: totalSpent > 500,
+        category: "Speciali",
+        validUntil: "2025-12-31",
+        icon: "💝"
+      }
+    ];
+
+    const allRewards = [...rewards, ...specialOffers];
+    setAvailableRewards(allRewards.filter(r => r.available));
+
+    // Mock redeemed rewards
+    setRedeemedRewards([
+      {
+        id: 200,
+        title: "Sconto 5% utilizzato",
+        description: "Utilizzato il 15/01/2025",
+        type: "used",
+        value: "5%",
+        redeemedDate: "2025-01-15",
+        icon: "✅"
+      }
+    ]);
+  };
+
+  const handleRedeemReward = async (reward) => {
+    try {
+      // In a real app, this would call an API
+      alert(`Premio "${reward.title}" riscattato con successo! Controlla la tua email per i dettagli.`);
+      
+      // Move reward to redeemed list
+      setRedeemedRewards(prev => [...prev, {
+        ...reward,
+        id: Date.now(),
+        redeemedDate: new Date().toISOString().split('T')[0]
+      }]);
+      
+      // Remove from available rewards
+      setAvailableRewards(prev => prev.filter(r => r.id !== reward.id));
+      
+    } catch (error) {
+      alert('Errore nel riscatto del premio. Riprova più tardi.');
+    }
+  };
+
+  const getCategoryColor = (category) => {
+    const colors = {
+      'Sconti': 'bg-blue-100 text-blue-800',
+      'Omaggi': 'bg-green-100 text-green-800',
+      'VIP': 'bg-purple-100 text-purple-800',
+      'Buoni': 'bg-yellow-100 text-yellow-800',
+      'Servizi': 'bg-indigo-100 text-indigo-800',
+      'Eventi': 'bg-pink-100 text-pink-800',
+      'Speciali': 'bg-red-100 text-red-800'
+    };
+    return colors[category] || 'bg-gray-100 text-gray-800';
+  };
+
+  if (!analytics || !profile) {
+    return (
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-48 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Stats */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Premi & Offerte</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white">
+            <div className="text-sm opacity-90">Bollini Disponibili</div>
+            <div className="text-2xl font-bold">{profile.bollini || 0}</div>
+          </div>
+          <div className="bg-gradient-to-r from-imagross-orange to-imagross-red rounded-lg p-4 text-white">
+            <div className="text-sm opacity-90">Livello Fidelity</div>
+            <div className="text-xl font-bold">{analytics.loyalty_level}</div>
+          </div>
+          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white">
+            <div className="text-sm opacity-90">Premi Disponibili</div>
+            <div className="text-2xl font-bold">{availableRewards.length}</div>
+          </div>
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white">
+            <div className="text-sm opacity-90">Premi Riscattati</div>
+            <div className="text-2xl font-bold">{redeemedRewards.length}</div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setActiveTab('available')}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'available' 
+                ? 'bg-white text-imagross-orange shadow-sm' 
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Premi Disponibili ({availableRewards.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('redeemed')}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'redeemed' 
+                ? 'bg-white text-imagross-orange shadow-sm' 
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Premi Riscattati ({redeemedRewards.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Rewards Grid */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        {activeTab === 'available' ? (
+          <div>
+            {availableRewards.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {availableRewards.map((reward) => (
+                  <div key={reward.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-3xl">{reward.icon}</span>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(reward.category)}`}>
+                        {reward.category}
+                      </span>
+                    </div>
+                    
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{reward.title}</h3>
+                    <p className="text-gray-600 text-sm mb-4">{reward.description}</p>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Valore:</span>
+                        <span className="font-semibold text-imagross-green">{reward.value}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Costo:</span>
+                        <span className="font-semibold">{reward.bolliniRequired} bollini</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Valido fino al:</span>
+                        <span className="text-gray-900">{reward.validUntil}</span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleRedeemReward(reward)}
+                      disabled={!reward.available}
+                      className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+                        reward.available
+                          ? 'bg-imagross-orange text-white hover:bg-imagross-red'
+                          : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {reward.available ? 'Riscatta Premio' : 'Bollini Insufficienti'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🎁</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nessun premio disponibile</h3>
+                <p className="text-gray-600">Accumula più bollini per sbloccare fantastici premi!</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            {redeemedRewards.length > 0 ? (
+              <div className="space-y-4">
+                {redeemedRewards.map((reward) => (
+                  <div key={reward.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{reward.icon}</span>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{reward.title}</h3>
+                          <p className="text-sm text-gray-600">{reward.description}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-gray-600">Riscattato il</div>
+                        <div className="font-semibold text-gray-900">{reward.redeemedDate}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📋</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nessun premio riscattato</h3>
+                <p className="text-gray-600">I premi che riscatterai appariranno qui.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* How it works */}
+      <div className="bg-gradient-to-r from-imagross-orange to-imagross-red rounded-lg p-6 text-white">
+        <h3 className="text-xl font-bold mb-4">Come Funziona il Sistema Premi</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center">
+            <div className="text-3xl mb-2">🛒</div>
+            <h4 className="font-semibold mb-1">1. Fai Shopping</h4>
+            <p className="text-sm opacity-90">Ogni acquisto ti fa guadagnare bollini</p>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl mb-2">💎</div>
+            <h4 className="font-semibold mb-1">2. Accumula Bollini</h4>
+            <p className="text-sm opacity-90">Più spendi, più bollini guadagni</p>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl mb-2">🎁</div>
+            <h4 className="font-semibold mb-1">3. Riscatta Premi</h4>
+            <p className="text-sm opacity-90">Usa i bollini per ottenere fantastici premi</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState(null);
