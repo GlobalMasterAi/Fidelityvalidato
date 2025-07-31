@@ -356,12 +356,10 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Fidelity Card Import Frontend Integration"
-  stuck_tasks:
-    - "Fidelity Card Import Frontend Integration"
+  current_focus: []
+  stuck_tasks: []
   test_all: false
-  test_priority: "high_first"
+  test_priority: "completed"
 
 agent_communication:
   - agent: "main"
