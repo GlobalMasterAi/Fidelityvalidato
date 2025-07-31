@@ -988,8 +988,12 @@ const AdminLoginPage = () => {
 const Dashboard = () => {
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({});
 
   useEffect(() => {
     fetchPersonalAnalytics();
