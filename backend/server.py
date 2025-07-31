@@ -356,6 +356,236 @@ async def load_scontrini_data():
         print(f"Error loading scontrini data: {e}")
         SCONTRINI_DATA = []
 
+def calculate_rfm_segmentation():
+    """Calculate RFM (Recency, Frequency, Monetary) segmentation for customers"""
+    from datetime import datetime, timedelta
+    import statistics
+    
+    # Aggregate customer data from scontrini
+    customer_metrics = defaultdict(lambda: {
+        'transactions': [],
+        'total_spent': 0,
+        'total_bollini': 0,
+        'last_transaction_date': None
+    })
+    
+    # Process all transactions
+    for transaction in SCONTRINI_DATA:
+        customer_id = transaction.get('CODICE_CLIENTE', '')
+        if not customer_id:
+            continue
+            
+        date_str = transaction.get('DATA_SCONTRINO', '')
+        if len(date_str) != 8:
+            continue
+            
+        try:
+            transaction_date = datetime.strptime(date_str, '%Y%m%d')
+            amount = float(transaction.get('IMPORTO_SCONTRINO', 0))
+            bollini = float(transaction.get('N_BOLLINI', 0))
+            
+            customer_metrics[customer_id]['transactions'].append({
+                'date': transaction_date,
+                'amount': amount,
+                'bollini': bollini
+            })
+            customer_metrics[customer_id]['total_spent'] += amount
+            customer_metrics[customer_id]['total_bollini'] += bollini
+            
+            if (customer_metrics[customer_id]['last_transaction_date'] is None or 
+                transaction_date > customer_metrics[customer_id]['last_transaction_date']):
+                customer_metrics[customer_id]['last_transaction_date'] = transaction_date
+                
+        except ValueError:
+            continue
+    
+    # Calculate RFM scores
+    rfm_data = []
+    today = datetime.now()
+    
+    for customer_id, metrics in customer_metrics.items():
+        if not metrics['transactions']:
+            continue
+            
+        # Recency: days since last transaction
+        recency = (today - metrics['last_transaction_date']).days
+        
+        # Frequency: number of transactions
+        frequency = len(metrics['transactions'])
+        
+        # Monetary: total spent
+        monetary = metrics['total_spent']
+        
+        # Get fidelity data if available
+        fidelity_data = FIDELITY_DATA.get(customer_id, {})
+        
+        rfm_data.append({
+            'customer_id': customer_id,
+            'recency': recency,
+            'frequency': frequency,
+            'monetary': monetary,
+            'total_bollini': metrics['total_bollini'],
+            'nome': fidelity_data.get('nome', ''),
+            'cognome': fidelity_data.get('cognome', ''),
+            'email': fidelity_data.get('email', ''),
+            'telefono': fidelity_data.get('n_telefono', ''),
+            'localita': fidelity_data.get('localita', ''),
+            'progressivo_spesa': safe_float_convert(fidelity_data.get('prog_spesa', '0'))
+        })
+    
+    if not rfm_data:
+        return []
+    
+    # Calculate quintiles for RFM scoring (1-5 scale)
+    recencies = [x['recency'] for x in rfm_data]
+    frequencies = [x['frequency'] for x in rfm_data]
+    monetaries = [x['monetary'] for x in rfm_data]
+    
+    # Sort for quintile calculation
+    recencies_sorted = sorted(recencies)
+    frequencies_sorted = sorted(frequencies, reverse=True)  # Higher frequency = better
+    monetaries_sorted = sorted(monetaries, reverse=True)   # Higher monetary = better
+    
+    def get_quintile_score(value, sorted_values, reverse=False):
+        """Get quintile score (1-5) for a value"""
+        n = len(sorted_values)
+        if n == 0:
+            return 3
+        
+        position = 0
+        for i, v in enumerate(sorted_values):
+            if value <= v:
+                position = i
+                break
+        else:
+            position = n - 1
+        
+        # Convert position to quintile (1-5)
+        quintile = min(5, max(1, int((position / n) * 5) + 1))
+        
+        # For recency, we want lower = better, so invert
+        if reverse:
+            quintile = 6 - quintile
+            
+        return quintile
+    
+    # Assign RFM scores and segments
+    for customer in rfm_data:
+        # Calculate RFM scores (1-5)
+        r_score = get_quintile_score(customer['recency'], recencies_sorted, reverse=True)
+        f_score = get_quintile_score(customer['frequency'], frequencies_sorted)
+        m_score = get_quintile_score(customer['monetary'], monetaries_sorted)
+        
+        customer['r_score'] = r_score
+        customer['f_score'] = f_score  
+        customer['m_score'] = m_score
+        customer['rfm_score'] = f"{r_score}{f_score}{m_score}"
+        
+        # Assign segments based on RFM scores
+        if r_score >= 4 and f_score >= 4 and m_score >= 4:
+            segment = "Champions"
+            color = "#10B981"  # Green
+            description = "Clienti migliori: acquistano spesso, recentemente e spendono molto"
+        elif r_score >= 3 and f_score >= 3 and m_score >= 4:
+            segment = "Loyal Customers"
+            color = "#3B82F6"  # Blue
+            description = "Clienti fedeli: acquistano regolarmente e spendono bene"
+        elif r_score >= 4 and f_score <= 2:
+            segment = "New Customers"
+            color = "#8B5CF6"  # Purple
+            description = "Nuovi clienti: acquisto recente ma bassa frequenza"
+        elif r_score >= 3 and f_score >= 2 and m_score >= 2:
+            segment = "Potential Loyalists"
+            color = "#F59E0B"  # Yellow
+            description = "Potenziali fedeli: buon potenziale di crescita"
+        elif r_score <= 2 and f_score >= 3:
+            segment = "At Risk"
+            color = "#F97316"  # Orange
+            description = "A rischio: clienti storici che non acquistano da tempo"
+        elif r_score <= 2 and f_score <= 2 and m_score >= 3:
+            segment = "Cannot Lose Them"
+            color = "#EF4444"  # Red
+            description = "Non perderli: clienti di valore che stanno abbandonando"
+        elif f_score <= 2 and m_score <= 2:
+            segment = "Hibernating"
+            color = "#6B7280"  # Gray
+            description = "In letargo: clienti inattivi da tempo"
+        else:
+            segment = "Others"
+            color = "#9CA3AF"  # Light Gray
+            description = "Altri: clienti con pattern misto"
+        
+        customer['segment'] = segment
+        customer['segment_color'] = color
+        customer['segment_description'] = description
+    
+    return rfm_data
+
+@api_router.get("/admin/customer-segmentation")
+async def get_customer_segmentation(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get customer segmentation analysis"""
+    # Verify admin token
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+        if payload.get("role") != "super_admin":
+            raise HTTPException(status_code=403, detail="Accesso negato")
+    except:
+        raise HTTPException(status_code=401, detail="Token non valido")
+    
+    try:
+        rfm_data = calculate_rfm_segmentation()
+        
+        # Aggregate segment statistics
+        segment_stats = Counter(customer['segment'] for customer in rfm_data)
+        
+        # Calculate segment values
+        segment_values = defaultdict(lambda: {'count': 0, 'total_value': 0, 'avg_recency': 0, 'avg_frequency': 0})
+        
+        for customer in rfm_data:
+            segment = customer['segment']
+            segment_values[segment]['count'] += 1
+            segment_values[segment]['total_value'] += customer['monetary']
+            segment_values[segment]['avg_recency'] += customer['recency']
+            segment_values[segment]['avg_frequency'] += customer['frequency']
+        
+        # Calculate averages
+        for segment in segment_values:
+            count = segment_values[segment]['count']
+            if count > 0:
+                segment_values[segment]['avg_recency'] = round(segment_values[segment]['avg_recency'] / count, 1)
+                segment_values[segment]['avg_frequency'] = round(segment_values[segment]['avg_frequency'] / count, 1)
+                segment_values[segment]['avg_value'] = round(segment_values[segment]['total_value'] / count, 2)
+        
+        # Create segment summary
+        segments_summary = []
+        for customer in rfm_data:
+            segment = customer['segment']
+            if not any(s['name'] == segment for s in segments_summary):
+                segments_summary.append({
+                    'name': segment,
+                    'color': customer['segment_color'],
+                    'description': customer['segment_description'],
+                    'count': segment_stats[segment],
+                    'total_value': segment_values[segment]['total_value'],
+                    'avg_value': segment_values[segment]['avg_value'],
+                    'avg_recency': segment_values[segment]['avg_recency'],
+                    'avg_frequency': segment_values[segment]['avg_frequency']
+                })
+        
+        # Sort segments by total value
+        segments_summary.sort(key=lambda x: x['total_value'], reverse=True)
+        
+        return {
+            'customers': rfm_data,
+            'segments_summary': segments_summary,
+            'total_customers': len(rfm_data),
+            'total_analyzed_value': sum(c['monetary'] for c in rfm_data)
+        }
+        
+    except Exception as e:
+        print(f"Error calculating segmentation: {e}")
+        raise HTTPException(status_code=500, detail="Errore nel calcolo della segmentazione")
+
 def get_dashboard_analytics():
     """Get comprehensive dashboard analytics"""
     from datetime import datetime, timedelta
