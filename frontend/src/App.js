@@ -2474,7 +2474,10 @@ const QRRegistrationPage = () => {
 };
 
 const AdminPanel = () => {
-    setEditingUser(user.id);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const { admin } = useAuth();
+
+  // Check for tab in URL
     setEditFormData({
       nome: user.nome || '',
       cognome: user.cognome || '',
