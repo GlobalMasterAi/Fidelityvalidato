@@ -288,9 +288,9 @@ backend:
 
   - task: "User Profile Management PUT"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
@@ -300,6 +300,12 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL ISSUE: User profile UPDATE endpoint has a critical bug. The endpoint returns 200 OK but changes are NOT persisted to the database. Tested with multiple field updates (telefono, localita, consenso_dati_personali, numero_figli) - all return success but values remain unchanged. Database update query appears to execute without error but data is not actually modified. This is a critical functionality issue that prevents users from updating their profiles."
+      - working: "NA"
+        agent: "main"
+        comment: "FIXING: Added proper MongoDB update verification with result.acknowledged check, improved error handling for matched_count and modified_count, added detailed logging for debugging update operations. Need retesting to verify fix."
+      - working: true
+        agent: "testing"
+        comment: "✅ CRITICAL FIX VERIFIED: User Profile PUT endpoint database persistence issue has been SUCCESSFULLY RESOLVED! Comprehensive testing confirms: ✅ Basic field updates (telefono, localita, consenso_dati_personali, numero_figli) now persist correctly to MongoDB ✅ Boolean field updates (consenso_dati_pubblicitari, animali_cani, animali_gatti, intolleranze) persist correctly ✅ Multiple field updates in single request (14 fields tested) persist correctly ✅ Multiple consecutive updates maintain database consistency ✅ Edge cases handled properly (empty updates, null values, boolean string conversion) ✅ Database verification with fresh GET requests confirms all changes are actually saved ✅ MongoDB update operations now properly use result.acknowledged, matched_count, and modified_count checks. The critical database persistence bug has been completely fixed and the PUT endpoint is now fully functional."
 
 frontend:
   - task: "Super Admin Dashboard UI"
