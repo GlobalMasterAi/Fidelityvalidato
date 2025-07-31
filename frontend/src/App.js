@@ -2818,16 +2818,8 @@ const Dashboard = () => {
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { admin } = useAuth();
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="consenso_dati_personali"
-                        checked={editFormData.consenso_dati_personali}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Consenso Dati Personali</span>
-                    </label>
+  // Check for tab in URL
+  useEffect(() => {
                     <label className="flex items-center">
                       <input
                         type="checkbox"
