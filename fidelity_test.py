@@ -537,25 +537,38 @@ def test_data_mapping_completeness():
 def test_registration_with_fidelity_data():
     """Test user registration using fidelity data pre-population"""
     try:
-        # First check tessera to get fidelity data
-        tessera_data = {"tessera_fisica": "2018000015632"}
+        # First check tessera to get fidelity data - use a card with valid data
+        tessera_data = {"tessera_fisica": "2020000000013"}
         check_response = requests.post(f"{API_BASE}/check-tessera", json=tessera_data)
         
-        if check_response.status_code != 200 or not check_response.json().get("found"):
-            log_test("Registration with Fidelity Data", False, "Could not find test tessera for registration")
+        if check_response.status_code != 200:
+            log_test("Registration with Fidelity Data", False, "Could not check test tessera for registration")
             return False
         
-        fidelity_data = check_response.json()["user_data"]
+        check_data = check_response.json()
+        if not check_data.get("found"):
+            log_test("Registration with Fidelity Data", False, "Test tessera not found")
+            return False
+        
+        if check_data.get("migrated"):
+            log_test("Registration with Fidelity Data", False, "Test tessera already migrated")
+            return False
+        
+        if "user_data" not in check_data:
+            log_test("Registration with Fidelity Data", False, "No user_data in tessera check response")
+            return False
+        
+        fidelity_data = check_data["user_data"]
         
         # Now register using the fidelity data
         user_data = {
             "nome": fidelity_data["nome"],
             "cognome": fidelity_data["cognome"],
             "sesso": fidelity_data["sesso"],
-            "email": f"antonio.bianchi.{uuid.uuid4().hex[:8]}@libero.it",  # Use unique email
-            "telefono": fidelity_data["telefono"],
-            "localita": fidelity_data["localita"],
-            "tessera_fisica": "2018000015632",
+            "email": f"cosimo.damiani.{uuid.uuid4().hex[:8]}@email.it",  # Use unique email
+            "telefono": fidelity_data.get("telefono") or "3331234567",  # Use default if empty
+            "localita": fidelity_data.get("localita") or "BARI",  # Use default if empty
+            "tessera_fisica": "2020000000013",
             "password": "TestPass123!",
             # Include extended fidelity fields
             "indirizzo": fidelity_data.get("indirizzo"),
@@ -593,7 +606,7 @@ def test_registration_with_fidelity_data():
                 log_test("Registration with Fidelity Data", False, "Name data doesn't match fidelity data")
                 return False
             
-            if data["tessera_fisica"] != "2018000015632":
+            if data["tessera_fisica"] != "2020000000013":
                 log_test("Registration with Fidelity Data", False, "Tessera fisica doesn't match")
                 return False
             
