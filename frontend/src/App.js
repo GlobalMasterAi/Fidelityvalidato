@@ -1387,10 +1387,7 @@ const Dashboard = () => {
         {activeSection === 'overview' && renderOverview()}
         {activeSection === 'analytics' && renderAnalytics()}
         {activeSection === 'profile' && (
-          <div className="bg-white rounded-lg p-6 shadow-sm border">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Gestione Profilo</h2>
-            <p className="text-gray-600">Sezione profilo in sviluppo...</p>
-          </div>
+          <ProfileManagement profile={profile} user={user} onRefresh={fetchUserProfile} />
         )}
         {activeSection === 'rewards' && (
           <div className="bg-white rounded-lg p-6 shadow-sm border">
