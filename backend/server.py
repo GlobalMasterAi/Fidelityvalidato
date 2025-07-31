@@ -164,15 +164,35 @@ class UserCreate(BaseModel):
     email: EmailStr
     telefono: str
     localita: str
-    tessera_fisica: str
+    tessera_fisica: Optional[str] = None  # Optional for new registrations
     password: str
     # Optional registration context
     store_id: Optional[str] = None
     cashier_id: Optional[str] = None
-    # Additional optional fields
+    # Extended optional fields for fidelity import
     indirizzo: Optional[str] = None
+    cap: Optional[str] = None
     provincia: Optional[str] = None
+    data_nascita: Optional[str] = None
     newsletter: bool = False
+    bollini: Optional[int] = None
+    progressivo_spesa: Optional[float] = None
+    consenso_dati_personali: bool = True
+    consenso_dati_pubblicitari: bool = True
+    consenso_profilazione: Optional[bool] = None
+    consenso_marketing: Optional[bool] = None
+    coniugato: Optional[bool] = None
+    data_matrimonio: Optional[str] = None
+    numero_figli: Optional[int] = None
+    animali_cani: bool = False
+    animali_gatti: bool = False
+    intolleranza_lattosio: bool = False
+    intolleranza_glutine: bool = False
+    intolleranza_nichel: bool = False
+    celiachia: bool = False
+    altra_intolleranza: Optional[str] = None
+    richiede_fattura: bool = False
+    ragione_sociale: Optional[str] = None
 
 class TesseraCheck(BaseModel):
     tessera_fisica: str
