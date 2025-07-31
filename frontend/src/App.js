@@ -2473,7 +2473,7 @@ const QRRegistrationPage = () => {
   return <div>QR Registration Page - Coming Soon</div>;
 };
 
-  const fetchUsers = async () => {
+const AdminPanel = () => {
     try {
       const response = await axios.get(`${API}/admin/users`, {
         headers: { Authorization: `Bearer ${adminToken}` }
