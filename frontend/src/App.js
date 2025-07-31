@@ -2474,17 +2474,24 @@ const QRRegistrationPage = () => {
 };
 
 const AdminPanel = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const { admin } = useAuth();
-
-  // Check for tab in URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    if (tab) {
-      setActiveTab(tab);
-    }
-  }, []);
+    setEditingUser(user.id);
+    setEditFormData({
+      nome: user.nome || '',
+      cognome: user.cognome || '',
+      email: user.email || '',
+      telefono: user.telefono || '',
+      localita: user.localita || '',
+      punti: user.punti || 0,
+      active: user.active !== false,
+      indirizzo: user.indirizzo || '',
+      cap: user.cap || '',
+      provincia: user.provincia || '',
+      data_nascita: user.data_nascita || '',
+      newsletter: user.newsletter || false,
+      bollini: user.bollini || 0,
+      progressivo_spesa: user.progressivo_spesa || 0,
+      consenso_dati_personali: user.consenso_dati_personali !== false,
+      consenso_dati_pubblicitari: user.consenso_dati_pubblicitari !== false,
       consenso_profilazione: user.consenso_profilazione,
       consenso_marketing: user.consenso_marketing,
       coniugato: user.coniugato,
