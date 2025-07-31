@@ -212,6 +212,21 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "FIXING: Added proper MongoDB update verification with result.acknowledged check, improved error handling for matched_count and modified_count, added detailed logging for debugging update operations. Need retesting to verify fix."
+
+  - task: "Super Admin User Profile Editing"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato nuovo endpoint PUT /api/admin/user-profile/{tessera_fisica} per permettere al Super Admin di modificare i profili utente tramite tessera fisica"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: New Super Admin user profile editing functionality fully operational! PUT /api/admin/user-profile/{tessera_fisica} endpoint working perfectly. ✅ Authentication: Only admin tokens accepted, regular users properly rejected ✅ Profile Updates: All allowed fields (nome, cognome, email, telefono, localita, indirizzo, provincia, sesso, data_nascita, cap) update correctly ✅ Database Persistence: Changes are properly saved to MongoDB and verified through fresh queries ✅ Error Handling: Non-existent tessera_fisica returns 404 with proper error message ✅ Field Restrictions: Only allowed fields can be updated, restricted fields ignored ✅ Security: Unauthorized access properly blocked, authentication required. Tested with real fidelity user CHIARA ABATANGELO (2020000028284) - all profile modifications persist correctly."
     implemented: true
     working: true
     file: "/app/backend/server.py"
