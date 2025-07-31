@@ -2226,6 +2226,17 @@ def run_all_tests():
         test_fidelity_card_chiara_abatangelo
     ]
     
+    print("\n👨‍💼 SUPER ADMIN USER PROFILE EDITING TESTS - NEW CRITICAL FUNCTIONALITY")
+    print("-" * 50)
+    admin_profile_tests = [
+        test_admin_user_profile_update_by_tessera,
+        test_admin_user_profile_update_nonexistent,
+        test_admin_user_profile_update_unauthorized,
+        test_admin_user_profile_update_no_token,
+        test_admin_user_profile_update_field_restrictions,
+        test_admin_user_profile_database_persistence
+    ]
+    
     # Run all test suites
     all_tests = (admin_auth_tests + store_tests + cashier_tests + 
                 qr_tests + stats_tests + access_tests + excel_tests + user_tests + profile_tests)
