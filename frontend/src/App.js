@@ -2470,10 +2470,8 @@ const UserManagement = () => {
   );
 };
 const QRRegistrationPage = () => {
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  return <div>QR Registration Page - Coming Soon</div>;
+};
 
   const fetchUsers = async () => {
     try {
