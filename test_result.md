@@ -180,7 +180,38 @@ backend:
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: /api/qr/{qr_code} endpoint for cashier info retrieval working. User registration via QR code with store/cashier context working. Registration count increment for cashiers working. Proper store/cashier linking in user profile verified."
 
-  - task: "Enhanced User Registration"
+  - task: "Personal User Analytics API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato endpoint /api/user/personal-analytics per dashboard utente con gamification, spending analytics, loyalty levels"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Personal Analytics API working correctly with complete loyalty data including: loyalty level calculation (Bronze/Silver/Gold/Platinum), total spending from SCONTRINI integration, bollini count, achievements system, monthly spending patterns, shopping behavior insights, rewards tracking. Authentication properly validates JWT tokens and user access."
+
+  - task: "User Profile Management API"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato GET e PUT endpoints per gestione profilo completo utente con merge dati fidelity"
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL BUG DISCOVERED: GET /api/user/profile works correctly with complete fidelity data integration. PUT /api/user/profile has database persistence issue - endpoint returns 200 OK but changes are not saved to MongoDB. User profile updates claim success but modifications don't persist."
+      - working: "NA"
+        agent: "main"
+        comment: "FIXING: Added proper MongoDB update verification with result.acknowledged check, improved error handling for matched_count and modified_count, added detailed logging for debugging update operations. Need retesting to verify fix."
     implemented: true
     working: true
     file: "/app/backend/server.py"
