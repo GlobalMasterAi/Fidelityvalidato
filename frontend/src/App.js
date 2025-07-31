@@ -3223,10 +3223,50 @@ const CustomerSegmentation = () => {
 };
 
 const App = () => {
+  const { isAuthenticated, isAdminAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AuthProvider>
       <BrowserRouter>
-        <AuthRoutes />
+        <Routes>
+          <Route path="/register" element={<TesseraCheckPage />} />
+          
+          <Route 
+            path="/login" 
+            element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} 
+          />
+          
+          <Route 
+            path="/admin/login" 
+            element={isAdminAuthenticated ? <Navigate to="/admin" /> : <AdminLoginPage />} 
+          />
+          
+          <Route 
+            path="/admin/*" 
+            element={isAdminAuthenticated ? <AdminPanel /> : <Navigate to="/admin/login" />} 
+          />
+          
+          <Route 
+            path="/dashboard" 
+            element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} 
+          />
+          
+          <Route 
+            path="/" 
+            element={<Navigate to={isAuthenticated ? "/dashboard" : (isAdminAuthenticated ? "/admin" : "/login")} />} 
+          />
+        </Routes>
       </BrowserRouter>
     </AuthProvider>
   );
