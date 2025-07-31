@@ -2999,21 +2999,46 @@ const UserManagement = () => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={() => setShowUserModal(false)}
-                className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
-              >
-                Chiudi
-              </button>
-              <button
-                onClick={() => {
-                  // Qui potresti implementare la funzionalità di modifica
-                  console.log('Edit user:', selectedUser);
-                }}
-                className="px-6 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
-              >
-                Modifica
-              </button>
+              {isEditingUser ? (
+                <>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={savingUser}
+                    className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={handleSaveUser}
+                    disabled={savingUser}
+                    className="px-6 py-2 bg-imagross-green text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center"
+                  >
+                    {savingUser ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Salvando...
+                      </>
+                    ) : (
+                      'Salva Modifiche'
+                    )}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowUserModal(false)}
+                    className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    Chiudi
+                  </button>
+                  <button
+                    onClick={handleEditUser}
+                    className="px-6 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+                  >
+                    Modifica Profilo
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
