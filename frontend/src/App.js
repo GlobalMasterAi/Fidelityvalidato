@@ -2816,16 +2816,8 @@ const Dashboard = () => {
   return <div>Dashboard Component</div>;
 };
 const AdminPanel = () => {
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="newsletter"
-                        checked={editFormData.newsletter}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Newsletter</span>
-                    </label>
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const { admin } = useAuth();
                     <label className="flex items-center">
                       <input
                         type="checkbox"
