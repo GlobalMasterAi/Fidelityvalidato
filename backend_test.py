@@ -1661,6 +1661,345 @@ def test_super_admin_only_endpoints():
         return False
 
 # ============================================================================
+# SUPER ADMIN USER PROFILE EDITING TESTS - NEW CRITICAL FUNCTIONALITY
+# ============================================================================
+
+def test_admin_user_profile_update_by_tessera():
+    """Test new PUT /api/admin/user-profile/{tessera_fisica} endpoint - CRITICAL NEW FEATURE"""
+    if not admin_access_token:
+        log_test("Admin User Profile Update", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Use the known test fidelity card: 2020000028284 (CHIARA ABATANGELO)
+        test_tessera = "2020000028284"
+        
+        # First, register this user to ensure they exist in the platform
+        user_registration_data = {
+            "nome": "CHIARA",
+            "cognome": "ABATANGELO", 
+            "sesso": "F",
+            "email": f"chiara.abatangelo.{uuid.uuid4().hex[:8]}@libero.it",
+            "telefono": "3497312268",
+            "localita": "MOLA",
+            "tessera_fisica": test_tessera,
+            "password": "TestPass123!",
+            "indirizzo": "VIA G. DI VITTORIO N.52"
+        }
+        
+        # Register the user first
+        reg_response = requests.post(f"{API_BASE}/register", json=user_registration_data)
+        if reg_response.status_code != 200:
+            # User might already exist, that's okay for this test
+            pass
+        
+        # Now test the admin profile update endpoint
+        update_data = {
+            "nome": "CHIARA UPDATED",
+            "cognome": "ABATANGELO MODIFIED",
+            "email": f"chiara.updated.{uuid.uuid4().hex[:8]}@libero.it",
+            "telefono": "3497312999",
+            "localita": "MOLA DI BARI",
+            "indirizzo": "VIA G. DI VITTORIO N.100",
+            "provincia": "BA",
+            "sesso": "F"
+        }
+        
+        response = requests.put(f"{API_BASE}/admin/user-profile/{test_tessera}", json=update_data, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate response structure
+            if "message" not in data or "user" not in data:
+                log_test("Admin User Profile Update", False, "Missing fields in response")
+                return False
+            
+            if "Profilo utente aggiornato con successo" not in data["message"]:
+                log_test("Admin User Profile Update", False, f"Unexpected message: {data['message']}")
+                return False
+            
+            # Validate updated user data
+            updated_user = data["user"]
+            
+            # Check if updates were applied
+            update_errors = []
+            if updated_user.get("nome") != update_data["nome"]:
+                update_errors.append(f"nome: expected {update_data['nome']}, got {updated_user.get('nome')}")
+            
+            if updated_user.get("cognome") != update_data["cognome"]:
+                update_errors.append(f"cognome: expected {update_data['cognome']}, got {updated_user.get('cognome')}")
+            
+            if updated_user.get("email") != update_data["email"]:
+                update_errors.append(f"email: expected {update_data['email']}, got {updated_user.get('email')}")
+            
+            if updated_user.get("telefono") != update_data["telefono"]:
+                update_errors.append(f"telefono: expected {update_data['telefono']}, got {updated_user.get('telefono')}")
+            
+            if updated_user.get("localita") != update_data["localita"]:
+                update_errors.append(f"localita: expected {update_data['localita']}, got {updated_user.get('localita')}")
+            
+            if update_errors:
+                log_test("Admin User Profile Update", False, f"Update validation failed: {'; '.join(update_errors)}")
+                return False
+            
+            # Verify tessera_fisica remains unchanged
+            if updated_user.get("tessera_fisica") != test_tessera:
+                log_test("Admin User Profile Update", False, f"tessera_fisica should not change: {updated_user.get('tessera_fisica')}")
+                return False
+            
+            # Verify updated_at timestamp was set
+            if "updated_at" not in updated_user:
+                log_test("Admin User Profile Update", False, "Missing updated_at timestamp")
+                return False
+            
+            log_test("Admin User Profile Update", True, f"Successfully updated user profile for tessera {test_tessera}")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin User Profile Update", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin User Profile Update", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_user_profile_update_nonexistent():
+    """Test admin user profile update with non-existent tessera_fisica"""
+    if not admin_access_token:
+        log_test("Admin Update Nonexistent User", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Use a non-existent tessera
+        nonexistent_tessera = "9999999999999"
+        
+        update_data = {
+            "nome": "Test",
+            "cognome": "User",
+            "email": "test@example.com"
+        }
+        
+        response = requests.put(f"{API_BASE}/admin/user-profile/{nonexistent_tessera}", json=update_data, headers=headers)
+        
+        if response.status_code == 404:
+            error_detail = response.json().get("detail", "")
+            if "Utente non registrato nella piattaforma" in error_detail:
+                log_test("Admin Update Nonexistent User", True, "Correctly rejected non-existent user")
+                return True
+            else:
+                log_test("Admin Update Nonexistent User", False, f"Wrong error message: {error_detail}")
+                return False
+        else:
+            log_test("Admin Update Nonexistent User", False, f"Should return 404, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Update Nonexistent User", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_user_profile_update_unauthorized():
+    """Test admin user profile update without admin token"""
+    try:
+        # Use regular user token instead of admin token
+        if not access_token:
+            log_test("Admin Update Unauthorized", False, "No user access token available")
+            return False
+        
+        headers = {"Authorization": f"Bearer {access_token}"}  # Regular user token
+        
+        test_tessera = "2020000028284"
+        update_data = {
+            "nome": "Unauthorized",
+            "cognome": "Update"
+        }
+        
+        response = requests.put(f"{API_BASE}/admin/user-profile/{test_tessera}", json=update_data, headers=headers)
+        
+        if response.status_code == 403:
+            error_detail = response.json().get("detail", "")
+            if "Admin access required" in error_detail:
+                log_test("Admin Update Unauthorized", True, "Correctly rejected non-admin access")
+                return True
+            else:
+                log_test("Admin Update Unauthorized", False, f"Wrong error message: {error_detail}")
+                return False
+        else:
+            log_test("Admin Update Unauthorized", False, f"Should return 403, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Update Unauthorized", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_user_profile_update_no_token():
+    """Test admin user profile update without any authentication"""
+    try:
+        test_tessera = "2020000028284"
+        update_data = {
+            "nome": "No",
+            "cognome": "Auth"
+        }
+        
+        response = requests.put(f"{API_BASE}/admin/user-profile/{test_tessera}", json=update_data)
+        
+        if response.status_code == 403:
+            log_test("Admin Update No Token", True, "Correctly rejected unauthenticated request")
+            return True
+        else:
+            log_test("Admin Update No Token", False, f"Should return 403, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Update No Token", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_user_profile_update_field_restrictions():
+    """Test admin user profile update with restricted fields"""
+    if not admin_access_token:
+        log_test("Admin Update Field Restrictions", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        test_tessera = "2020000028284"
+        
+        # Try to update fields that should be allowed and some that might be restricted
+        update_data = {
+            "nome": "TestNome",
+            "cognome": "TestCognome", 
+            "email": f"test.{uuid.uuid4().hex[:8]}@example.com",
+            "telefono": "1234567890",
+            "localita": "TestCity",
+            "indirizzo": "Test Address",
+            "provincia": "TE",
+            "sesso": "M",
+            "data_nascita": "19900101",
+            "cap": "12345",
+            # These fields should be allowed based on the endpoint code
+            "tessera_digitale": "should_not_update",  # This should be ignored
+            "punti": 9999,  # This should be ignored
+            "password_hash": "should_not_update"  # This should be ignored
+        }
+        
+        response = requests.put(f"{API_BASE}/admin/user-profile/{test_tessera}", json=update_data, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            updated_user = data["user"]
+            
+            # Verify allowed fields were updated
+            allowed_updates = ["nome", "cognome", "email", "telefono", "localita", "indirizzo", "provincia", "sesso", "data_nascita", "cap"]
+            
+            for field in allowed_updates:
+                if field in update_data and updated_user.get(field) != update_data[field]:
+                    log_test("Admin Update Field Restrictions", False, f"Allowed field {field} not updated properly")
+                    return False
+            
+            # Verify restricted fields were not updated (if they exist in response)
+            if "punti" in updated_user and updated_user["punti"] == 9999:
+                log_test("Admin Update Field Restrictions", False, "Restricted field 'punti' was updated")
+                return False
+            
+            if "tessera_digitale" in updated_user and updated_user["tessera_digitale"] == "should_not_update":
+                log_test("Admin Update Field Restrictions", False, "Restricted field 'tessera_digitale' was updated")
+                return False
+            
+            log_test("Admin Update Field Restrictions", True, "Field restrictions properly enforced")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Update Field Restrictions", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Update Field Restrictions", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_user_profile_database_persistence():
+    """Test admin user profile update database persistence - CRITICAL TEST"""
+    if not admin_access_token:
+        log_test("Admin Update DB Persistence", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        test_tessera = "2020000028284"
+        
+        # Generate unique test data
+        import time
+        timestamp = str(int(time.time()))
+        
+        update_data = {
+            "nome": f"PersistTest{timestamp[-4:]}",
+            "cognome": f"DbTest{timestamp[-4:]}",
+            "telefono": f"333{timestamp[-7:]}",
+            "localita": f"TestCity{timestamp[-3:]}",
+            "indirizzo": f"Via Test {timestamp[-4:]}",
+            "provincia": "TS"
+        }
+        
+        # Perform the update
+        response = requests.put(f"{API_BASE}/admin/user-profile/{test_tessera}", json=update_data, headers=headers)
+        
+        if response.status_code == 200:
+            # Wait a moment to ensure database write completion
+            import time
+            time.sleep(0.5)
+            
+            # Verify persistence by checking if user can login and see updated data
+            # First, we need to find the user's email to test login
+            updated_data = response.json()
+            user_email = updated_data["user"]["email"]
+            
+            # Try to login as the updated user (if we know the password)
+            # For this test, we'll use the admin check-tessera endpoint to verify persistence
+            tessera_check_data = {"tessera_fisica": test_tessera}
+            check_response = requests.post(f"{API_BASE}/admin/check-tessera", json=tessera_check_data, headers=headers)
+            
+            if check_response.status_code == 200:
+                check_data = check_response.json()
+                
+                if check_data.get("found") and "user_data" in check_data:
+                    user_data = check_data["user_data"]
+                    
+                    # Verify the updates persisted
+                    persistence_errors = []
+                    for field, expected_value in update_data.items():
+                        if user_data.get(field) != expected_value:
+                            persistence_errors.append(f"{field}: expected {expected_value}, got {user_data.get(field)}")
+                    
+                    if persistence_errors:
+                        log_test("Admin Update DB Persistence", False, f"Database persistence failed: {'; '.join(persistence_errors)}")
+                        return False
+                    
+                    log_test("Admin Update DB Persistence", True, "Admin profile updates successfully persisted to database")
+                    return True
+                else:
+                    log_test("Admin Update DB Persistence", False, "Could not verify user data after update")
+                    return False
+            else:
+                log_test("Admin Update DB Persistence", False, "Could not check tessera after update")
+                return False
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Update DB Persistence", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Update DB Persistence", False, f"Exception: {str(e)}")
+        return False
+
+# ============================================================================
 # EXCEL IMPORT SYSTEM TESTS
 # ============================================================================
 
