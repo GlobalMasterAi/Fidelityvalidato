@@ -329,11 +329,89 @@ async def get_super_admin(credentials: HTTPAuthorizationCredentials = Depends(se
 # Load fidelity data
 FIDELITY_DATA = {}
 
+def clean_json_string(content: str) -> str:
+    """Clean malformed JSON content"""
+    import re
+    
+    # Fix common issues in the JSON
+    # Replace invalid escape sequences like "\\" with empty string  
+    content = re.sub(r':"\\+"', ':""', content)
+    
+    # Fix any other malformed escape sequences
+    content = re.sub(r'\\+(?!")', '', content)
+    
+    return content
+
+def parse_json_tolerant(file_path: str, encoding: str = 'latin-1') -> list:
+    """Parse JSON file with tolerance for malformed records"""
+    records = []
+    skipped_records = 0
+    
+    try:
+        with open(file_path, 'r', encoding=encoding) as f:
+            content = f.read()
+            
+        # Clean the content first
+        content = clean_json_string(content)
+        
+        # Try to parse the complete JSON
+        try:
+            data = json.loads(content)
+            if isinstance(data, list):
+                for record in data:
+                    if isinstance(record, dict) and 'card_number' in record:
+                        records.append(record)
+                    else:
+                        skipped_records += 1
+            print(f"Successfully parsed complete JSON file")
+            
+        except json.JSONDecodeError as e:
+            # If complete parsing fails, try chunked parsing
+            print(f"Complete JSON parsing failed: {e}")
+            print("Attempting chunked parsing...")
+            
+            # Remove the outer brackets and split by records
+            content = content.strip()
+            if content.startswith('[') and content.endswith(']'):
+                content = content[1:-1]  # Remove outer brackets
+            
+            # Split by record boundaries ("},{"
+            record_strings = content.split('},{')
+            
+            for i, record_str in enumerate(record_strings):
+                try:
+                    # Add back the braces
+                    if i == 0:
+                        record_str = record_str + '}'
+                    elif i == len(record_strings) - 1:
+                        record_str = '{' + record_str
+                    else:
+                        record_str = '{' + record_str + '}'
+                    
+                    record = json.loads(record_str)
+                    if 'card_number' in record:
+                        records.append(record)
+                    else:
+                        skipped_records += 1
+                        
+                except json.JSONDecodeError:
+                    skipped_records += 1
+                    continue
+                except Exception:
+                    skipped_records += 1
+                    continue
+    
+    except Exception as e:
+        print(f"Error reading file {file_path}: {e}")
+    
+    print(f"Loaded {len(records)} records, skipped {skipped_records} malformed records")
+    return records
+
 async def load_fidelity_data():
     """Load fidelity data from JSON file"""
     global FIDELITY_DATA
     try:
-        # For now, load sample data from the original small files + hardcoded test data
+        # Start with sample test data
         FIDELITY_DATA = {
             "2013000002194": {
                 "card_number": "2013000002194",
@@ -447,18 +525,24 @@ async def load_fidelity_data():
             }
         }
         
-        # Try to load from big JSON if possible
+        # Now try to load the complete fidelity JSON with robust parsing
         try:
-            import json
-            with open('/app/fidelity_complete.json', 'r', encoding='latin-1') as f:
-                content = f.read(50000)  # Read only first 50KB for now
-                # Try to extract some records manually
-                print("Attempting to load additional records from big JSON...")
+            print("Loading fidelity data from complete JSON file...")
+            json_records = parse_json_tolerant('/app/fidelity_complete.json')
+            
+            # Convert records to the FIDELITY_DATA format
+            for record in json_records:
+                card_number = record.get('card_number', '').strip()
+                if card_number:
+                    FIDELITY_DATA[card_number] = record
+                    
+            print(f"Successfully integrated {len(json_records)} records from fidelity JSON")
+            
         except Exception as big_json_error:
             print(f"Could not load big JSON: {big_json_error}")
         
-        print(f"Loaded {len(FIDELITY_DATA)} test fidelity records")
-        print(f"Available test cards: {list(FIDELITY_DATA.keys())}")
+        print(f"Total loaded fidelity records: {len(FIDELITY_DATA)}")
+        print(f"Sample card numbers: {list(FIDELITY_DATA.keys())[:10]}")
         
     except Exception as e:
         print(f"Error loading fidelity data: {e}")
