@@ -972,21 +972,32 @@ const AdminLoginPage = () => {
 // Admin Dashboard Components
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedTimeRange, setSelectedTimeRange] = useState('30d');
+  const [selectedStore, setSelectedStore] = useState('');
   const { adminToken } = useAuth();
 
   useEffect(() => {
-    fetchDashboardStats();
-  }, []);
+    fetchDashboardData();
+  }, [selectedTimeRange, selectedStore]);
 
-  const fetchDashboardStats = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const response = await axios.get(`${API}/admin/stats/dashboard`, {
-        headers: { Authorization: `Bearer ${adminToken}` }
-      });
-      setStats(response.data);
+      setLoading(true);
+      const [statsResponse, analyticsResponse] = await Promise.all([
+        axios.get(`${API}/admin/stats/dashboard`, {
+          headers: { Authorization: `Bearer ${adminToken}` }
+        }),
+        axios.get(`${API}/admin/analytics`, {
+          headers: { Authorization: `Bearer ${adminToken}` }
+        })
+      ]);
+      
+      setStats(statsResponse.data);
+      setAnalytics(analyticsResponse.data);
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
@@ -997,7 +1008,7 @@ const AdminDashboard = () => {
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento statistiche...</p>
+          <p className="mt-4 text-gray-600">Caricamento dashboard...</p>
         </div>
       </div>
     );
@@ -1005,49 +1016,251 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Dashboard Amministratore</h1>
-      
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-imagross-orange rounded-lg">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard Analytics</h1>
+        <div className="flex space-x-4 mt-4 sm:mt-0">
+          <select
+            value={selectedTimeRange}
+            onChange={(e) => setSelectedTimeRange(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+          >
+            <option value="7d">Ultimi 7 giorni</option>
+            <option value="30d">Ultimi 30 giorni</option>
+            <option value="90d">Ultimi 90 giorni</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Key Metrics Cards */}
+      {stats && analytics && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Revenue Card */}
+            <div className="bg-gradient-to-r from-imagross-orange to-red-500 rounded-lg shadow p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100 text-sm font-medium">Fatturato Totale</p>
+                  <p className="text-3xl font-bold">€{analytics.summary.total_revenue.toLocaleString()}</p>
+                  <p className="text-orange-100 text-sm">
+                    Medio: €{analytics.summary.avg_transaction}/transazione
+                  </p>
+                </div>
+                <div className="p-3 bg-white bg-opacity-20 rounded-full">
+                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z"/>
+                  </svg>
+                </div>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Utenti Totali</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.total_users}</p>
+            </div>
+
+            {/* Transactions Card */}
+            <div className="bg-gradient-to-r from-imagross-green to-green-600 rounded-lg shadow p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100 text-sm font-medium">Transazioni</p>
+                  <p className="text-3xl font-bold">{analytics.summary.total_transactions.toLocaleString()}</p>
+                  <p className="text-green-100 text-sm">
+                    {stats.total_users} clienti attivi
+                  </p>
+                </div>
+                <div className="p-3 bg-white bg-opacity-20 rounded-full">
+                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Bollini Card */}
+            <div className="bg-gradient-to-r from-purple-500 to-purple-700 rounded-lg shadow p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-sm font-medium">Bollini Distribuiti</p>
+                  <p className="text-3xl font-bold">{analytics.summary.total_bollini.toLocaleString()}</p>
+                  <p className="text-purple-100 text-sm">
+                    Media: {analytics.summary.avg_bollini_per_transaction}/transazione
+                  </p>
+                </div>
+                <div className="p-3 bg-white bg-opacity-20 rounded-full">
+                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Stores Card */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-700 rounded-lg shadow p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm font-medium">Punti Vendita</p>
+                  <p className="text-3xl font-bold">{stats.total_stores}</p>
+                  <p className="text-blue-100 text-sm">
+                    {stats.total_cashiers} casse attive
+                  </p>
+                </div>
+                <div className="p-3 bg-white bg-opacity-20 rounded-full">
+                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H3.862a2 2 0 01-1.995-1.858L1 7m18 0l-2-4H3L1 7m18 0H1"/>
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-imagross-green rounded-lg">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H3.862a2 2 0 01-1.995-1.858L1 7m18 0l-2-4H3L1 7m18 0H1"/>
-                </svg>
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Revenue Trend Chart */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Trend Fatturato (Ultimi 30 giorni)</h3>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <LineChart data={analytics.daily_trend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(date) => {
+                        const d = new Date(date.slice(0,4), date.slice(4,6)-1, date.slice(6,8));
+                        return d.toLocaleDateString('it-IT', { month: 'short', day: 'numeric' });
+                      }}
+                    />
+                    <YAxis tickFormatter={(value) => `€${value}`} />
+                    <Tooltip 
+                      labelFormatter={(date) => {
+                        const d = new Date(date.slice(0,4), date.slice(4,6)-1, date.slice(6,8));
+                        return d.toLocaleDateString('it-IT');
+                      }}
+                      formatter={(value) => [`€${value}`, 'Fatturato']}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="#F97316" 
+                      strokeWidth={3}
+                      dot={{ fill: '#F97316', strokeWidth: 2, r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Supermercati</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.total_stores}</p>
+            </div>
+
+            {/* Store Performance Chart */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance per Punto Vendita</h3>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <BarChart data={analytics.revenue_by_store.slice(0, 8)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="store_id" />
+                    <YAxis tickFormatter={(value) => `€${value}`} />
+                    <Tooltip formatter={(value) => [`€${value}`, 'Fatturato']} />
+                    <Bar dataKey="revenue" fill="#10B981" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-imagross-red rounded-lg">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z"/>
-                </svg>
+          {/* Additional Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Hourly Distribution */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Distribuzione Oraria Transazioni</h3>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <AreaChart data={analytics.hourly_distribution}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="hour" tickFormatter={(hour) => `${hour}:00`} />
+                    <YAxis />
+                    <Tooltip labelFormatter={(hour) => `Ora: ${hour}:00`} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="transactions" 
+                      stroke="#8B5CF6" 
+                      fill="#8B5CF6" 
+                      fillOpacity={0.6}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Casse Attive</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.total_cashiers}</p>
+            </div>
+
+            {/* Payment Methods */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Metodi di Pagamento</h3>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={analytics.payment_methods.slice(0, 6)}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ method, percent }) => `${method} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="count"
+                    >
+                      {analytics.payment_methods.slice(0, 6).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={['#F97316', '#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444'][index % 6]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
+            </div>
+          </div>
+
+          {/* Top Customers Table */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Top 10 Clienti per Spesa</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Codice Cliente</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Spesa Totale</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transazioni</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Spesa Media</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {analytics.top_customers.map((customer, index) => (
+                    <tr key={customer.customer_id} className={index < 3 ? 'bg-yellow-50' : ''}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {index < 3 && (
+                            <span className="inline-flex items-center justify-center w-6 h-6 bg-yellow-400 text-yellow-800 text-xs font-bold rounded-full mr-2">
+                              {index + 1}
+                            </span>
+                          )}
+                          <span className="font-medium text-gray-900">{customer.customer_id}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                        €{customer.total_spent.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {customer.transactions}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        €{(customer.total_spent / customer.transactions).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
             </div>
           </div>
 
