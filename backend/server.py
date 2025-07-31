@@ -525,8 +525,12 @@ def calculate_rfm_segmentation():
 async def get_user_personal_analytics(current_user = Depends(get_current_user)):
     """Get comprehensive personal analytics for the user"""
     try:
-        user_id = current_user["id"]
-        tessera_fisica = current_user.get("tessera_fisica", "")
+        # Extract user data from the response
+        if current_user["type"] != "user":
+            raise HTTPException(status_code=403, detail="User access required")
+        
+        user_data = current_user["data"]
+        tessera_fisica = user_data.tessera_fisica
         
         # Get user transactions from scontrini data
         user_transactions = []
