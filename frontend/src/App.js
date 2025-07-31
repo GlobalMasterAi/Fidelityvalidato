@@ -1049,7 +1049,7 @@ const Dashboard = () => {
   const formatDateBack = (dateStr) => {
     if (!dateStr) return '';
     return dateStr.replace(/-/g, '');
-  };
+  const fetchPersonalAnalytics = async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API}/user/personal-analytics`, {
