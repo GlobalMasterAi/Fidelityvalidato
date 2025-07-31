@@ -781,6 +781,80 @@ async def get_qr_info(qr_code: str):
         "registration_url": f"/register?qr={qr_code}"
     }
 
+@api_router.post("/admin/check-tessera")
+async def admin_check_tessera(tessera_data: TesseraCheck, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Admin endpoint to check tessera fisica and return user data"""
+    # Verify admin token
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+        if payload.get("role") != "super_admin":
+            raise HTTPException(status_code=403, detail="Accesso negato")
+    except:
+        raise HTTPException(status_code=401, detail="Token non valido")
+    
+    try:
+        # Check in current users first
+        user = await db.users.find_one({"tessera_fisica": tessera_data.tessera_fisica})
+        
+        if user:
+            if user.get("migrated", False):
+                return {
+                    "found": True,
+                    "migrated": True,
+                    "message": "Tessera già migrata",
+                    "user_data": {
+                        "nome": user.get("nome", ""),
+                        "cognome": user.get("cognome", ""),
+                        "sesso": user.get("sesso", "M"),
+                        "email": user.get("email", ""),
+                        "telefono": user.get("telefono", ""),
+                        "localita": user.get("localita", ""),
+                        "indirizzo": user.get("indirizzo", ""),
+                        "provincia": user.get("provincia", "")
+                    }
+                }
+            else:
+                # User exists but not migrated
+                return {
+                    "found": True,
+                    "migrated": False,
+                    "user_data": {
+                        "nome": user.get("nome", ""),
+                        "cognome": user.get("cognome", ""),
+                        "sesso": user.get("sesso", "M"),
+                        "email": user.get("email", ""),
+                        "telefono": user.get("telefono", ""),
+                        "localita": user.get("localita", ""),
+                        "indirizzo": user.get("indirizzo", ""),
+                        "provincia": user.get("provincia", "")
+                    }
+                }
+        
+        # Check in fidelity data
+        fidelity_data = get_fidelity_user_data(tessera_data.tessera_fisica)
+        
+        if fidelity_data:
+            return {
+                "found": True,
+                "migrated": False,
+                "user_data": fidelity_data,
+                "source": "fidelity_json"
+            }
+        
+        return {
+            "found": False,
+            "migrated": False,
+            "message": "Tessera non trovata"
+        }
+        
+    except Exception as e:
+        print(f"Error checking tessera (admin): {e}")
+        return {
+            "found": False,
+            "migrated": False,
+            "message": "Errore durante la verifica"
+        }
+
 @api_router.post("/check-tessera")
 async def check_tessera(tessera_data: TesseraCheck):
     """Check if tessera fisica exists and return user data"""
