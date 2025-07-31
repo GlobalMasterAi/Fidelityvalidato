@@ -1520,6 +1520,7 @@ logger = logging.getLogger(__name__)
 async def startup_event():
     await init_super_admin()
     await load_fidelity_data()
+    await load_scontrini_data()
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
