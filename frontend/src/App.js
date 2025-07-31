@@ -2815,18 +2815,7 @@ const StoreManagement = ({ setActiveTab }) => {
 const Dashboard = () => {
   return <div>Dashboard Component</div>;
 };
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="active"
-                        checked={editFormData.active}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Account Attivo</span>
-                    </label>
+const AdminPanel = () => {
                     <label className="flex items-center">
                       <input
                         type="checkbox"
