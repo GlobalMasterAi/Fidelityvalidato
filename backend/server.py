@@ -521,6 +521,229 @@ def calculate_rfm_segmentation():
     
     return rfm_data
 
+@api_router.get("/user/personal-analytics")
+async def get_user_personal_analytics(current_user = Depends(get_current_user)):
+    """Get comprehensive personal analytics for the user"""
+    try:
+        user_id = current_user["id"]
+        tessera_fisica = current_user.get("tessera_fisica", "")
+        
+        # Get user transactions from scontrini data
+        user_transactions = []
+        for transaction in SCONTRINI_DATA:
+            if transaction.get('CODICE_CLIENTE', '') == tessera_fisica:
+                user_transactions.append(transaction)
+        
+        if not user_transactions:
+            # Return empty analytics for users without transaction history
+            return {
+                "summary": {
+                    "total_spent": 0,
+                    "total_transactions": 0,
+                    "total_bollini": 0,
+                    "avg_transaction": 0,
+                    "last_transaction_date": None,
+                    "shopping_frequency": 0,
+                    "loyalty_level": "Bronze",
+                    "days_since_last_shop": 0
+                },
+                "monthly_trend": [],
+                "category_breakdown": [],
+                "shopping_patterns": {
+                    "favorite_day": "N/D",
+                    "favorite_hour": "N/D",
+                    "peak_shopping_day": "N/D"
+                },
+                "achievements": [],
+                "next_rewards": [],
+                "spending_insights": [],
+                "challenges": []
+            }
+        
+        from datetime import datetime, timedelta
+        from collections import defaultdict, Counter
+        import calendar
+        
+        # Calculate summary metrics
+        total_spent = sum(float(t.get('IMPORTO_SCONTRINO', 0)) for t in user_transactions)
+        total_transactions = len(user_transactions)
+        total_bollini = sum(float(t.get('N_BOLLINI', 0)) for t in user_transactions)
+        avg_transaction = total_spent / total_transactions if total_transactions > 0 else 0
+        
+        # Get last transaction date
+        latest_date = None
+        for transaction in user_transactions:
+            date_str = transaction.get('DATA_SCONTRINO', '')
+            if len(date_str) == 8:
+                try:
+                    trans_date = datetime.strptime(date_str, '%Y%m%d')
+                    if latest_date is None or trans_date > latest_date:
+                        latest_date = trans_date
+                except ValueError:
+                    continue
+        
+        days_since_last_shop = (datetime.now() - latest_date).days if latest_date else 0
+        
+        # Calculate shopping frequency (transactions per month)
+        if latest_date and total_transactions > 0:
+            # Get first transaction date
+            earliest_date = latest_date
+            for transaction in user_transactions:
+                date_str = transaction.get('DATA_SCONTRINO', '')
+                if len(date_str) == 8:
+                    try:
+                        trans_date = datetime.strptime(date_str, '%Y%m%d')
+                        if trans_date < earliest_date:
+                            earliest_date = trans_date
+                    except ValueError:
+                        continue
+            
+            months_span = max(1, (latest_date - earliest_date).days / 30)
+            shopping_frequency = round(total_transactions / months_span, 1)
+        else:
+            shopping_frequency = 0
+        
+        # Determine loyalty level
+        loyalty_level = "Bronze"
+        if total_spent >= 2000:
+            loyalty_level = "Platinum"
+        elif total_spent >= 1000:
+            loyalty_level = "Gold"
+        elif total_spent >= 500:
+            loyalty_level = "Silver"
+        
+        # Monthly trend analysis
+        monthly_spending = defaultdict(float)
+        monthly_transactions = defaultdict(int)
+        monthly_bollini = defaultdict(int)
+        
+        for transaction in user_transactions:
+            date_str = transaction.get('DATA_SCONTRINO', '')
+            if len(date_str) >= 6:
+                try:
+                    month_key = date_str[:6]  # YYYYMM
+                    monthly_spending[month_key] += float(transaction.get('IMPORTO_SCONTRINO', 0))
+                    monthly_transactions[month_key] += 1
+                    monthly_bollini[month_key] += float(transaction.get('N_BOLLINI', 0))
+                except (ValueError, TypeError):
+                    continue
+        
+        # Format monthly trend
+        monthly_trend = []
+        for month_key in sorted(monthly_spending.keys())[-12:]:  # Last 12 months
+            try:
+                year = int(month_key[:4])
+                month = int(month_key[4:6])
+                month_name = calendar.month_name[month]
+                monthly_trend.append({
+                    "month": f"{month_name} {year}",
+                    "month_key": month_key,
+                    "spent": round(monthly_spending[month_key], 2),
+                    "transactions": monthly_transactions[month_key],
+                    "bollini": monthly_bollini[month_key]
+                })
+            except (ValueError, IndexError):
+                continue
+        
+        # Shopping patterns analysis
+        day_of_week = defaultdict(int)
+        hour_of_day = defaultdict(int)
+        
+        for transaction in user_transactions:
+            date_str = transaction.get('DATA_SCONTRINO', '')
+            time_str = transaction.get('ORA_SCONTRINO', '')
+            
+            # Day of week analysis
+            if len(date_str) == 8:
+                try:
+                    trans_date = datetime.strptime(date_str, '%Y%m%d')
+                    day_name = calendar.day_name[trans_date.weekday()]
+                    day_of_week[day_name] += 1
+                except ValueError:
+                    continue
+            
+            # Hour analysis
+            if isinstance(time_str, int) and time_str > 0:
+                hour = time_str // 100
+                if 0 <= hour <= 23:
+                    hour_of_day[hour] += 1
+        
+        favorite_day = max(day_of_week.items(), key=lambda x: x[1])[0] if day_of_week else "N/D"
+        favorite_hour = max(hour_of_day.items(), key=lambda x: x[1])[0] if hour_of_day else "N/D"
+        peak_shopping_day = favorite_day
+        
+        # Generate achievements
+        achievements = []
+        if total_transactions >= 10:
+            achievements.append({"name": "Frequent Shopper", "description": "10+ acquisti completati", "icon": "🛒", "unlocked": True})
+        if total_spent >= 500:
+            achievements.append({"name": "Big Spender", "description": "€500+ spesi", "icon": "💰", "unlocked": True})
+        if total_bollini >= 100:
+            achievements.append({"name": "Bollini Master", "description": "100+ bollini raccolti", "icon": "⭐", "unlocked": True})
+        if shopping_frequency >= 4:
+            achievements.append({"name": "Regular Customer", "description": "4+ acquisti al mese", "icon": "🏆", "unlocked": True})
+        
+        # Next rewards
+        next_rewards = []
+        bollini_to_reward = max(0, 200 - total_bollini)
+        if bollini_to_reward > 0:
+            next_rewards.append({"reward": "Sconto 10€", "bollini_needed": bollini_to_reward, "description": f"Ti mancano {bollini_to_reward} bollini"})
+        
+        spent_to_gold = max(0, 1000 - total_spent)
+        if spent_to_gold > 0 and loyalty_level != "Gold" and loyalty_level != "Platinum":
+            next_rewards.append({"reward": "Livello Gold", "amount_needed": spent_to_gold, "description": f"Spendi altri €{spent_to_gold:.0f}"})
+        
+        # Spending insights
+        insights = []
+        if monthly_trend and len(monthly_trend) >= 2:
+            last_month_spent = monthly_trend[-1]["spent"]
+            prev_month_spent = monthly_trend[-2]["spent"] if len(monthly_trend) >= 2 else 0
+            
+            if last_month_spent > prev_month_spent * 1.2:
+                insights.append({"type": "warning", "message": f"La spesa è aumentata del {((last_month_spent/prev_month_spent-1)*100):.0f}% rispetto al mese scorso", "icon": "📈"})
+            elif last_month_spent < prev_month_spent * 0.8:
+                insights.append({"type": "positive", "message": f"Hai risparmiato il {((1-last_month_spent/prev_month_spent)*100):.0f}% rispetto al mese scorso!", "icon": "💚"})
+        
+        if avg_transaction > 25:
+            insights.append({"type": "info", "message": f"La tua spesa media (€{avg_transaction:.2f}) è sopra la media del negozio", "icon": "💡"})
+        
+        # Generate challenges
+        challenges = []
+        if total_bollini < 50:
+            challenges.append({"name": "Raccoglitore di Bollini", "description": "Raccogli 50 bollini", "progress": total_bollini, "target": 50, "reward": "Badge Speciale"})
+        
+        if shopping_frequency < 2:
+            challenges.append({"name": "Shopping Regolare", "description": "Fai almeno 2 acquisti questo mese", "progress": 0, "target": 2, "reward": "Bonus Points"})
+        
+        return {
+            "summary": {
+                "total_spent": round(total_spent, 2),
+                "total_transactions": total_transactions,
+                "total_bollini": int(total_bollini),
+                "avg_transaction": round(avg_transaction, 2),
+                "last_transaction_date": latest_date.strftime('%Y-%m-%d') if latest_date else None,
+                "shopping_frequency": shopping_frequency,
+                "loyalty_level": loyalty_level,
+                "days_since_last_shop": days_since_last_shop
+            },
+            "monthly_trend": monthly_trend,
+            "shopping_patterns": {
+                "favorite_day": favorite_day,
+                "favorite_hour": f"{favorite_hour}:00" if isinstance(favorite_hour, int) else favorite_hour,
+                "peak_shopping_day": peak_shopping_day,
+                "day_distribution": dict(day_of_week),
+                "hour_distribution": dict(hour_of_day)
+            },
+            "achievements": achievements,
+            "next_rewards": next_rewards,
+            "spending_insights": insights,
+            "challenges": challenges
+        }
+        
+    except Exception as e:
+        print(f"Error getting personal analytics: {e}")
+        raise HTTPException(status_code=500, detail="Errore nel recupero delle analytics personali")
+
 @api_router.get("/admin/customer-segmentation")
 async def get_customer_segmentation(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Get customer segmentation analysis"""
