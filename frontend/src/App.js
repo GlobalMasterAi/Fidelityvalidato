@@ -1005,7 +1005,7 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       // Prima cerchiamo nei dati fidelity
-      const fidelityResponse = await axios.post(`${API}/check-tessera`, 
+      const fidelityResponse = await axios.post(`${API}/admin/check-tessera`, 
         { tessera_fisica: customerId },
         { headers: { Authorization: `Bearer ${adminToken}` } }
       );
