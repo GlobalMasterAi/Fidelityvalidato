@@ -225,6 +225,51 @@ backend:
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: Excel file upload and user import functionality working. Super admin access control working. File processing and data mapping working. Import statistics reporting working."
 
+  - task: "Personal Analytics API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "API /api/user/personal-analytics per analytics complete utente con loyalty level, spending, bollini, achievements, challenges"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Personal analytics API working with complete data structure. JWT authentication working. Loyalty level calculation (Bronze/Silver/Gold/Platinum) working. Summary metrics (total_spent, total_transactions, total_bollini, avg_transaction, shopping_frequency) working. Monthly trend analysis working. Shopping patterns analysis working. Achievements and challenges system working. SCONTRINI data integration working. Unauthorized access properly rejected."
+
+  - task: "User Profile Management GET"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "API GET /api/user/profile per recupero profilo completo utente con dati fidelity integrati"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: User profile GET endpoint working with complete data merging. Fidelity data integration working. Extended profile fields (consenso, famiglia, animali, intolleranze) working. JWT authentication working. Data type validation working. Unauthorized access properly rejected."
+
+  - task: "User Profile Management PUT"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "API PUT /api/user/profile per aggiornamento profilo utente con validazione campi"
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL ISSUE: User profile UPDATE endpoint has a critical bug. The endpoint returns 200 OK but changes are NOT persisted to the database. Tested with multiple field updates (telefono, localita, consenso_dati_personali, numero_figli) - all return success but values remain unchanged. Database update query appears to execute without error but data is not actually modified. This is a critical functionality issue that prevents users from updating their profiles."
+
 frontend:
   - task: "Super Admin Dashboard UI"
     implemented: true
