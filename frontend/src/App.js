@@ -1329,6 +1329,183 @@ const AdminDashboard = () => {
           </div>
         </>
       )}
+
+      {/* Customer Details Modal */}
+      {showCustomerModal && customerDetails && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">
+                Dettagli Cliente: {selectedCustomer}
+              </h3>
+              <button
+                onClick={() => setShowCustomerModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Dati Anagrafici */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-imagross-orange" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
+                  </svg>
+                  Dati Anagrafici
+                </h4>
+                {customerDetails.fidelity?.found && customerDetails.fidelity?.user_data ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Nome:</span>
+                      <span className="text-gray-900">{customerDetails.fidelity.user_data.nome || 'N/D'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Cognome:</span>
+                      <span className="text-gray-900">{customerDetails.fidelity.user_data.cognome || 'N/D'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Email:</span>
+                      <span className="text-gray-900">{customerDetails.fidelity.user_data.email || 'N/D'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Telefono:</span>
+                      <span className="text-gray-900">{customerDetails.fidelity.user_data.telefono || 'N/D'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Località:</span>
+                      <span className="text-gray-900">{customerDetails.fidelity.user_data.localita || 'N/D'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Indirizzo:</span>
+                      <span className="text-gray-900">{customerDetails.fidelity.user_data.indirizzo || 'N/D'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Sesso:</span>
+                      <span className="text-gray-900">{customerDetails.fidelity.user_data.sesso || 'N/D'}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">Dati anagrafici non disponibili</p>
+                )}
+              </div>
+
+              {/* Statistiche Spesa */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-imagross-green" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z" />
+                  </svg>
+                  Statistiche Spesa
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Transazioni Totali:</span>
+                    <span className="text-gray-900 font-semibold">{customerDetails.transactions.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Spesa Totale:</span>
+                    <span className="text-imagross-green font-semibold">
+                      €{customerDetails.transactions.reduce((sum, t) => sum + (t.IMPORTO_SCONTRINO || 0), 0).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Spesa Media:</span>
+                    <span className="text-gray-900">
+                      €{customerDetails.transactions.length > 0 
+                        ? (customerDetails.transactions.reduce((sum, t) => sum + (t.IMPORTO_SCONTRINO || 0), 0) / customerDetails.transactions.length).toFixed(2)
+                        : '0.00'
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Bollini Totali:</span>
+                    <span className="text-purple-600 font-semibold">
+                      {customerDetails.transactions.reduce((sum, t) => sum + (t.N_BOLLINI || 0), 0)}
+                    </span>
+                  </div>
+                  {customerDetails.fidelity?.user_data?.progressivo_spesa && (
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Progressivo Storico:</span>
+                      <span className="text-imagross-orange font-semibold">
+                        €{customerDetails.fidelity.user_data.progressivo_spesa}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Ultime Transazioni */}
+            {customerDetails.transactions.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-imagross-red" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm8 0a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1h-6a1 1 0 01-1-1V8z" />
+                  </svg>
+                  Ultime Transazioni ({customerDetails.transactions.slice(0, 10).length})
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ora</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Importo</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bollini</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Store</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cassa</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {customerDetails.transactions.slice(0, 10).map((transaction, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {transaction.DATA_SCONTRINO ? 
+                              new Date(transaction.DATA_SCONTRINO.slice(0,4), transaction.DATA_SCONTRINO.slice(4,6)-1, transaction.DATA_SCONTRINO.slice(6,8)).toLocaleDateString('it-IT')
+                              : 'N/D'
+                            }
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {transaction.ORA_SCONTRINO ? 
+                              `${Math.floor(transaction.ORA_SCONTRINO / 100)}:${(transaction.ORA_SCONTRINO % 100).toString().padStart(2, '0')}`
+                              : 'N/D'
+                            }
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-imagross-green">
+                            €{transaction.IMPORTO_SCONTRINO?.toFixed(2) || '0.00'}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-purple-600 font-medium">
+                            {transaction.N_BOLLINI || 0}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            Store {transaction.DITTA || 'N/D'}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            Cassa {transaction.NUMERO_CASSA || 'N/D'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowCustomerModal(false)}
+                className="px-6 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+              >
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
