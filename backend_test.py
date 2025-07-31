@@ -1207,6 +1207,397 @@ def test_stores_statistics():
         return False
 
 # ============================================================================
+# USER PROFILE MANAGEMENT API TESTS - CRITICAL FOCUS ON PUT ENDPOINT
+# ============================================================================
+
+def test_user_profile_get_complete():
+    """Test GET /api/user/profile with complete fidelity data integration"""
+    if not access_token:
+        log_test("User Profile GET Complete", False, "No access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        response = requests.get(f"{API_BASE}/user/profile", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate comprehensive profile structure
+            required_fields = [
+                "id", "nome", "cognome", "email", "telefono", "localita", 
+                "tessera_fisica", "tessera_digitale", "punti", "created_at",
+                "sesso", "data_nascita", "indirizzo", "cap", "provincia",
+                "bollini", "progressivo_spesa", "consenso_dati_personali",
+                "consenso_dati_pubblicitari", "numero_figli", "animali_cani",
+                "animali_gatti", "intolleranza_lattosio", "intolleranza_glutine",
+                "intolleranza_nichel", "celiachia", "richiede_fattura", "active"
+            ]
+            
+            missing_fields = [field for field in required_fields if field not in data]
+            if missing_fields:
+                log_test("User Profile GET Complete", False, f"Missing fields: {missing_fields}")
+                return False
+            
+            # Validate data types
+            if not isinstance(data["punti"], int):
+                log_test("User Profile GET Complete", False, f"Points should be integer, got {type(data['punti'])}")
+                return False
+                
+            if not isinstance(data["bollini"], int):
+                log_test("User Profile GET Complete", False, f"Bollini should be integer, got {type(data['bollini'])}")
+                return False
+                
+            if not isinstance(data["progressivo_spesa"], (int, float)):
+                log_test("User Profile GET Complete", False, f"Progressivo spesa should be numeric, got {type(data['progressivo_spesa'])}")
+                return False
+            
+            # Validate boolean fields
+            boolean_fields = ["consenso_dati_personali", "consenso_dati_pubblicitari", 
+                            "animali_cani", "animali_gatti", "intolleranza_lattosio",
+                            "intolleranza_glutine", "intolleranza_nichel", "celiachia", 
+                            "richiede_fattura", "active"]
+            
+            for field in boolean_fields:
+                if field in data and data[field] is not None and not isinstance(data[field], bool):
+                    log_test("User Profile GET Complete", False, f"Field {field} should be boolean, got {type(data[field])}")
+                    return False
+            
+            log_test("User Profile GET Complete", True, "Complete profile retrieved with all fidelity data fields")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("User Profile GET Complete", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("User Profile GET Complete", False, f"Exception: {str(e)}")
+        return False
+
+def test_user_profile_put_basic_fields():
+    """Test PUT /api/user/profile with basic field updates - CRITICAL DATABASE PERSISTENCE TEST"""
+    if not access_token:
+        log_test("User Profile PUT Basic", False, "No access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        # First, get current profile to compare
+        response = requests.get(f"{API_BASE}/user/profile", headers=headers)
+        if response.status_code != 200:
+            log_test("User Profile PUT Basic", False, "Could not get current profile")
+            return False
+        
+        original_profile = response.json()
+        
+        # Update basic fields
+        import time
+        timestamp = str(int(time.time()))
+        update_data = {
+            "telefono": f"+39 333 {timestamp[-7:]}",
+            "localita": f"Milano Test {timestamp[-4:]}",
+            "consenso_dati_personali": not original_profile.get("consenso_dati_personali", True),
+            "numero_figli": (original_profile.get("numero_figli", 0) + 1) % 5
+        }
+        
+        # Perform PUT request
+        response = requests.put(f"{API_BASE}/user/profile", json=update_data, headers=headers)
+        
+        if response.status_code == 200:
+            updated_profile = response.json()
+            
+            # CRITICAL: Verify changes are actually persisted
+            # Immediately GET the profile again to confirm persistence
+            verification_response = requests.get(f"{API_BASE}/user/profile", headers=headers)
+            if verification_response.status_code != 200:
+                log_test("User Profile PUT Basic", False, "Could not verify profile after update")
+                return False
+            
+            verified_profile = verification_response.json()
+            
+            # Check if updates were actually persisted
+            persistence_errors = []
+            
+            if verified_profile["telefono"] != update_data["telefono"]:
+                persistence_errors.append(f"telefono: expected {update_data['telefono']}, got {verified_profile['telefono']}")
+            
+            if verified_profile["localita"] != update_data["localita"]:
+                persistence_errors.append(f"localita: expected {update_data['localita']}, got {verified_profile['localita']}")
+            
+            if verified_profile["consenso_dati_personali"] != update_data["consenso_dati_personali"]:
+                persistence_errors.append(f"consenso_dati_personali: expected {update_data['consenso_dati_personali']}, got {verified_profile['consenso_dati_personali']}")
+            
+            if verified_profile["numero_figli"] != update_data["numero_figli"]:
+                persistence_errors.append(f"numero_figli: expected {update_data['numero_figli']}, got {verified_profile['numero_figli']}")
+            
+            if persistence_errors:
+                log_test("User Profile PUT Basic", False, f"DATABASE PERSISTENCE FAILED: {'; '.join(persistence_errors)}")
+                return False
+            
+            log_test("User Profile PUT Basic", True, "Profile updates successfully persisted to database")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("User Profile PUT Basic", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("User Profile PUT Basic", False, f"Exception: {str(e)}")
+        return False
+
+def test_user_profile_put_boolean_fields():
+    """Test PUT /api/user/profile with boolean field updates"""
+    if not access_token:
+        log_test("User Profile PUT Boolean", False, "No access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        # Get current profile
+        response = requests.get(f"{API_BASE}/user/profile", headers=headers)
+        if response.status_code != 200:
+            log_test("User Profile PUT Boolean", False, "Could not get current profile")
+            return False
+        
+        original_profile = response.json()
+        
+        # Update boolean fields
+        update_data = {
+            "consenso_dati_pubblicitari": not original_profile.get("consenso_dati_pubblicitari", True),
+            "animali_cani": not original_profile.get("animali_cani", False),
+            "animali_gatti": not original_profile.get("animali_gatti", False),
+            "intolleranza_lattosio": not original_profile.get("intolleranza_lattosio", False),
+            "intolleranza_glutine": not original_profile.get("intolleranza_glutine", False),
+            "celiachia": not original_profile.get("celiachia", False)
+        }
+        
+        # Perform PUT request
+        response = requests.put(f"{API_BASE}/user/profile", json=update_data, headers=headers)
+        
+        if response.status_code == 200:
+            # Verify persistence with fresh GET request
+            verification_response = requests.get(f"{API_BASE}/user/profile", headers=headers)
+            if verification_response.status_code != 200:
+                log_test("User Profile PUT Boolean", False, "Could not verify profile after update")
+                return False
+            
+            verified_profile = verification_response.json()
+            
+            # Check boolean field persistence
+            persistence_errors = []
+            for field, expected_value in update_data.items():
+                if verified_profile.get(field) != expected_value:
+                    persistence_errors.append(f"{field}: expected {expected_value}, got {verified_profile.get(field)}")
+            
+            if persistence_errors:
+                log_test("User Profile PUT Boolean", False, f"Boolean field persistence failed: {'; '.join(persistence_errors)}")
+                return False
+            
+            log_test("User Profile PUT Boolean", True, "Boolean field updates successfully persisted")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("User Profile PUT Boolean", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("User Profile PUT Boolean", False, f"Exception: {str(e)}")
+        return False
+
+def test_user_profile_put_multiple_fields():
+    """Test PUT /api/user/profile with multiple field updates in single request"""
+    if not access_token:
+        log_test("User Profile PUT Multiple", False, "No access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        # Get current profile
+        response = requests.get(f"{API_BASE}/user/profile", headers=headers)
+        if response.status_code != 200:
+            log_test("User Profile PUT Multiple", False, "Could not get current profile")
+            return False
+        
+        original_profile = response.json()
+        
+        # Update multiple fields of different types
+        import time
+        timestamp = str(int(time.time()))
+        update_data = {
+            "nome": f"TestNome{timestamp[-4:]}",
+            "cognome": f"TestCognome{timestamp[-4:]}",
+            "telefono": f"+39 347 {timestamp[-7:]}",
+            "localita": f"Roma Test {timestamp[-4:]}",
+            "indirizzo": f"Via Test {timestamp[-4:]}",
+            "cap": f"{timestamp[-5:]}",
+            "provincia": "RM",
+            "consenso_dati_personali": not original_profile.get("consenso_dati_personali", True),
+            "consenso_dati_pubblicitari": not original_profile.get("consenso_dati_pubblicitari", True),
+            "newsletter": not original_profile.get("newsletter", False),
+            "numero_figli": (original_profile.get("numero_figli", 0) + 2) % 5,
+            "animali_cani": not original_profile.get("animali_cani", False),
+            "intolleranza_lattosio": not original_profile.get("intolleranza_lattosio", False),
+            "richiede_fattura": not original_profile.get("richiede_fattura", False)
+        }
+        
+        # Perform PUT request
+        response = requests.put(f"{API_BASE}/user/profile", json=update_data, headers=headers)
+        
+        if response.status_code == 200:
+            # Verify persistence with fresh GET request
+            verification_response = requests.get(f"{API_BASE}/user/profile", headers=headers)
+            if verification_response.status_code != 200:
+                log_test("User Profile PUT Multiple", False, "Could not verify profile after update")
+                return False
+            
+            verified_profile = verification_response.json()
+            
+            # Check all field persistence
+            persistence_errors = []
+            for field, expected_value in update_data.items():
+                actual_value = verified_profile.get(field)
+                if actual_value != expected_value:
+                    persistence_errors.append(f"{field}: expected {expected_value}, got {actual_value}")
+            
+            if persistence_errors:
+                log_test("User Profile PUT Multiple", False, f"Multiple field persistence failed: {'; '.join(persistence_errors)}")
+                return False
+            
+            log_test("User Profile PUT Multiple", True, f"Successfully updated and persisted {len(update_data)} fields")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("User Profile PUT Multiple", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("User Profile PUT Multiple", False, f"Exception: {str(e)}")
+        return False
+
+def test_user_profile_put_empty_update():
+    """Test PUT /api/user/profile with empty update data"""
+    if not access_token:
+        log_test("User Profile PUT Empty", False, "No access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        # Get current profile
+        response = requests.get(f"{API_BASE}/user/profile", headers=headers)
+        if response.status_code != 200:
+            log_test("User Profile PUT Empty", False, "Could not get current profile")
+            return False
+        
+        original_profile = response.json()
+        
+        # Perform PUT request with empty data
+        response = requests.put(f"{API_BASE}/user/profile", json={}, headers=headers)
+        
+        if response.status_code == 200:
+            # Verify profile unchanged
+            verification_response = requests.get(f"{API_BASE}/user/profile", headers=headers)
+            if verification_response.status_code != 200:
+                log_test("User Profile PUT Empty", False, "Could not verify profile after empty update")
+                return False
+            
+            verified_profile = verification_response.json()
+            
+            # Key fields should remain unchanged
+            key_fields = ["nome", "cognome", "telefono", "localita", "consenso_dati_personali"]
+            for field in key_fields:
+                if verified_profile.get(field) != original_profile.get(field):
+                    log_test("User Profile PUT Empty", False, f"Field {field} changed unexpectedly")
+                    return False
+            
+            log_test("User Profile PUT Empty", True, "Empty update handled correctly - no changes made")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("User Profile PUT Empty", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("User Profile PUT Empty", False, f"Exception: {str(e)}")
+        return False
+
+def test_user_profile_put_unauthorized():
+    """Test PUT /api/user/profile without authentication"""
+    try:
+        update_data = {"telefono": "+39 333 1234567"}
+        response = requests.put(f"{API_BASE}/user/profile", json=update_data)
+        
+        if response.status_code == 403:
+            log_test("User Profile PUT Unauthorized", True, "Correctly rejected unauthenticated profile update")
+            return True
+        else:
+            log_test("User Profile PUT Unauthorized", False, f"Should return 403, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("User Profile PUT Unauthorized", False, f"Exception: {str(e)}")
+        return False
+
+def test_fidelity_card_chiara_abatangelo():
+    """Test specific fidelity card 2020000028284 (CHIARA ABATANGELO) as mentioned in review"""
+    try:
+        tessera_data = {"tessera_fisica": "2020000028284"}
+        response = requests.post(f"{API_BASE}/check-tessera", json=tessera_data)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if not data.get("found", False):
+                log_test("Fidelity Card CHIARA", False, "Card 2020000028284 not found in system")
+                return False
+            
+            user_data = data.get("user_data", {})
+            if not user_data:
+                log_test("Fidelity Card CHIARA", False, "No user data returned for card 2020000028284")
+                return False
+            
+            # Validate expected CHIARA ABATANGELO data
+            expected_fields = {
+                "nome": "CHIARA",
+                "cognome": "ABATANGELO",
+                "email": "chiara.abatangelo@libero.it",
+                "telefono": "3497312268",
+                "localita": "MOLA"
+            }
+            
+            for field, expected_value in expected_fields.items():
+                actual_value = user_data.get(field, "")
+                if actual_value.upper() != expected_value.upper():
+                    log_test("Fidelity Card CHIARA", False, f"Field {field}: expected {expected_value}, got {actual_value}")
+                    return False
+            
+            # Check progressivo_spesa
+            progressivo_spesa = user_data.get("progressivo_spesa", 0)
+            if progressivo_spesa < 100:  # Should be around €100.01
+                log_test("Fidelity Card CHIARA", False, f"Progressivo spesa too low: {progressivo_spesa}")
+                return False
+            
+            log_test("Fidelity Card CHIARA", True, f"CHIARA ABATANGELO card verified with €{progressivo_spesa:.2f} spending")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Fidelity Card CHIARA", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Fidelity Card CHIARA", False, f"Exception: {str(e)}")
+        return False
+
+# ============================================================================
 # ACCESS CONTROL TESTS
 # ============================================================================
 
