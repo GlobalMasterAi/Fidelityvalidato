@@ -2477,17 +2477,69 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { admin } = useAuth();
 
-  // Check for tab in URL
-    setEditFormData({
-      nome: user.nome || '',
-      cognome: user.cognome || '',
-      email: user.email || '',
-      telefono: user.telefono || '',
-      localita: user.localita || '',
-      punti: user.punti || 0,
-      active: user.active !== false,
-      indirizzo: user.indirizzo || '',
-      cap: user.cap || '',
+  const tabs = [
+    { id: 'dashboard', name: 'Dashboard', icon: '📊' },
+    { id: 'segmentation', name: 'Segmentazione Clienti', icon: '🎯' },
+    { id: 'stores', name: 'Supermercati', icon: '🏪' },
+    { id: 'cashiers', name: 'Casse', icon: '💳' },
+    { id: 'users', name: 'Utenti', icon: '👥' },
+    { id: 'statistics', name: 'Statistiche', icon: '📈' }
+  ];
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <AdminDashboard />;
+      case 'segmentation':
+        return <CustomerSegmentation />;
+      case 'stores':
+        return <StoreManagement setActiveTab={setActiveTab} />;
+      case 'cashiers':
+        return <CashierManagement />;
+      case 'users':
+        return <UserManagement />;
+      case 'statistics':
+        return <div className="text-center py-12"><p className="text-gray-500">Statistiche avanzate in arrivo...</p></div>;
+      default:
+        return <AdminDashboard />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <Header />
+      <div className="flex">
+        {/* Sidebar */}
+        <div className="w-64 bg-white shadow-lg">
+          <div className="p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-6">Admin Panel</h2>
+            <nav className="space-y-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
+                    activeTab === tab.id
+                      ? 'bg-imagross-orange text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <span className="mr-3 text-lg">{tab.icon}</span>
+                  {tab.name}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 p-8">
+          {renderContent()}
+        </div>
+      </div>
+    </div>
+  );
+};
       provincia: user.provincia || '',
       data_nascita: user.data_nascita || '',
       newsletter: user.newsletter || false,
