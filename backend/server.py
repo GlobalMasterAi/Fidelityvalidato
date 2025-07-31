@@ -1029,7 +1029,7 @@ async def admin_login(login_data: AdminLogin):
     if not admin["active"]:
         raise HTTPException(status_code=401, detail="Account disattivato")
     
-    access_token = create_access_token(data={"sub": admin["id"], "type": "admin"})
+    access_token = create_access_token(data={"sub": admin["id"], "type": "admin", "role": admin["role"]})
     
     admin_data = {
         "id": admin["id"],
