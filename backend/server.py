@@ -2197,6 +2197,57 @@ async def update_user(user_id: str, user_data: dict, current_admin = Depends(get
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Errore aggiornamento utente: {str(e)}")
 
+@api_router.put("/admin/user-profile/{tessera_fisica}")
+async def update_user_by_tessera(tessera_fisica: str, user_data: dict, current_admin = Depends(get_current_admin)):
+    """Update user information by tessera_fisica"""
+    try:
+        # Find user by tessera_fisica
+        user = await db.users.find_one({"tessera_fisica": tessera_fisica})
+        if not user:
+            raise HTTPException(status_code=404, detail="Utente non registrato nella piattaforma")
+        
+        # Prepare update data
+        update_data = {}
+        allowed_fields = [
+            "nome", "cognome", "email", "telefono", "localita", "indirizzo", 
+            "provincia", "sesso", "data_nascita", "cap"
+        ]
+        
+        for field in allowed_fields:
+            if field in user_data:
+                update_data[field] = user_data[field]
+        
+        # Add update timestamp
+        update_data["updated_at"] = datetime.utcnow()
+        
+        # Update user
+        result = await db.users.update_one(
+            {"tessera_fisica": tessera_fisica},
+            {"$set": update_data}
+        )
+        
+        if not result.acknowledged:
+            raise HTTPException(status_code=500, detail="Errore nella scrittura al database")
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Utente non trovato")
+        
+        # Get updated user
+        updated_user = await db.users.find_one({"tessera_fisica": tessera_fisica})
+        if "_id" in updated_user:
+            del updated_user["_id"]
+        
+        return {
+            "message": "Profilo utente aggiornato con successo",
+            "user": updated_user
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error updating user by tessera: {e}")
+        raise HTTPException(status_code=400, detail=f"Errore aggiornamento profilo utente: {str(e)}")
+
 @api_router.post("/admin/import/excel")
 async def import_excel_data(
     file: UploadFile = File(...),
