@@ -985,6 +985,370 @@ const AdminLoginPage = () => {
   );
 };
 
+const Dashboard = () => {
+  const { user } = useAuth();
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState('overview');
+
+  useEffect(() => {
+    fetchPersonalAnalytics();
+  }, []);
+
+  const fetchPersonalAnalytics = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/user/personal-analytics`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getLoyaltyLevelColor = (level) => {
+    switch(level) {
+      case 'Platinum': return 'from-purple-500 to-purple-700';
+      case 'Gold': return 'from-yellow-400 to-yellow-600';
+      case 'Silver': return 'from-gray-400 to-gray-600';
+      default: return 'from-orange-400 to-orange-600';
+    }
+  };
+
+  const getLoyaltyLevelIcon = (level) => {
+    switch(level) {
+      case 'Platinum': return '💎';
+      case 'Gold': return '🏆';
+      case 'Silver': return '🥈';
+      default: return '🥉';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento la tua area personale...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const renderOverview = () => (
+    <div className="space-y-6">
+      {/* Loyalty Card Digital */}
+      <div className={`bg-gradient-to-r ${getLoyaltyLevelColor(analytics?.summary?.loyalty_level)} text-white rounded-xl p-6 shadow-lg relative overflow-hidden`}>
+        <div className="absolute top-0 right-0 text-6xl opacity-20">
+          {getLoyaltyLevelIcon(analytics?.summary?.loyalty_level)}
+        </div>
+        <div className="relative z-10">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="text-2xl font-bold">{user?.nome} {user?.cognome}</h2>
+              <p className="text-lg opacity-90">{analytics?.summary?.loyalty_level} Member</p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm opacity-75">Tessera</div>
+              <div className="font-mono text-lg">{user?.tessera_fisica}</div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-3xl font-bold">{user?.punti || 0}</div>
+              <div className="text-sm opacity-75">Punti</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold">{analytics?.summary?.total_bollini || 0}</div>
+              <div className="text-sm opacity-75">Bollini</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold">€{analytics?.summary?.total_spent || 0}</div>
+              <div className="text-sm opacity-75">Spesa Totale</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <span className="text-2xl">🛒</span>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Acquisti Totali</p>
+              <p className="text-2xl font-semibold text-gray-900">{analytics?.summary?.total_transactions || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <span className="text-2xl">💰</span>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Spesa Media</p>
+              <p className="text-2xl font-semibold text-gray-900">€{analytics?.summary?.avg_transaction || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div className="flex items-center">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <span className="text-2xl">📅</span>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Frequenza</p>
+              <p className="text-2xl font-semibold text-gray-900">{analytics?.summary?.shopping_frequency || 0}/mese</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div className="flex items-center">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <span className="text-2xl">🕒</span>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Ultimo Acquisto</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {analytics?.summary?.days_since_last_shop === 0 ? 'Oggi' : 
+                 analytics?.summary?.days_since_last_shop === 1 ? 'Ieri' :
+                 `${analytics?.summary?.days_since_last_shop} giorni fa`}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Achievements & Next Rewards */}
+      {analytics?.achievements?.length > 0 && (
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span className="mr-2">🏆</span>
+            I Tuoi Achievement
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {analytics.achievements.map((achievement, index) => (
+              <div key={index} className="flex items-center p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                <span className="text-2xl mr-3">{achievement.icon}</span>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">{achievement.name}</p>
+                  <p className="text-xs text-gray-600">{achievement.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Next Rewards */}
+      {analytics?.next_rewards?.length > 0 && (
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span className="mr-2">🎯</span>
+            Prossimi Traguardi
+          </h3>
+          <div className="space-y-3">
+            {analytics.next_rewards.map((reward, index) => (
+              <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-imagross-orange to-imagross-red text-white rounded-lg">
+                <div>
+                  <p className="font-semibold">{reward.reward}</p>
+                  <p className="text-sm opacity-90">{reward.description}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl">🎁</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Spending Insights */}
+      {analytics?.spending_insights?.length > 0 && (
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span className="mr-2">💡</span>
+            I Tuoi Insights
+          </h3>
+          <div className="space-y-3">
+            {analytics.spending_insights.map((insight, index) => (
+              <div key={index} className={`flex items-center p-4 rounded-lg ${
+                insight.type === 'positive' ? 'bg-green-50 border border-green-200' :
+                insight.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
+                'bg-blue-50 border border-blue-200'
+              }`}>
+                <span className="text-2xl mr-3">{insight.icon}</span>
+                <p className="text-gray-800">{insight.message}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderAnalytics = () => (
+    <div className="space-y-6">
+      {/* Monthly Trend Chart */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Trend Spesa Mensile</h3>
+        {analytics?.monthly_trend?.length > 0 ? (
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <LineChart data={analytics.monthly_trend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="month" stroke="#374151" fontSize={12} />
+                <YAxis stroke="#374151" fontSize={12} tickFormatter={(value) => `€${value}`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                  formatter={(value) => [`€${value}`, 'Spesa']}
+                />
+                <Line type="monotone" dataKey="spent" stroke="#F97316" strokeWidth={3} dot={{ fill: '#F97316', strokeWidth: 2, r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">Nessun dato disponibile</p>
+        )}
+      </div>
+
+      {/* Shopping Patterns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">I Tuoi Pattern di Acquisto</h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Giorno Preferito:</span>
+              <span className="font-semibold text-imagross-orange">{analytics?.shopping_patterns?.favorite_day}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Orario Preferito:</span>
+              <span className="font-semibold text-imagross-orange">{analytics?.shopping_patterns?.favorite_hour}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Giorno Top:</span>
+              <span className="font-semibold text-imagross-orange">{analytics?.shopping_patterns?.peak_shopping_day}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Sfide Attive</h3>
+          {analytics?.challenges?.length > 0 ? (
+            <div className="space-y-4">
+              {analytics.challenges.map((challenge, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-semibold text-gray-900">{challenge.name}</h4>
+                    <span className="text-sm text-imagross-orange font-medium">{challenge.reward}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">{challenge.description}</p>
+                  <div className="flex items-center">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2 mr-3">
+                      <div 
+                        className="bg-imagross-orange h-2 rounded-full" 
+                        style={{ width: `${Math.min(100, (challenge.progress / challenge.target) * 100)}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">
+                      {challenge.progress}/{challenge.target}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">Nessuna sfida attiva</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const sections = [
+    { id: 'overview', name: 'Panoramica', icon: '🏠' },
+    { id: 'analytics', name: 'Le Tue Analytics', icon: '📊' },
+    { id: 'profile', name: 'Profilo', icon: '👤' },
+    { id: 'rewards', name: 'Premi & Offerte', icon: '🎁' }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Ciao, {user?.nome}! 👋</h1>
+              <p className="text-lg opacity-90 mt-1">Ecco la tua area personale ImaGross</p>
+            </div>
+            <div className="hidden md:block">
+              <div className="text-right">
+                <p className="text-sm opacity-75">Il tuo livello</p>
+                <p className="text-2xl font-bold flex items-center justify-end">
+                  {getLoyaltyLevelIcon(analytics?.summary?.loyalty_level)} {analytics?.summary?.loyalty_level}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-8">
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                onClick={() => setActiveSection(section.id)}
+                className={`flex items-center py-4 px-2 border-b-2 font-medium text-sm ${
+                  activeSection === section.id
+                    ? 'border-imagross-orange text-imagross-orange'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <span className="mr-2">{section.icon}</span>
+                {section.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {activeSection === 'overview' && renderOverview()}
+        {activeSection === 'analytics' && renderAnalytics()}
+        {activeSection === 'profile' && (
+          <div className="bg-white rounded-lg p-6 shadow-sm border">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Gestione Profilo</h2>
+            <p className="text-gray-600">Sezione profilo in sviluppo...</p>
+          </div>
+        )}
+        {activeSection === 'rewards' && (
+          <div className="bg-white rounded-lg p-6 shadow-sm border">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Premi & Offerte</h2>
+            <p className="text-gray-600">Sezione premi in sviluppo...</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Admin Dashboard Components
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
