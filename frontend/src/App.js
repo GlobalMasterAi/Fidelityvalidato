@@ -2125,29 +2125,350 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingUser, setEditingUser] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editFormData, setEditFormData] = useState({
-    nome: '',
-    cognome: '',
-    email: '',
-    telefono: '',
-    localita: '',
-    punti: 0,
-    active: true,
-    indirizzo: '',
-    cap: '',
-    provincia: '',
-    data_nascita: '',
-    newsletter: false,
-    bollini: 0,
-    progressivo_spesa: 0,
-    consenso_dati_personali: true,
-    consenso_dati_pubblicitari: true,
-    consenso_profilazione: null,
-    consenso_marketing: null,
-    coniugato: null,
-    numero_figli: 0,
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const { adminToken } = useAuth();
+
+  const limit = 20;
+
+  useEffect(() => {
+    fetchUsers();
+  }, [page, searchTerm]);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/admin/fidelity-users?page=${page}&limit=${limit}&search=${searchTerm}`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setUsers(response.data.users);
+      setTotalPages(response.data.pages);
+      setTotalUsers(response.data.total);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setPage(1); // Reset to first page when searching
+  };
+
+  const handleUserClick = (user) => {
+    setSelectedUser(user);
+    setShowUserModal(true);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr || dateStr.length !== 8) return 'N/D';
+    const year = dateStr.slice(0, 4);
+    const month = dateStr.slice(4, 6);
+    const day = dateStr.slice(6, 8);
+    return `${day}/${month}/${year}`;
+  };
+
+  if (loading && page === 1) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento utenti fidelity...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Database Utenti Fidelity</h1>
+          <p className="text-gray-600 mt-1">
+            {totalUsers.toLocaleString()} utenti nel database fidelity
+          </p>
+        </div>
+        
+        {/* Search */}
+        <div className="mt-4 sm:mt-0 w-full sm:w-auto">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Cerca per tessera, nome, cognome, email..."
+              value={searchTerm}
+              onChange={handleSearch}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full sm:w-96 focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Users Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tessera
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cliente
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Contatti
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Località
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Spesa
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Bollini
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Registrazione
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {users.map((user) => (
+                <tr 
+                  key={user.tessera_fisica} 
+                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => handleUserClick(user)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-imagross-orange">
+                      {user.tessera_fisica}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {user.negozio || 'N/D'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {user.nome} {user.cognome}
+                    </div>
+                    <div className="text-xs text-gray-500 flex items-center">
+                      <span className={`inline-block w-2 h-2 rounded-full mr-1 ${user.sesso === 'F' ? 'bg-pink-400' : 'bg-blue-400'}`}></span>
+                      {user.sesso === 'F' ? 'Femmina' : 'Maschio'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{user.email || 'N/D'}</div>
+                    <div className="text-xs text-gray-500">{user.telefono || 'N/D'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{user.localita || 'N/D'}</div>
+                    <div className="text-xs text-gray-500">{user.provincia || 'N/D'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-semibold text-imagross-green">
+                      €{user.progressivo_spesa.toLocaleString()}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-purple-600">
+                      {user.bollini.toLocaleString()}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-xs text-gray-500">
+                      {formatDate(user.data_creazione)}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {user.stato_tessera === '01' ? 'Attiva' : 'Inattiva'}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Pagination */}
+        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+          <div className="flex-1 flex justify-between sm:hidden">
+            <button
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
+              Precedente
+            </button>
+            <button
+              onClick={() => setPage(page + 1)}
+              disabled={page === totalPages}
+              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
+              Successivo
+            </button>
+          </div>
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Mostrando <span className="font-medium">{((page - 1) * limit) + 1}</span> a{' '}
+                <span className="font-medium">{Math.min(page * limit, totalUsers)}</span> di{' '}
+                <span className="font-medium">{totalUsers}</span> risultati
+              </p>
+            </div>
+            <div>
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                <button
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Prec
+                </button>
+                <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                  {page} di {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(page + 1)}
+                  disabled={page === totalPages}
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Succ
+                </button>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* User Details Modal */}
+      {showUserModal && selectedUser && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">
+                Dettagli Utente Fidelity: {selectedUser.tessera_fisica}
+              </h3>
+              <button
+                onClick={() => setShowUserModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Dati Anagrafici */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Dati Anagrafici</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Nome:</span>
+                    <span className="text-gray-900">{selectedUser.nome || 'N/D'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Cognome:</span>
+                    <span className="text-gray-900">{selectedUser.cognome || 'N/D'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Sesso:</span>
+                    <span className="text-gray-900">{selectedUser.sesso === 'F' ? 'Femmina' : 'Maschio'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Data Nascita:</span>
+                    <span className="text-gray-900">{formatDate(selectedUser.data_nascita)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Email:</span>
+                    <span className="text-gray-900">{selectedUser.email || 'N/D'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Telefono:</span>
+                    <span className="text-gray-900">{selectedUser.telefono || 'N/D'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Indirizzo:</span>
+                    <span className="text-gray-900">{selectedUser.indirizzo || 'N/D'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Località:</span>
+                    <span className="text-gray-900">{selectedUser.localita || 'N/D'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Provincia:</span>
+                    <span className="text-gray-900">{selectedUser.provincia || 'N/D'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dati Fidelity */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Dati Fidelity</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Tessera Fisica:</span>
+                    <span className="text-imagross-orange font-semibold">{selectedUser.tessera_fisica}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Stato Tessera:</span>
+                    <span className={selectedUser.stato_tessera === '01' ? 'text-green-600' : 'text-red-600'}>
+                      {selectedUser.stato_tessera === '01' ? 'Attiva' : 'Inattiva'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Data Registrazione:</span>
+                    <span className="text-gray-900">{formatDate(selectedUser.data_creazione)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Negozio Origine:</span>
+                    <span className="text-gray-900">{selectedUser.negozio || 'N/D'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Progressivo Spesa:</span>
+                    <span className="text-imagross-green font-bold text-lg">€{selectedUser.progressivo_spesa.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600">Bollini Accumulati:</span>
+                    <span className="text-purple-600 font-bold text-lg">{selectedUser.bollini.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowUserModal(false)}
+                className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Chiudi
+              </button>
+              <button
+                onClick={() => {
+                  // Qui potresti implementare la funzionalità di modifica
+                  console.log('Edit user:', selectedUser);
+                }}
+                className="px-6 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+              >
+                Modifica
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
     data_matrimonio: '',
     animali_cani: false,
     animali_gatti: false,
