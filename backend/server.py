@@ -660,8 +660,15 @@ async def update_user_profile(profile_data: dict, current_user = Depends(get_cur
             {"$set": update_data}
         )
         
+        if not result.acknowledged:
+            raise HTTPException(status_code=500, detail="Errore nella scrittura al database")
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Utente non trovato")
+        
         if result.modified_count == 0:
-            raise HTTPException(status_code=400, detail="Nessuna modifica effettuata")
+            # Check if no changes were needed (data was already the same)
+            print(f"No modifications needed for user {user_id}")
         
         # Return updated profile
         return await get_user_profile(current_user)
