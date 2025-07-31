@@ -1051,20 +1051,6 @@ const Dashboard = () => {
     return dateStr.replace(/-/g, '');
   };
 
-  const fetchPersonalAnalytics = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API}/user/personal-analytics`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setAnalytics(response.data);
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const getLoyaltyLevelColor = (level) => {
     switch(level) {
       case 'Platinum': return 'from-purple-500 to-purple-700';
