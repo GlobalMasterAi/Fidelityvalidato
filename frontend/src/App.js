@@ -2469,18 +2469,7 @@ const UserManagement = () => {
     </div>
   );
 };
-    data_matrimonio: '',
-    animali_cani: false,
-    animali_gatti: false,
-    intolleranza_lattosio: false,
-    intolleranza_glutine: false,
-    intolleranza_nichel: false,
-    celiachia: false,
-    altra_intolleranza: '',
-    richiede_fattura: false,
-    ragione_sociale: ''
-  });
-  const { adminToken } = useAuth();
+const QRRegistrationPage = () => {
 
   useEffect(() => {
     fetchUsers();
