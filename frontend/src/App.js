@@ -985,6 +985,346 @@ const AdminLoginPage = () => {
   );
 };
 
+const ProfileManagement = ({ profile, user, onRefresh }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setEditForm(profile);
+    }
+  }, [profile]);
+
+  const handleInputChange = (field, value) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`${API}/user/profile`, editForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.status === 200) {
+        alert('Profilo aggiornato con successo!');
+        setIsEditing(false);
+        onRefresh(); // Refresh the profile data
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Errore nell\'aggiornamento del profilo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditForm(profile);
+    setIsEditing(false);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr || dateStr.length !== 8) return '';
+    const year = dateStr.slice(0, 4);
+    const month = dateStr.slice(4, 6);
+    const day = dateStr.slice(6, 8);
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateBack = (dateStr) => {
+    if (!dateStr) return '';
+    return dateStr.replace(/-/g, '');
+  };
+
+  if (!profile) {
+    return (
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Gestione Profilo</h2>
+          {!isEditing ? (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-4 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+            >
+              Modifica Profilo
+            </button>
+          ) : (
+            <div className="space-x-3">
+              <button
+                onClick={handleCancel}
+                disabled={loading}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={loading}
+                className="px-4 py-2 bg-imagross-green text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  'Salva Modifiche'
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Dati Personali */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Dati Personali</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.nome || ''}
+                    onChange={(e) => handleInputChange('nome', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.nome || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cognome</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.cognome || ''}
+                    onChange={(e) => handleInputChange('cognome', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.cognome || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                {isEditing ? (
+                  <input
+                    type="email"
+                    value={editForm.email || ''}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.email || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    value={editForm.telefono || ''}
+                    onChange={(e) => handleInputChange('telefono', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.telefono || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data di Nascita</label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formatDate(editForm.data_nascita)}
+                    onChange={(e) => handleInputChange('data_nascita', formatDateBack(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.data_nascita ? formatDate(profile.data_nascita) : 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sesso</label>
+                {isEditing ? (
+                  <select
+                    value={editForm.sesso || ''}
+                    onChange={(e) => handleInputChange('sesso', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  >
+                    <option value="">Seleziona</option>
+                    <option value="M">Maschio</option>
+                    <option value="F">Femmina</option>
+                  </select>
+                ) : (
+                  <p className="text-gray-900">
+                    {profile.sesso === 'M' ? 'Maschio' : profile.sesso === 'F' ? 'Femmina' : 'Non specificato'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Indirizzo e Contatti */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Indirizzo e Contatti</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Indirizzo</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.indirizzo || ''}
+                    onChange={(e) => handleInputChange('indirizzo', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.indirizzo || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Località</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.localita || ''}
+                    onChange={(e) => handleInputChange('localita', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.localita || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.provincia || ''}
+                    onChange={(e) => handleInputChange('provincia', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.provincia || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CAP</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.cap || ''}
+                    onChange={(e) => handleInputChange('cap', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.cap || 'Non specificato'}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dati Fidelity (Read Only) */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Dati Fidelity</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="text-sm text-gray-600">Tessera Fisica</div>
+            <div className="text-lg font-semibold text-imagross-orange">{profile.tessera_fisica}</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="text-sm text-gray-600">Punti Accumulati</div>
+            <div className="text-lg font-semibold text-purple-600">{profile.punti || 0}</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="text-sm text-gray-600">Bollini</div>
+            <div className="text-lg font-semibold text-imagross-green">{profile.bollini || 0}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Preferenze e Consensi */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Preferenze e Consensi</h3>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">Newsletter</label>
+            {isEditing ? (
+              <input
+                type="checkbox"
+                checked={editForm.newsletter || false}
+                onChange={(e) => handleInputChange('newsletter', e.target.checked)}
+                className="h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+              />
+            ) : (
+              <span className={`px-2 py-1 text-xs rounded-full ${profile.newsletter ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {profile.newsletter ? 'Attiva' : 'Non attiva'}
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">Consenso Dati Personali</label>
+            <span className={`px-2 py-1 text-xs rounded-full ${profile.consenso_dati_personali ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              {profile.consenso_dati_personali ? 'Accordato' : 'Non accordato'}
+            </span>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">Consenso Marketing</label>
+            {isEditing ? (
+              <input
+                type="checkbox"
+                checked={editForm.consenso_marketing || false}
+                onChange={(e) => handleInputChange('consenso_marketing', e.target.checked)}
+                className="h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+              />
+            ) : (
+              <span className={`px-2 py-1 text-xs rounded-full ${profile.consenso_marketing ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {profile.consenso_marketing ? 'Accordato' : 'Non accordato'}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState(null);
