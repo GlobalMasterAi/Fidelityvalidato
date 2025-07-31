@@ -1732,10 +1732,7 @@ const Dashboard = () => {
           <ProfileManagement profile={profile} user={user} onRefresh={fetchUserProfile} />
         )}
         {activeSection === 'rewards' && (
-          <div className="bg-white rounded-lg p-6 shadow-sm border">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Premi & Offerte</h2>
-            <p className="text-gray-600">Sezione premi in sviluppo...</p>
-          </div>
+          <RewardsSection analytics={analytics} profile={profile} />
         )}
       </div>
     </div>
