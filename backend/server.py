@@ -530,6 +530,15 @@ async def init_super_admin():
 async def root():
     return {"message": "ImaGross Loyalty API v2.0 - Scalable System"}
 
+@api_router.get("/debug/fidelity")
+async def debug_fidelity():
+    """Debug endpoint to check fidelity data"""
+    return {
+        "loaded_records": len(FIDELITY_DATA),
+        "available_cards": list(FIDELITY_DATA.keys()),
+        "sample_data": next(iter(FIDELITY_DATA.values())) if FIDELITY_DATA else None
+    }
+
 @api_router.get("/qr/{qr_code}")
 async def get_qr_info(qr_code: str):
     """Get information about a QR code (store and cashier info)"""
