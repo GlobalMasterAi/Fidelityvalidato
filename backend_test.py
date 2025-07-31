@@ -1875,6 +1875,18 @@ def run_all_tests():
         test_digital_card_generation
     ]
     
+    print("\n🔧 USER PROFILE MANAGEMENT API TESTS - CRITICAL PUT ENDPOINT FOCUS")
+    print("-" * 50)
+    profile_tests = [
+        test_user_profile_get_complete,
+        test_user_profile_put_basic_fields,
+        test_user_profile_put_boolean_fields,
+        test_user_profile_put_multiple_fields,
+        test_user_profile_put_empty_update,
+        test_user_profile_put_unauthorized,
+        test_fidelity_card_chiara_abatangelo
+    ]
+    
     # Run all test suites
     all_tests = (admin_auth_tests + store_tests + cashier_tests + 
                 qr_tests + stats_tests + access_tests + excel_tests + user_tests)
