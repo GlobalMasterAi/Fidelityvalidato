@@ -2807,11 +2807,6 @@ const CustomerSegmentation = () => {
   );
 };
 
-const StoreManagement = ({ setActiveTab }) => {
-  // Component implementation follows...  
-  return <div>Store Management Component</div>;
-};
-
 const Dashboard = () => {
   return <div>Dashboard Component</div>;
 };
