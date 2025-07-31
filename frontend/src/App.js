@@ -997,7 +997,21 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchPersonalAnalytics();
+    fetchUserProfile();
   }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/user/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProfile(response.data);
+      setProfileForm(response.data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
 
   const fetchPersonalAnalytics = async () => {
     try {
