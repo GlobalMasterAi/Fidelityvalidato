@@ -2474,15 +2474,11 @@ const QRRegistrationPage = () => {
 };
 
 const AdminPanel = () => {
-    setEditingUser(user.id);
-    setEditFormData({
-      nome: user.nome || '',
-      cognome: user.cognome || '',
-      email: user.email || '',
-      telefono: user.telefono || '',
-      localita: user.localita || '',
-      punti: user.punti || 0,
-      active: user.active !== false,
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const { admin } = useAuth();
+
+  // Check for tab in URL
+  useEffect(() => {
       indirizzo: user.indirizzo || '',
       cap: user.cap || '',
       provincia: user.provincia || '',
