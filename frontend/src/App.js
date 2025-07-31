@@ -2479,15 +2479,12 @@ const AdminPanel = () => {
 
   // Check for tab in URL
   useEffect(() => {
-      indirizzo: user.indirizzo || '',
-      cap: user.cap || '',
-      provincia: user.provincia || '',
-      data_nascita: user.data_nascita || '',
-      newsletter: user.newsletter || false,
-      bollini: user.bollini || 0,
-      progressivo_spesa: user.progressivo_spesa || 0,
-      consenso_dati_personali: user.consenso_dati_personali !== false,
-      consenso_dati_pubblicitari: user.consenso_dati_pubblicitari !== false,
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, []);
       consenso_profilazione: user.consenso_profilazione,
       consenso_marketing: user.consenso_marketing,
       coniugato: user.coniugato,
