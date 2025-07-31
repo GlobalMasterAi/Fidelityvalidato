@@ -1297,7 +1297,11 @@ const AdminDashboard = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {analytics.top_customers.map((customer, index) => (
-                    <tr key={customer.customer_id} className={index < 3 ? 'bg-yellow-50' : ''}>
+                    <tr 
+                      key={customer.customer_id} 
+                      className={`${index < 3 ? 'bg-yellow-50' : ''} hover:bg-gray-50 cursor-pointer transition-colors`}
+                      onClick={() => handleCustomerClick(customer.customer_id)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {index < 3 && (
@@ -1305,7 +1309,7 @@ const AdminDashboard = () => {
                               {index + 1}
                             </span>
                           )}
-                          <span className="font-medium text-gray-900">{customer.customer_id}</span>
+                          <span className="font-medium text-imagross-orange hover:text-imagross-red">{customer.customer_id}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
