@@ -2474,17 +2474,8 @@ const QRRegistrationPage = () => {
 };
 
 const AdminPanel = () => {
-    try {
-      const response = await axios.get(`${API}/admin/users`, {
-        headers: { Authorization: `Bearer ${adminToken}` }
-      });
-      setUsers(response.data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const { admin } = useAuth();
 
   const startEdit = (user) => {
     setEditingUser(user.id);
