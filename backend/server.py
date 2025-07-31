@@ -500,10 +500,21 @@ async def register(user_data: UserCreate):
     if existing_user:
         raise HTTPException(status_code=400, detail="Email già registrata")
     
-    # Check if tessera fisica already exists
-    existing_tessera = await db.users.find_one({"tessera_fisica": user_data.tessera_fisica})
-    if existing_tessera:
-        raise HTTPException(status_code=400, detail="Tessera fisica già registrata")
+    # Generate tessera fisica if not provided (new registration without existing tessera)
+    tessera_fisica = user_data.tessera_fisica
+    if not tessera_fisica:
+        # Generate new tessera number (format: 2024 + timestamp)
+        import time
+        tessera_fisica = f"2024{int(time.time())}"
+        
+        # Ensure uniqueness
+        while await db.users.find_one({"tessera_fisica": tessera_fisica}):
+            tessera_fisica = f"2024{int(time.time())}{str(uuid.uuid4())[:4]}"
+    else:
+        # Check if tessera fisica already exists
+        existing_tessera = await db.users.find_one({"tessera_fisica": tessera_fisica})
+        if existing_tessera:
+            raise HTTPException(status_code=400, detail="Tessera fisica già registrata")
     
     # If registering via QR code, validate cashier
     store_name = None
@@ -521,10 +532,20 @@ async def register(user_data: UserCreate):
                 {"$inc": {"total_registrations": 1}}
             )
     
-    # Create user
+    # Create user with all provided data
     user_dict = user_data.dict()
+    user_dict["tessera_fisica"] = tessera_fisica
     user_dict["password_hash"] = hash_password(user_data.password)
+    user_dict["migrated"] = bool(user_data.tessera_fisica)  # Mark as migrated if tessera was provided
     del user_dict["password"]
+    
+    # Set default values for None fields
+    for field in user_dict:
+        if user_dict[field] is None and field in ["bollini", "numero_figli", "progressivo_spesa"]:
+            if field == "progressivo_spesa":
+                user_dict[field] = 0.0
+            else:
+                user_dict[field] = 0
     
     user = User(**user_dict)
     await db.users.insert_one(user.dict())
