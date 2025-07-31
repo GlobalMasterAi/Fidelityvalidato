@@ -1277,41 +1277,6 @@ const AdminDashboard = () => {
     </div>
   );
 };
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-500 rounded-lg">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Registrazioni Settimana</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.recent_registrations}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-500 rounded-lg">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7a1 1 0 00-1-1H5a1 1 0 00-1 1v1m8 0v8a1 1 0 01-1 1H5a1 1 0 01-1-1v-8"/>
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Punti Distribuiti</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.total_points_distributed}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 const StoreManagement = ({ setActiveTab }) => {
   const [stores, setStores] = useState([]);
