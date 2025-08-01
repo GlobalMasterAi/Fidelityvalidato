@@ -297,6 +297,203 @@ class AdminLoginResponse(BaseModel):
     token_type: str
     admin: dict
 
+# ============================================================================
+# ADVANCED REWARDS SYSTEM MODELS
+# ============================================================================
+
+class Reward(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str = Field(..., max_length=200)
+    description: str = Field(..., max_length=1000)
+    type: RewardType
+    category: RewardCategory
+    status: RewardStatus = RewardStatus.ACTIVE
+    
+    # Value configuration
+    discount_percentage: Optional[int] = Field(None, ge=1, le=100)  # For percentage discounts
+    discount_amount: Optional[float] = Field(None, ge=0)  # For fixed amount discounts/vouchers
+    product_sku: Optional[str] = None  # For free products
+    custom_instructions: Optional[str] = None  # For custom rewards
+    
+    # Requirements and limits
+    bollini_required: int = Field(..., ge=0)
+    min_purchase_amount: Optional[float] = Field(None, ge=0)  # Minimum purchase for use
+    max_discount_amount: Optional[float] = Field(None, ge=0)  # Max discount cap
+    loyalty_level_required: Optional[str] = None  # Bronze, Silver, Gold, Platinum
+    
+    # Stock and usage limits
+    total_stock: Optional[int] = Field(None, ge=0)  # None = unlimited
+    remaining_stock: Optional[int] = Field(None, ge=0)
+    max_redemptions_per_user: Optional[int] = Field(None, ge=1)  # Per user limit
+    max_uses_per_redemption: int = Field(1, ge=1)  # How many times each redemption can be used
+    
+    # Expiry configuration
+    expiry_type: ExpiryType
+    expiry_date: Optional[datetime] = None  # For fixed date expiry
+    expiry_days_from_creation: Optional[int] = Field(None, ge=1)  # Days from creation
+    expiry_days_from_redemption: Optional[int] = Field(None, ge=1)  # Days from redemption
+    
+    # Display and branding
+    icon: str = "🎁"
+    color: str = "#FF6B35"  # Hex color for display
+    featured: bool = False  # Show prominently
+    sort_order: int = 0  # For custom ordering
+    
+    # Terms and conditions
+    terms_and_conditions: Optional[str] = None
+    usage_instructions: Optional[str] = None
+    
+    # Metadata
+    created_by: str  # Admin ID who created it
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Analytics
+    total_redemptions: int = 0
+    total_uses: int = 0
+    last_redeemed_at: Optional[datetime] = None
+
+class CreateReward(BaseModel):
+    title: str = Field(..., max_length=200)
+    description: str = Field(..., max_length=1000)
+    type: RewardType
+    category: RewardCategory
+    
+    # Value configuration - at least one must be provided based on type
+    discount_percentage: Optional[int] = Field(None, ge=1, le=100)
+    discount_amount: Optional[float] = Field(None, ge=0)
+    product_sku: Optional[str] = None
+    custom_instructions: Optional[str] = None
+    
+    # Requirements
+    bollini_required: int = Field(..., ge=0)
+    min_purchase_amount: Optional[float] = Field(None, ge=0)
+    max_discount_amount: Optional[float] = Field(None, ge=0)
+    loyalty_level_required: Optional[str] = None
+    
+    # Stock and limits
+    total_stock: Optional[int] = Field(None, ge=0)
+    max_redemptions_per_user: Optional[int] = Field(None, ge=1)
+    max_uses_per_redemption: int = Field(1, ge=1)
+    
+    # Expiry
+    expiry_type: ExpiryType
+    expiry_date: Optional[datetime] = None
+    expiry_days_from_creation: Optional[int] = Field(None, ge=1)
+    expiry_days_from_redemption: Optional[int] = Field(None, ge=1)
+    
+    # Display
+    icon: str = "🎁"
+    color: str = "#FF6B35"
+    featured: bool = False
+    sort_order: int = 0
+    
+    # Terms
+    terms_and_conditions: Optional[str] = None
+    usage_instructions: Optional[str] = None
+
+class UpdateReward(BaseModel):
+    title: Optional[str] = Field(None, max_length=200)
+    description: Optional[str] = Field(None, max_length=1000)
+    status: Optional[RewardStatus] = None
+    discount_percentage: Optional[int] = Field(None, ge=1, le=100)
+    discount_amount: Optional[float] = Field(None, ge=0)
+    product_sku: Optional[str] = None
+    custom_instructions: Optional[str] = None
+    bollini_required: Optional[int] = Field(None, ge=0)
+    min_purchase_amount: Optional[float] = Field(None, ge=0)
+    max_discount_amount: Optional[float] = Field(None, ge=0)
+    loyalty_level_required: Optional[str] = None
+    total_stock: Optional[int] = Field(None, ge=0)
+    max_redemptions_per_user: Optional[int] = Field(None, ge=1)
+    max_uses_per_redemption: Optional[int] = Field(None, ge=1)
+    expiry_type: Optional[ExpiryType] = None
+    expiry_date: Optional[datetime] = None
+    expiry_days_from_creation: Optional[int] = Field(None, ge=1)
+    expiry_days_from_redemption: Optional[int] = Field(None, ge=1)
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    featured: Optional[bool] = None
+    sort_order: Optional[int] = None
+    terms_and_conditions: Optional[str] = None
+    usage_instructions: Optional[str] = None
+
+class RewardRedemption(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    reward_id: str
+    user_id: str
+    user_tessera: str  # For easier lookup
+    
+    # Redemption details
+    status: RedemptionStatus = RedemptionStatus.PENDING
+    redemption_code: str = Field(default_factory=lambda: f"RWD{uuid.uuid4().hex[:8].upper()}")
+    qr_code: Optional[str] = None  # Generated QR code for the redemption
+    
+    # Timestamps
+    redeemed_at: datetime = Field(default_factory=datetime.utcnow)
+    approved_at: Optional[datetime] = None
+    used_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None  # Calculated based on reward expiry rules
+    
+    # Usage tracking
+    uses_remaining: int = Field(default=1)  # Based on reward.max_uses_per_redemption
+    usage_history: List[dict] = Field(default_factory=list)  # Track each use
+    
+    # Admin actions
+    approved_by: Optional[str] = None  # Admin ID who approved
+    rejected_by: Optional[str] = None  # Admin ID who rejected
+    rejection_reason: Optional[str] = None
+    admin_notes: Optional[str] = None
+    
+    # Usage context
+    store_used_at: Optional[str] = None  # Store ID where used
+    cashier_used_at: Optional[str] = None  # Cashier ID who processed
+    transaction_id: Optional[str] = None  # Associated transaction
+
+class RedeemReward(BaseModel):
+    reward_id: str
+    user_message: Optional[str] = None  # Optional message from user
+
+class ProcessRedemption(BaseModel):
+    action: str = Field(..., regex="^(approve|reject)$")
+    admin_notes: Optional[str] = None
+    rejection_reason: Optional[str] = None
+
+class UseRedemption(BaseModel):
+    redemption_code: str
+    store_id: Optional[str] = None
+    cashier_id: Optional[str] = None
+    transaction_id: Optional[str] = None
+    usage_notes: Optional[str] = None
+
+# Response models for API
+class RewardResponse(BaseModel):
+    id: str
+    title: str
+    description: str
+    type: RewardType
+    category: RewardCategory
+    status: RewardStatus
+    bollini_required: int
+    user_can_redeem: bool = False  # Calculated field
+    user_redemptions_count: int = 0  # User-specific count
+    remaining_stock: Optional[int] = None
+    expires_at: Optional[datetime] = None
+    icon: str
+    color: str
+    featured: bool
+    
+class RedemptionResponse(BaseModel):
+    id: str
+    reward: RewardResponse
+    status: RedemptionStatus
+    redemption_code: str
+    qr_code: Optional[str] = None
+    redeemed_at: datetime
+    expires_at: Optional[datetime] = None
+    uses_remaining: int
+    admin_notes: Optional[str] = None
+
 # Helper functions
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
