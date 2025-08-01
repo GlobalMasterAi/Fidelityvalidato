@@ -2920,7 +2920,9 @@ def test_loyalty_level_requirements():
                 "category": "VIP",
                 "bollini_required": 200,
                 "loyalty_level_required": "Platinum",
-                "total_stock": 10
+                "total_stock": 10,
+                "expiry_type": "days_from_redemption",
+                "expiry_days_from_redemption": 60
             }
             
             response2 = requests.post(f"{API_BASE}/admin/rewards", json=platinum_level_reward, headers=headers)
