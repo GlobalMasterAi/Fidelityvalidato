@@ -54,6 +54,42 @@ class StoreStatus(str, Enum):
     INACTIVE = "inactive"
     MAINTENANCE = "maintenance"
 
+class RewardType(str, Enum):
+    DISCOUNT_PERCENTAGE = "discount_percentage"  # 10%
+    DISCOUNT_FIXED = "discount_fixed"           # €5
+    FREE_PRODUCT = "free_product"               # Prodotto gratuito
+    VOUCHER = "voucher"                         # Buono spesa
+    FREE_SHIPPING = "free_shipping"             # Spedizione gratuita
+    VIP_ACCESS = "vip_access"                   # Accesso VIP
+    CUSTOM = "custom"                           # Premio personalizzato
+
+class RewardCategory(str, Enum):
+    DISCOUNTS = "Sconti"
+    GIFTS = "Omaggi" 
+    VIP = "VIP"
+    VOUCHERS = "Buoni"
+    SERVICES = "Servizi"
+    EVENTS = "Eventi"
+    SPECIAL = "Speciali"
+
+class RewardStatus(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    EXPIRED = "expired"
+    OUT_OF_STOCK = "out_of_stock"
+
+class RedemptionStatus(str, Enum):
+    PENDING = "pending"           # In attesa di approvazione
+    APPROVED = "approved"         # Approvato, pronto per uso
+    USED = "used"                 # Utilizzato
+    REJECTED = "rejected"         # Rifiutato
+    EXPIRED = "expired"           # Scaduto
+
+class ExpiryType(str, Enum):
+    FIXED_DATE = "fixed_date"           # Data fissa
+    DAYS_FROM_CREATION = "days_from_creation"  # X giorni dalla creazione
+    DAYS_FROM_REDEMPTION = "days_from_redemption"  # X giorni dal riscatto
+
 # Enhanced Models
 class Store(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
