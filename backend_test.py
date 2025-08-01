@@ -2890,7 +2890,9 @@ def test_loyalty_level_requirements():
             "discount_amount": 25.0,
             "bollini_required": 100,
             "loyalty_level_required": "Gold",
-            "total_stock": 50
+            "total_stock": 50,
+            "expiry_type": "days_from_creation",
+            "expiry_days_from_creation": 90
         }
         
         response = requests.post(f"{API_BASE}/admin/rewards", json=gold_level_reward, headers=headers)
