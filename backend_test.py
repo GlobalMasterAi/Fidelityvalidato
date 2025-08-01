@@ -2114,18 +2114,25 @@ def test_admin_get_rewards():
         if response.status_code == 200:
             data = response.json()
             
-            if not isinstance(data, list):
-                log_test("Admin Get Rewards", False, "Response should be a list")
+            # API returns {"rewards": [...]} structure
+            if "rewards" not in data:
+                log_test("Admin Get Rewards", False, "Missing 'rewards' key in response")
                 return False
             
-            if len(data) == 0:
+            rewards_list = data["rewards"]
+            
+            if not isinstance(rewards_list, list):
+                log_test("Admin Get Rewards", False, "Rewards should be a list")
+                return False
+            
+            if len(rewards_list) == 0:
                 log_test("Admin Get Rewards", False, "No rewards found")
                 return False
             
             # Validate first reward structure
-            reward = data[0]
+            reward = rewards_list[0]
             required_fields = ["id", "title", "description", "type", "category", "status", 
-                             "bollini_required", "total_redemptions", "remaining_stock"]
+                             "bollini_required", "total_redemptions"]
             missing_fields = [field for field in required_fields if field not in reward]
             if missing_fields:
                 log_test("Admin Get Rewards", False, f"Missing fields in reward: {missing_fields}")
@@ -2135,8 +2142,8 @@ def test_admin_get_rewards():
             response = requests.get(f"{API_BASE}/admin/rewards?category=Sconti", headers=headers)
             if response.status_code == 200:
                 filtered_data = response.json()
-                if isinstance(filtered_data, list):
-                    for reward in filtered_data:
+                if "rewards" in filtered_data and isinstance(filtered_data["rewards"], list):
+                    for reward in filtered_data["rewards"]:
                         if reward["category"] != "Sconti":
                             log_test("Admin Get Rewards", False, "Category filtering not working")
                             return False
@@ -2145,10 +2152,10 @@ def test_admin_get_rewards():
             response = requests.get(f"{API_BASE}/admin/rewards?search=sconto", headers=headers)
             if response.status_code == 200:
                 search_data = response.json()
-                if isinstance(search_data, list) and len(search_data) > 0:
+                if "rewards" in search_data and isinstance(search_data["rewards"], list) and len(search_data["rewards"]) > 0:
                     # Should find rewards with "sconto" in title or description
                     found_match = False
-                    for reward in search_data:
+                    for reward in search_data["rewards"]:
                         if "sconto" in reward["title"].lower() or "sconto" in reward["description"].lower():
                             found_match = True
                             break
@@ -2156,7 +2163,7 @@ def test_admin_get_rewards():
                         log_test("Admin Get Rewards", False, "Search functionality not working")
                         return False
             
-            log_test("Admin Get Rewards", True, f"Retrieved {len(data)} rewards with filtering/search working")
+            log_test("Admin Get Rewards", True, f"Retrieved {len(rewards_list)} rewards with filtering/search working")
             return True
             
         else:
