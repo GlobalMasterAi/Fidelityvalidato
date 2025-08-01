@@ -3826,9 +3826,13 @@ const RewardManagement = () => {
     try {
       const params = new URLSearchParams({
         page: rewardsPage.toString(),
-        limit: '10',
-        ...rewardFilters
+        limit: '10'
       });
+      
+      // Add only non-empty filters
+      if (rewardFilters.status) params.append('status', rewardFilters.status);
+      if (rewardFilters.category) params.append('category', rewardFilters.category);
+      if (rewardFilters.search) params.append('search', rewardFilters.search);
       
       const response = await axios.get(`${API}/admin/rewards?${params}`, {
         headers: { Authorization: `Bearer ${adminToken}` }
@@ -3845,9 +3849,14 @@ const RewardManagement = () => {
     try {
       const params = new URLSearchParams({
         page: redemptionsPage.toString(),
-        limit: '10',
-        ...redemptionFilters
+        limit: '10'
       });
+      
+      // Add only non-empty filters
+      if (redemptionFilters.status) params.append('status', redemptionFilters.status);
+      if (redemptionFilters.reward_id) params.append('reward_id', redemptionFilters.reward_id);
+      if (redemptionFilters.date_from) params.append('date_from', redemptionFilters.date_from);
+      if (redemptionFilters.date_to) params.append('date_to', redemptionFilters.date_to);
       
       const response = await axios.get(`${API}/admin/redemptions?${params}`, {
         headers: { Authorization: `Bearer ${adminToken}` }
