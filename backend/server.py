@@ -455,7 +455,7 @@ class RedeemReward(BaseModel):
     user_message: Optional[str] = None  # Optional message from user
 
 class ProcessRedemption(BaseModel):
-    action: str = Field(..., regex="^(approve|reject)$")
+    action: str = Field(..., pattern="^(approve|reject)$")
     admin_notes: Optional[str] = None
     rejection_reason: Optional[str] = None
 
