@@ -2248,20 +2248,27 @@ def test_admin_update_reward():
         if response.status_code == 200:
             data = response.json()
             
+            # API returns {"message": "...", "reward": {...}} structure
+            if "message" not in data or "reward" not in data:
+                log_test("Admin Update Reward", False, "Missing message or reward in response")
+                return False
+            
+            reward_data_response = data["reward"]
+            
             # Validate updates were applied
-            if data["title"] != update_data["title"]:
+            if reward_data_response["title"] != update_data["title"]:
                 log_test("Admin Update Reward", False, "Title not updated")
                 return False
             
-            if data["discount_percentage"] != update_data["discount_percentage"]:
+            if reward_data_response["discount_percentage"] != update_data["discount_percentage"]:
                 log_test("Admin Update Reward", False, "Discount percentage not updated")
                 return False
             
-            if data["bollini_required"] != update_data["bollini_required"]:
+            if reward_data_response["bollini_required"] != update_data["bollini_required"]:
                 log_test("Admin Update Reward", False, "Bollini required not updated")
                 return False
             
-            if "updated_at" not in data:
+            if "updated_at" not in reward_data_response:
                 log_test("Admin Update Reward", False, "Missing updated_at field")
                 return False
             
