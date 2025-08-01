@@ -3743,6 +3743,390 @@ const QRRegistrationPage = () => {
   return <div>QR Registration Page - Coming Soon</div>;
 };
 
+const RewardManagement = () => {
+  const [activeSubTab, setActiveSubTab] = useState('overview');
+  const [rewards, setRewards] = useState([]);
+  const [redemptions, setRedemptions] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedReward, setSelectedReward] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showRedemptionModal, setShowRedemptionModal] = useState(false);
+  const [selectedRedemption, setSelectedRedemption] = useState(null);
+  const { adminToken } = useAuth();
+
+  // Pagination states
+  const [rewardsPage, setRewardsPage] = useState(1);
+  const [redemptionsPage, setRedemptionsPage] = useState(1);
+  const [rewardsTotal, setRewardsTotal] = useState(0);
+  const [redemptionsTotal, setRedemptionsTotal] = useState(0);
+  
+  // Filter states
+  const [rewardFilters, setRewardFilters] = useState({
+    status: '',
+    category: '',
+    search: ''
+  });
+  const [redemptionFilters, setRedemptionFilters] = useState({
+    status: '',
+    reward_id: '',
+    date_from: '',
+    date_to: ''
+  });
+
+  const rewardCategories = [
+    'Sconti', 'Omaggi', 'VIP', 'Buoni', 'Servizi', 'Eventi', 'Speciali'
+  ];
+
+  const rewardStatuses = [
+    { value: 'active', label: 'Attivo' },
+    { value: 'inactive', label: 'Inattivo' },
+    { value: 'expired', label: 'Scaduto' },
+    { value: 'out_of_stock', label: 'Esaurito' }
+  ];
+
+  const redemptionStatuses = [
+    { value: 'pending', label: 'In Attesa' },
+    { value: 'approved', label: 'Approvato' },
+    { value: 'used', label: 'Utilizzato' },
+    { value: 'rejected', label: 'Rifiutato' },
+    { value: 'expired', label: 'Scaduto' }
+  ];
+
+  useEffect(() => {
+    fetchData();
+  }, [activeSubTab, rewardsPage, redemptionsPage, rewardFilters, redemptionFilters]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      if (activeSubTab === 'overview' || activeSubTab === 'rewards') {
+        await fetchRewards();
+      }
+      
+      if (activeSubTab === 'overview' || activeSubTab === 'redemptions') {
+        await fetchRedemptions();
+      }
+      
+      if (activeSubTab === 'overview' || activeSubTab === 'analytics') {
+        await fetchAnalytics();
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRewards = async () => {
+    try {
+      const params = new URLSearchParams({
+        page: rewardsPage.toString(),
+        limit: '10',
+        ...rewardFilters
+      });
+      
+      const response = await axios.get(`${API}/admin/rewards?${params}`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setRewards(response.data.rewards);
+      setRewardsTotal(response.data.total);
+    } catch (error) {
+      console.error('Error fetching rewards:', error);
+    }
+  };
+
+  const fetchRedemptions = async () => {
+    try {
+      const params = new URLSearchParams({
+        page: redemptionsPage.toString(),
+        limit: '10',
+        ...redemptionFilters
+      });
+      
+      const response = await axios.get(`${API}/admin/redemptions?${params}`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setRedemptions(response.data.redemptions);
+      setRedemptionsTotal(response.data.total);
+    } catch (error) {
+      console.error('Error fetching redemptions:', error);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/rewards/analytics`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    }
+  };
+
+  const handleCreateReward = async (rewardData) => {
+    try {
+      await axios.post(`${API}/admin/rewards`, rewardData, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      alert('Premio creato con successo!');
+      setShowCreateModal(false);
+      fetchRewards();
+    } catch (error) {
+      console.error('Error creating reward:', error);
+      alert('Errore nella creazione del premio');
+    }
+  };
+
+  const handleEditReward = async (rewardId, updateData) => {
+    try {
+      await axios.put(`${API}/admin/rewards/${rewardId}`, updateData, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      alert('Premio aggiornato con successo!');
+      setShowEditModal(false);
+      setSelectedReward(null);
+      fetchRewards();
+    } catch (error) {
+      console.error('Error updating reward:', error);
+      alert('Errore nell\'aggiornamento del premio');
+    }
+  };
+
+  const handleDeleteReward = async (rewardId) => {
+    if (!confirm('Sei sicuro di voler disattivare questo premio?')) return;
+    
+    try {
+      await axios.delete(`${API}/admin/rewards/${rewardId}`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      alert('Premio disattivato con successo!');
+      fetchRewards();
+    } catch (error) {
+      console.error('Error deleting reward:', error);
+      alert('Errore nella disattivazione del premio');
+    }
+  };
+
+  const handleProcessRedemption = async (redemptionId, action, notes = '', rejectionReason = '') => {
+    try {
+      await axios.put(`${API}/admin/redemptions/${redemptionId}`, {
+        action,
+        admin_notes: notes,
+        rejection_reason: rejectionReason
+      }, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      const actionText = action === 'approve' ? 'approvato' : 'rifiutato';
+      alert(`Riscatto ${actionText} con successo!`);
+      setShowRedemptionModal(false);
+      setSelectedRedemption(null);
+      fetchRedemptions();
+    } catch (error) {
+      console.error('Error processing redemption:', error);
+      alert('Errore nel processare il riscatto');
+    }
+  };
+
+  const handleMarkRedemptionUsed = async (redemptionId, usageData) => {
+    try {
+      await axios.post(`${API}/admin/redemptions/${redemptionId}/use`, usageData, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      alert('Utilizzo registrato con successo!');
+      fetchRedemptions();
+    } catch (error) {
+      console.error('Error marking redemption as used:', error);
+      alert('Errore nella registrazione utilizzo');
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      active: 'bg-green-100 text-green-800',
+      inactive: 'bg-gray-100 text-gray-800',
+      expired: 'bg-red-100 text-red-800',
+      out_of_stock: 'bg-yellow-100 text-yellow-800',
+      pending: 'bg-yellow-100 text-yellow-800',
+      approved: 'bg-blue-100 text-blue-800',
+      used: 'bg-green-100 text-green-800',
+      rejected: 'bg-red-100 text-red-800'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getCategoryColor = (category) => {
+    const colors = {
+      'Sconti': 'bg-blue-100 text-blue-800',
+      'Omaggi': 'bg-green-100 text-green-800',
+      'VIP': 'bg-purple-100 text-purple-800',
+      'Buoni': 'bg-yellow-100 text-yellow-800',
+      'Servizi': 'bg-indigo-100 text-indigo-800',
+      'Eventi': 'bg-pink-100 text-pink-800',
+      'Speciali': 'bg-red-100 text-red-800'
+    };
+    return colors[category] || 'bg-gray-100 text-gray-800';
+  };
+
+  const subTabs = [
+    { id: 'overview', name: 'Panoramica', icon: '📊' },
+    { id: 'rewards', name: 'Gestione Premi', icon: '🎁' },
+    { id: 'redemptions', name: 'Riscatti', icon: '🎫' },
+    { id: 'analytics', name: 'Analytics', icon: '📈' }
+  ];
+
+  if (loading && activeSubTab === 'overview') {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento gestione premi...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Gestione Premi Avanzata</h1>
+            <p className="text-gray-600 mt-1">Sistema completo per la gestione premi e riscatti</p>
+          </div>
+          
+          {activeSubTab === 'rewards' && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-4 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors flex items-center"
+            >
+              <span className="mr-2">➕</span>
+              Crea Nuovo Premio
+            </button>
+          )}
+        </div>
+
+        {/* Sub Navigation */}
+        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+          {subTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubTab(tab.id)}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center ${
+                activeSubTab === tab.id 
+                  ? 'bg-white text-imagross-orange shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content based on active sub-tab */}
+      {activeSubTab === 'overview' && (
+        <RewardOverview 
+          analytics={analytics}
+          rewards={rewards.slice(0, 5)}
+          redemptions={redemptions.slice(0, 5)}
+          onViewAllRewards={() => setActiveSubTab('rewards')}
+          onViewAllRedemptions={() => setActiveSubTab('redemptions')}
+        />
+      )}
+
+      {activeSubTab === 'rewards' && (
+        <RewardsList 
+          rewards={rewards}
+          total={rewardsTotal}
+          page={rewardsPage}
+          onPageChange={setRewardsPage}
+          filters={rewardFilters}
+          onFiltersChange={setRewardFilters}
+          onEdit={(reward) => {
+            setSelectedReward(reward);
+            setShowEditModal(true);
+          }}
+          onDelete={handleDeleteReward}
+          getStatusColor={getStatusColor}
+          getCategoryColor={getCategoryColor}
+          loading={loading}
+        />
+      )}
+
+      {activeSubTab === 'redemptions' && (
+        <RedemptionsList 
+          redemptions={redemptions}
+          total={redemptionsTotal}
+          page={redemptionsPage}
+          onPageChange={setRedemptionsPage}
+          filters={redemptionFilters}
+          onFiltersChange={setRedemptionFilters}
+          onProcess={(redemption) => {
+            setSelectedRedemption(redemption);
+            setShowRedemptionModal(true);
+          }}
+          onMarkUsed={handleMarkRedemptionUsed}
+          getStatusColor={getStatusColor}
+          loading={loading}
+        />
+      )}
+
+      {activeSubTab === 'analytics' && (
+        <RewardAnalytics 
+          analytics={analytics}
+          loading={loading}
+        />
+      )}
+
+      {/* Modals */}
+      {showCreateModal && (
+        <CreateRewardModal
+          onClose={() => setShowCreateModal(false)}
+          onCreate={handleCreateReward}
+          categories={rewardCategories}
+        />
+      )}
+
+      {showEditModal && selectedReward && (
+        <EditRewardModal
+          reward={selectedReward}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedReward(null);
+          }}
+          onUpdate={handleEditReward}
+          categories={rewardCategories}
+        />
+      )}
+
+      {showRedemptionModal && selectedRedemption && (
+        <ProcessRedemptionModal
+          redemption={selectedRedemption}
+          onClose={() => {
+            setShowRedemptionModal(false);
+            setSelectedRedemption(null);
+          }}
+          onProcess={handleProcessRedemption}
+        />
+      )}
+    </div>
+  );
+};
+
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { admin } = useAuth();
