@@ -4296,8 +4296,6 @@ const RewardOverview = ({ analytics, rewards, redemptions, onViewAllRewards, onV
   );
 };
 
-const RewardsList = ({ rewards, total, page, onPageChange, filters, onFiltersChange, onEdit, onDelete, getStatusColor, getCategoryColor, loading }) => {
-
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { admin } = useAuth();
