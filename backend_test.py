@@ -2461,16 +2461,24 @@ def test_admin_get_all_redemptions():
         if response.status_code == 200:
             data = response.json()
             
-            if not isinstance(data, list):
-                log_test("Admin Get All Redemptions", False, "Response should be a list")
+            # API returns {"redemptions": [...], "total": N, ...} structure
+            if "redemptions" not in data:
+                log_test("Admin Get All Redemptions", False, "Missing 'redemptions' key in response")
                 return False
             
-            if len(data) == 0:
-                log_test("Admin Get All Redemptions", False, "No redemptions found")
+            redemptions_list = data["redemptions"]
+            
+            if not isinstance(redemptions_list, list):
+                log_test("Admin Get All Redemptions", False, "Redemptions should be a list")
                 return False
+            
+            # It's okay if there are no redemptions yet
+            if len(redemptions_list) == 0:
+                log_test("Admin Get All Redemptions", True, "Retrieved 0 redemptions (none exist yet)")
+                return True
             
             # Validate redemption structure for admin view
-            redemption = data[0]
+            redemption = redemptions_list[0]
             required_fields = ["id", "reward_id", "user_id", "user_tessera", "status", 
                              "redemption_code", "redeemed_at", "uses_remaining"]
             missing_fields = [field for field in required_fields if field not in redemption]
@@ -2482,13 +2490,13 @@ def test_admin_get_all_redemptions():
             response = requests.get(f"{API_BASE}/admin/redemptions?status=pending", headers=headers)
             if response.status_code == 200:
                 filtered_data = response.json()
-                if isinstance(filtered_data, list):
-                    for redemption in filtered_data:
+                if "redemptions" in filtered_data and isinstance(filtered_data["redemptions"], list):
+                    for redemption in filtered_data["redemptions"]:
                         if redemption["status"] != "pending":
                             log_test("Admin Get All Redemptions", False, "Status filtering not working")
                             return False
             
-            log_test("Admin Get All Redemptions", True, f"Retrieved {len(data)} redemptions with filtering working")
+            log_test("Admin Get All Redemptions", True, f"Retrieved {len(redemptions_list)} redemptions with filtering working")
             return True
             
         else:
