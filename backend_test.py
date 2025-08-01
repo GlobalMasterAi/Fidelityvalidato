@@ -2048,39 +2048,46 @@ def test_admin_create_reward():
         if response.status_code == 200:
             data = response.json()
             
+            # Validate response structure - API returns {"message": "...", "reward": {...}}
+            if "message" not in data or "reward" not in data:
+                log_test("Admin Create Reward", False, "Missing message or reward in response")
+                return False
+            
+            reward_data_response = data["reward"]
+            
             # Validate response structure
             required_fields = ["id", "title", "description", "type", "category", "status", 
                              "bollini_required", "created_at", "created_by"]
-            missing_fields = [field for field in required_fields if field not in data]
+            missing_fields = [field for field in required_fields if field not in reward_data_response]
             if missing_fields:
                 log_test("Admin Create Reward", False, f"Missing fields: {missing_fields}")
                 return False
             
             # Validate data matches input
-            if data["title"] != reward_data["title"]:
+            if reward_data_response["title"] != reward_data["title"]:
                 log_test("Admin Create Reward", False, "Title mismatch")
                 return False
             
-            if data["discount_percentage"] != reward_data["discount_percentage"]:
+            if reward_data_response["discount_percentage"] != reward_data["discount_percentage"]:
                 log_test("Admin Create Reward", False, "Discount percentage mismatch")
                 return False
             
-            if data["bollini_required"] != reward_data["bollini_required"]:
+            if reward_data_response["bollini_required"] != reward_data["bollini_required"]:
                 log_test("Admin Create Reward", False, "Bollini required mismatch")
                 return False
             
-            if not is_valid_uuid(data["id"]):
+            if not is_valid_uuid(reward_data_response["id"]):
                 log_test("Admin Create Reward", False, "Invalid reward ID format")
                 return False
             
-            if data["status"] != "active":
-                log_test("Admin Create Reward", False, f"Wrong default status: {data['status']}")
+            if reward_data_response["status"] != "active":
+                log_test("Admin Create Reward", False, f"Wrong default status: {reward_data_response['status']}")
                 return False
             
             # Store reward ID for later tests
-            test_reward_id = data["id"]
+            test_reward_id = reward_data_response["id"]
             
-            log_test("Admin Create Reward", True, f"Reward created successfully: {data['title']}")
+            log_test("Admin Create Reward", True, f"Reward created successfully: {reward_data_response['title']}")
             return True
             
         else:
