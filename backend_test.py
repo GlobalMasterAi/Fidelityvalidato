@@ -2755,10 +2755,17 @@ def test_reward_expiry_logic():
         response = requests.post(f"{API_BASE}/admin/rewards", json=fixed_date_reward, headers=headers)
         
         if response.status_code == 200:
-            reward_data = response.json()
+            data = response.json()
+            
+            # API returns {"message": "...", "reward": {...}} structure
+            if "reward" not in data:
+                log_test("Reward Expiry Logic", False, "Missing reward in response")
+                return False
+            
+            reward_data_response = data["reward"]
             
             # Validate expiry date was set correctly
-            if not reward_data.get("expiry_date"):
+            if not reward_data_response.get("expiry_date"):
                 log_test("Reward Expiry Logic", False, "Fixed expiry date not set")
                 return False
             
@@ -2778,7 +2785,8 @@ def test_reward_expiry_logic():
             response2 = requests.post(f"{API_BASE}/admin/rewards", json=days_from_creation_reward, headers=headers)
             
             if response2.status_code == 200:
-                reward_data2 = response2.json()
+                data2 = response2.json()
+                reward_data2 = data2["reward"]
                 
                 # Validate expiry configuration
                 if reward_data2["expiry_type"] != "days_from_creation":
