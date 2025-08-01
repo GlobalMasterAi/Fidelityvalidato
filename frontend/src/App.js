@@ -19,6 +19,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { RewardsList, RedemptionsList, RewardAnalytics } from './RewardComponents';
+import { CreateRewardModal, EditRewardModal, ProcessRedemptionModal } from './RewardModals';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
