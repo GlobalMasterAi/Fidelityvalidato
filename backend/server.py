@@ -589,6 +589,139 @@ async def load_scontrini_data():
         print(f"Error loading scontrini data: {e}")
         SCONTRINI_DATA = []
 
+# ============================================================================
+# REWARDS SYSTEM HELPER FUNCTIONS
+# ============================================================================
+
+def generate_redemption_qr_code(redemption_code: str, reward_title: str) -> str:
+    """Generate QR code for reward redemption"""
+    qr_data = {
+        "type": "reward_redemption",
+        "code": redemption_code,
+        "title": reward_title,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    qr_string = json.dumps(qr_data)
+    return generate_qr_code(qr_string)
+
+def calculate_reward_expiry(reward: dict, redemption_date: datetime = None) -> Optional[datetime]:
+    """Calculate when a reward expires based on its expiry configuration"""
+    if reward["expiry_type"] == ExpiryType.FIXED_DATE:
+        return reward.get("expiry_date")
+    elif reward["expiry_type"] == ExpiryType.DAYS_FROM_CREATION:
+        if reward.get("expiry_days_from_creation"):
+            return reward["created_at"] + timedelta(days=reward["expiry_days_from_creation"])
+    elif reward["expiry_type"] == ExpiryType.DAYS_FROM_REDEMPTION:
+        if reward.get("expiry_days_from_redemption") and redemption_date:
+            return redemption_date + timedelta(days=reward["expiry_days_from_redemption"])
+    return None
+
+def can_user_redeem_reward(user: dict, reward: dict, existing_redemptions: List[dict]) -> tuple[bool, str]:
+    """Check if a user can redeem a specific reward"""
+    # Check if reward is active
+    if reward["status"] != RewardStatus.ACTIVE:
+        return False, "Premio non più disponibile"
+    
+    # Check if reward has expired (creation-based expiry)
+    if reward["expiry_type"] == ExpiryType.FIXED_DATE and reward.get("expiry_date"):
+        if datetime.utcnow() > reward["expiry_date"]:
+            return False, "Premio scaduto"
+    elif reward["expiry_type"] == ExpiryType.DAYS_FROM_CREATION and reward.get("expiry_days_from_creation"):
+        expiry_date = reward["created_at"] + timedelta(days=reward["expiry_days_from_creation"])
+        if datetime.utcnow() > expiry_date:
+            return False, "Premio scaduto"
+    
+    # Check stock
+    if reward.get("remaining_stock") is not None and reward["remaining_stock"] <= 0:
+        return False, "Premio esaurito"
+    
+    # Check if user has enough bollini
+    if user.get("bollini", 0) < reward["bollini_required"]:
+        return False, f"Bollini insufficienti (richiesti: {reward['bollini_required']}, disponibili: {user.get('bollini', 0)})"
+    
+    # Check loyalty level requirement
+    if reward.get("loyalty_level_required"):
+        user_level = calculate_user_loyalty_level(user)
+        required_levels = ["Bronze", "Silver", "Gold", "Platinum"]
+        if user_level not in required_levels or required_levels.index(user_level) < required_levels.index(reward["loyalty_level_required"]):
+            return False, f"Livello fidelity insufficiente (richiesto: {reward['loyalty_level_required']})"
+    
+    # Check per-user redemption limit
+    if reward.get("max_redemptions_per_user"):
+        user_redemption_count = len([r for r in existing_redemptions if r["user_id"] == user["id"] and r["reward_id"] == reward["id"]])
+        if user_redemption_count >= reward["max_redemptions_per_user"]:
+            return False, f"Limite riscatti raggiunto ({reward['max_redemptions_per_user']} per utente)"
+    
+    return True, "OK"
+
+def calculate_user_loyalty_level(user: dict) -> str:
+    """Calculate user loyalty level based on spending"""
+    total_spent = user.get("progressivo_spesa", 0)
+    
+    if total_spent >= 2000:
+        return "Platinum"
+    elif total_spent >= 1000:
+        return "Gold"
+    elif total_spent >= 500:
+        return "Silver"
+    else:
+        return "Bronze"
+
+def update_reward_stock(reward_id: str, decrement: int = 1):
+    """Update reward stock after redemption"""
+    # This would be called after successful redemption
+    # Implementation will be in the actual endpoint
+    pass
+
+def get_reward_analytics_data(rewards: List[dict], redemptions: List[dict]) -> dict:
+    """Generate analytics data for rewards dashboard"""
+    total_rewards = len(rewards)
+    active_rewards = len([r for r in rewards if r["status"] == RewardStatus.ACTIVE])
+    total_redemptions = len(redemptions)
+    pending_redemptions = len([r for r in redemptions if r["status"] == RedemptionStatus.PENDING])
+    
+    # Popular rewards
+    redemption_counts = defaultdict(int)
+    for redemption in redemptions:
+        redemption_counts[redemption["reward_id"]] += 1
+    
+    popular_rewards = []
+    for reward in rewards:
+        count = redemption_counts.get(reward["id"], 0)
+        if count > 0:
+            popular_rewards.append({
+                "reward": reward,
+                "redemption_count": count
+            })
+    
+    popular_rewards.sort(key=lambda x: x["redemption_count"], reverse=True)
+    
+    # Category breakdown
+    category_stats = defaultdict(lambda: {"total": 0, "active": 0, "redemptions": 0})
+    for reward in rewards:
+        category = reward["category"]
+        category_stats[category]["total"] += 1
+        if reward["status"] == RewardStatus.ACTIVE:
+            category_stats[category]["active"] += 1
+    
+    # Add redemption counts per category
+    for redemption in redemptions:
+        for reward in rewards:
+            if reward["id"] == redemption["reward_id"]:
+                category_stats[reward["category"]]["redemptions"] += 1
+                break
+    
+    return {
+        "overview": {
+            "total_rewards": total_rewards,
+            "active_rewards": active_rewards,
+            "total_redemptions": total_redemptions,
+            "pending_redemptions": pending_redemptions
+        },
+        "popular_rewards": popular_rewards[:10],
+        "category_stats": dict(category_stats)
+    }
+
 def calculate_rfm_segmentation():
     """Calculate RFM (Recency, Frequency, Monetary) segmentation for customers"""
     from datetime import datetime, timedelta
