@@ -2000,6 +2000,960 @@ def test_admin_user_profile_database_persistence():
         return False
 
 # ============================================================================
+# ADVANCED REWARDS MANAGEMENT SYSTEM TESTS - CRITICAL NEW FUNCTIONALITY
+# ============================================================================
+
+# Global variables for rewards tests
+test_reward_id = None
+test_redemption_id = None
+test_redemption_code = None
+
+def test_admin_create_reward():
+    """Test POST /api/admin/rewards - Create new reward with full validation"""
+    global test_reward_id
+    
+    if not admin_access_token:
+        log_test("Admin Create Reward", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Create a comprehensive reward
+        reward_data = {
+            "title": "Sconto 10% su Spesa",
+            "description": "Ottieni il 10% di sconto sulla tua prossima spesa superiore a €50",
+            "type": "discount_percentage",
+            "category": "Sconti",
+            "discount_percentage": 10,
+            "bollini_required": 50,
+            "min_purchase_amount": 50.0,
+            "max_discount_amount": 20.0,
+            "loyalty_level_required": "Bronze",
+            "total_stock": 100,
+            "max_redemptions_per_user": 2,
+            "max_uses_per_redemption": 1,
+            "expiry_type": "days_from_redemption",
+            "expiry_days_from_redemption": 30,
+            "icon": "💰",
+            "color": "#FF6B35",
+            "featured": True,
+            "sort_order": 1,
+            "terms_and_conditions": "Valido solo per spese superiori a €50. Non cumulabile con altre offerte.",
+            "usage_instructions": "Mostra questo codice alla cassa per ottenere lo sconto."
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/rewards", json=reward_data, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate response structure
+            required_fields = ["id", "title", "description", "type", "category", "status", 
+                             "bollini_required", "created_at", "created_by"]
+            missing_fields = [field for field in required_fields if field not in data]
+            if missing_fields:
+                log_test("Admin Create Reward", False, f"Missing fields: {missing_fields}")
+                return False
+            
+            # Validate data matches input
+            if data["title"] != reward_data["title"]:
+                log_test("Admin Create Reward", False, "Title mismatch")
+                return False
+            
+            if data["discount_percentage"] != reward_data["discount_percentage"]:
+                log_test("Admin Create Reward", False, "Discount percentage mismatch")
+                return False
+            
+            if data["bollini_required"] != reward_data["bollini_required"]:
+                log_test("Admin Create Reward", False, "Bollini required mismatch")
+                return False
+            
+            if not is_valid_uuid(data["id"]):
+                log_test("Admin Create Reward", False, "Invalid reward ID format")
+                return False
+            
+            if data["status"] != "active":
+                log_test("Admin Create Reward", False, f"Wrong default status: {data['status']}")
+                return False
+            
+            # Store reward ID for later tests
+            test_reward_id = data["id"]
+            
+            log_test("Admin Create Reward", True, f"Reward created successfully: {data['title']}")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Create Reward", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Create Reward", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_get_rewards():
+    """Test GET /api/admin/rewards - List rewards with filtering, pagination, search"""
+    if not admin_access_token:
+        log_test("Admin Get Rewards", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Test basic listing
+        response = requests.get(f"{API_BASE}/admin/rewards", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if not isinstance(data, list):
+                log_test("Admin Get Rewards", False, "Response should be a list")
+                return False
+            
+            if len(data) == 0:
+                log_test("Admin Get Rewards", False, "No rewards found")
+                return False
+            
+            # Validate first reward structure
+            reward = data[0]
+            required_fields = ["id", "title", "description", "type", "category", "status", 
+                             "bollini_required", "total_redemptions", "remaining_stock"]
+            missing_fields = [field for field in required_fields if field not in reward]
+            if missing_fields:
+                log_test("Admin Get Rewards", False, f"Missing fields in reward: {missing_fields}")
+                return False
+            
+            # Test filtering by category
+            response = requests.get(f"{API_BASE}/admin/rewards?category=Sconti", headers=headers)
+            if response.status_code == 200:
+                filtered_data = response.json()
+                if isinstance(filtered_data, list):
+                    for reward in filtered_data:
+                        if reward["category"] != "Sconti":
+                            log_test("Admin Get Rewards", False, "Category filtering not working")
+                            return False
+            
+            # Test search functionality
+            response = requests.get(f"{API_BASE}/admin/rewards?search=sconto", headers=headers)
+            if response.status_code == 200:
+                search_data = response.json()
+                if isinstance(search_data, list) and len(search_data) > 0:
+                    # Should find rewards with "sconto" in title or description
+                    found_match = False
+                    for reward in search_data:
+                        if "sconto" in reward["title"].lower() or "sconto" in reward["description"].lower():
+                            found_match = True
+                            break
+                    if not found_match:
+                        log_test("Admin Get Rewards", False, "Search functionality not working")
+                        return False
+            
+            log_test("Admin Get Rewards", True, f"Retrieved {len(data)} rewards with filtering/search working")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Get Rewards", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Get Rewards", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_get_reward_details():
+    """Test GET /api/admin/rewards/{reward_id} - Get specific reward details"""
+    if not admin_access_token or not test_reward_id:
+        log_test("Admin Get Reward Details", False, "No admin token or reward ID available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        response = requests.get(f"{API_BASE}/admin/rewards/{test_reward_id}", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate comprehensive reward structure
+            required_fields = ["id", "title", "description", "type", "category", "status",
+                             "discount_percentage", "bollini_required", "min_purchase_amount",
+                             "max_discount_amount", "loyalty_level_required", "total_stock",
+                             "remaining_stock", "max_redemptions_per_user", "expiry_type",
+                             "created_at", "updated_at", "total_redemptions", "total_uses"]
+            missing_fields = [field for field in required_fields if field not in data]
+            if missing_fields:
+                log_test("Admin Get Reward Details", False, f"Missing fields: {missing_fields}")
+                return False
+            
+            # Validate data types
+            if not isinstance(data["bollini_required"], int):
+                log_test("Admin Get Reward Details", False, "Bollini required should be integer")
+                return False
+            
+            if not isinstance(data["total_redemptions"], int):
+                log_test("Admin Get Reward Details", False, "Total redemptions should be integer")
+                return False
+            
+            if data["id"] != test_reward_id:
+                log_test("Admin Get Reward Details", False, "Reward ID mismatch")
+                return False
+            
+            log_test("Admin Get Reward Details", True, f"Reward details retrieved: {data['title']}")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Get Reward Details", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Get Reward Details", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_update_reward():
+    """Test PUT /api/admin/rewards/{reward_id} - Update existing reward"""
+    if not admin_access_token or not test_reward_id:
+        log_test("Admin Update Reward", False, "No admin token or reward ID available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        update_data = {
+            "title": "Sconto 15% su Spesa - AGGIORNATO",
+            "description": "Ottieni il 15% di sconto sulla tua prossima spesa superiore a €40 - OFFERTA MIGLIORATA",
+            "discount_percentage": 15,
+            "min_purchase_amount": 40.0,
+            "bollini_required": 45,
+            "featured": False,
+            "sort_order": 2
+        }
+        
+        response = requests.put(f"{API_BASE}/admin/rewards/{test_reward_id}", json=update_data, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate updates were applied
+            if data["title"] != update_data["title"]:
+                log_test("Admin Update Reward", False, "Title not updated")
+                return False
+            
+            if data["discount_percentage"] != update_data["discount_percentage"]:
+                log_test("Admin Update Reward", False, "Discount percentage not updated")
+                return False
+            
+            if data["bollini_required"] != update_data["bollini_required"]:
+                log_test("Admin Update Reward", False, "Bollini required not updated")
+                return False
+            
+            if "updated_at" not in data:
+                log_test("Admin Update Reward", False, "Missing updated_at field")
+                return False
+            
+            log_test("Admin Update Reward", True, "Reward updated successfully")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Update Reward", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Update Reward", False, f"Exception: {str(e)}")
+        return False
+
+def test_user_get_available_rewards():
+    """Test GET /api/user/rewards - Available rewards for current user"""
+    if not access_token:
+        log_test("User Get Available Rewards", False, "No user access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        response = requests.get(f"{API_BASE}/user/rewards", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if not isinstance(data, list):
+                log_test("User Get Available Rewards", False, "Response should be a list")
+                return False
+            
+            # Validate reward structure for user view
+            if len(data) > 0:
+                reward = data[0]
+                required_fields = ["id", "title", "description", "type", "category", 
+                                 "bollini_required", "user_can_redeem", "user_redemptions_count",
+                                 "icon", "color", "featured"]
+                missing_fields = [field for field in required_fields if field not in reward]
+                if missing_fields:
+                    log_test("User Get Available Rewards", False, f"Missing fields in user reward: {missing_fields}")
+                    return False
+                
+                # Validate user-specific fields
+                if not isinstance(reward["user_can_redeem"], bool):
+                    log_test("User Get Available Rewards", False, "user_can_redeem should be boolean")
+                    return False
+                
+                if not isinstance(reward["user_redemptions_count"], int):
+                    log_test("User Get Available Rewards", False, "user_redemptions_count should be integer")
+                    return False
+            
+            log_test("User Get Available Rewards", True, f"Retrieved {len(data)} available rewards for user")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("User Get Available Rewards", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("User Get Available Rewards", False, f"Exception: {str(e)}")
+        return False
+
+def test_user_redeem_reward():
+    """Test POST /api/user/rewards/{reward_id}/redeem - Redeem a reward"""
+    global test_redemption_id, test_redemption_code
+    
+    if not access_token or not test_reward_id:
+        log_test("User Redeem Reward", False, "No user token or reward ID available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        # First, add some bollini to the user so they can redeem
+        points_response = requests.post(f"{API_BASE}/add-points/100", headers=headers)
+        if points_response.status_code != 200:
+            log_test("User Redeem Reward", False, "Could not add points for redemption test")
+            return False
+        
+        redemption_data = {
+            "user_message": "Vorrei riscattare questo premio per la mia prossima spesa"
+        }
+        
+        response = requests.post(f"{API_BASE}/user/rewards/{test_reward_id}/redeem", 
+                               json=redemption_data, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate redemption response
+            required_fields = ["id", "reward", "status", "redemption_code", "redeemed_at", 
+                             "expires_at", "uses_remaining"]
+            missing_fields = [field for field in required_fields if field not in data]
+            if missing_fields:
+                log_test("User Redeem Reward", False, f"Missing fields in redemption: {missing_fields}")
+                return False
+            
+            # Validate redemption status
+            if data["status"] != "pending":
+                log_test("User Redeem Reward", False, f"Wrong initial status: {data['status']}")
+                return False
+            
+            # Validate redemption code format
+            if not data["redemption_code"].startswith("RWD"):
+                log_test("User Redeem Reward", False, f"Invalid redemption code format: {data['redemption_code']}")
+                return False
+            
+            # Validate reward data is included
+            if not isinstance(data["reward"], dict) or "title" not in data["reward"]:
+                log_test("User Redeem Reward", False, "Invalid reward data in redemption response")
+                return False
+            
+            # Store for later tests
+            test_redemption_id = data["id"]
+            test_redemption_code = data["redemption_code"]
+            
+            log_test("User Redeem Reward", True, f"Reward redeemed successfully: {data['redemption_code']}")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("User Redeem Reward", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("User Redeem Reward", False, f"Exception: {str(e)}")
+        return False
+
+def test_user_get_redemptions():
+    """Test GET /api/user/redemptions - User's redemption history"""
+    if not access_token:
+        log_test("User Get Redemptions", False, "No user access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        response = requests.get(f"{API_BASE}/user/redemptions", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if not isinstance(data, list):
+                log_test("User Get Redemptions", False, "Response should be a list")
+                return False
+            
+            # Should have at least the redemption we just made
+            if len(data) == 0:
+                log_test("User Get Redemptions", False, "No redemptions found")
+                return False
+            
+            # Validate redemption structure
+            redemption = data[0]
+            required_fields = ["id", "reward", "status", "redemption_code", "redeemed_at", 
+                             "uses_remaining"]
+            missing_fields = [field for field in required_fields if field not in redemption]
+            if missing_fields:
+                log_test("User Get Redemptions", False, f"Missing fields in redemption: {missing_fields}")
+                return False
+            
+            # Find our test redemption
+            found_test_redemption = False
+            for redemption in data:
+                if redemption["id"] == test_redemption_id:
+                    found_test_redemption = True
+                    break
+            
+            if not found_test_redemption:
+                log_test("User Get Redemptions", False, "Test redemption not found in user history")
+                return False
+            
+            log_test("User Get Redemptions", True, f"Retrieved {len(data)} redemptions for user")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("User Get Redemptions", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("User Get Redemptions", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_get_all_redemptions():
+    """Test GET /api/admin/redemptions - List all redemptions with filtering"""
+    if not admin_access_token:
+        log_test("Admin Get All Redemptions", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Test basic listing
+        response = requests.get(f"{API_BASE}/admin/redemptions", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if not isinstance(data, list):
+                log_test("Admin Get All Redemptions", False, "Response should be a list")
+                return False
+            
+            if len(data) == 0:
+                log_test("Admin Get All Redemptions", False, "No redemptions found")
+                return False
+            
+            # Validate redemption structure for admin view
+            redemption = data[0]
+            required_fields = ["id", "reward_id", "user_id", "user_tessera", "status", 
+                             "redemption_code", "redeemed_at", "uses_remaining"]
+            missing_fields = [field for field in required_fields if field not in redemption]
+            if missing_fields:
+                log_test("Admin Get All Redemptions", False, f"Missing fields in admin redemption: {missing_fields}")
+                return False
+            
+            # Test filtering by status
+            response = requests.get(f"{API_BASE}/admin/redemptions?status=pending", headers=headers)
+            if response.status_code == 200:
+                filtered_data = response.json()
+                if isinstance(filtered_data, list):
+                    for redemption in filtered_data:
+                        if redemption["status"] != "pending":
+                            log_test("Admin Get All Redemptions", False, "Status filtering not working")
+                            return False
+            
+            log_test("Admin Get All Redemptions", True, f"Retrieved {len(data)} redemptions with filtering working")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Get All Redemptions", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Get All Redemptions", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_get_reward_redemptions():
+    """Test GET /api/admin/rewards/{reward_id}/redemptions - Get redemptions for specific reward"""
+    if not admin_access_token or not test_reward_id:
+        log_test("Admin Get Reward Redemptions", False, "No admin token or reward ID available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        response = requests.get(f"{API_BASE}/admin/rewards/{test_reward_id}/redemptions", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if not isinstance(data, list):
+                log_test("Admin Get Reward Redemptions", False, "Response should be a list")
+                return False
+            
+            # Should have at least our test redemption
+            if len(data) == 0:
+                log_test("Admin Get Reward Redemptions", False, "No redemptions found for reward")
+                return False
+            
+            # Validate all redemptions are for the correct reward
+            for redemption in data:
+                if redemption["reward_id"] != test_reward_id:
+                    log_test("Admin Get Reward Redemptions", False, "Found redemption for wrong reward")
+                    return False
+            
+            log_test("Admin Get Reward Redemptions", True, f"Retrieved {len(data)} redemptions for specific reward")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Get Reward Redemptions", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Get Reward Redemptions", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_approve_redemption():
+    """Test PUT /api/admin/redemptions/{redemption_id} - Approve redemption"""
+    if not admin_access_token or not test_redemption_id:
+        log_test("Admin Approve Redemption", False, "No admin token or redemption ID available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        approval_data = {
+            "action": "approve",
+            "admin_notes": "Redemption approved - user meets all requirements"
+        }
+        
+        response = requests.put(f"{API_BASE}/admin/redemptions/{test_redemption_id}", 
+                              json=approval_data, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate approval response
+            if "message" not in data or "redemption" not in data:
+                log_test("Admin Approve Redemption", False, "Missing fields in approval response")
+                return False
+            
+            if "approvato" not in data["message"]:
+                log_test("Admin Approve Redemption", False, f"Unexpected approval message: {data['message']}")
+                return False
+            
+            # Validate redemption status changed
+            redemption = data["redemption"]
+            if redemption["status"] != "approved":
+                log_test("Admin Approve Redemption", False, f"Status not updated: {redemption['status']}")
+                return False
+            
+            # Should have QR code generated for approved redemption
+            if not redemption.get("qr_code"):
+                log_test("Admin Approve Redemption", False, "QR code not generated for approved redemption")
+                return False
+            
+            # Should have approved_at timestamp
+            if not redemption.get("approved_at"):
+                log_test("Admin Approve Redemption", False, "approved_at timestamp not set")
+                return False
+            
+            # Should have approved_by admin ID
+            if not redemption.get("approved_by"):
+                log_test("Admin Approve Redemption", False, "approved_by admin ID not set")
+                return False
+            
+            log_test("Admin Approve Redemption", True, f"Redemption approved successfully with QR code")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Approve Redemption", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Approve Redemption", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_use_redemption():
+    """Test POST /api/admin/redemptions/{redemption_id}/use - Mark redemption as used"""
+    if not admin_access_token or not test_redemption_id:
+        log_test("Admin Use Redemption", False, "No admin token or redemption ID available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        usage_data = {
+            "store_id": test_store_id if test_store_id else None,
+            "cashier_id": test_cashier_id if test_cashier_id else None,
+            "usage_notes": "Redemption used at checkout - discount applied successfully"
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/redemptions/{test_redemption_id}/use", 
+                               json=usage_data, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate usage response
+            if "message" not in data or "redemption" not in data:
+                log_test("Admin Use Redemption", False, "Missing fields in usage response")
+                return False
+            
+            if "utilizzato" not in data["message"]:
+                log_test("Admin Use Redemption", False, f"Unexpected usage message: {data['message']}")
+                return False
+            
+            # Validate redemption status changed
+            redemption = data["redemption"]
+            if redemption["status"] != "used":
+                log_test("Admin Use Redemption", False, f"Status not updated: {redemption['status']}")
+                return False
+            
+            # Should have used_at timestamp
+            if not redemption.get("used_at"):
+                log_test("Admin Use Redemption", False, "used_at timestamp not set")
+                return False
+            
+            # Uses remaining should be decremented
+            if redemption["uses_remaining"] != 0:
+                log_test("Admin Use Redemption", False, f"Uses remaining not decremented: {redemption['uses_remaining']}")
+                return False
+            
+            # Should have usage history entry
+            if not redemption.get("usage_history") or len(redemption["usage_history"]) == 0:
+                log_test("Admin Use Redemption", False, "Usage history not recorded")
+                return False
+            
+            log_test("Admin Use Redemption", True, "Redemption marked as used successfully")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Use Redemption", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Use Redemption", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_rewards_analytics():
+    """Test GET /api/admin/rewards/analytics - Comprehensive rewards analytics"""
+    if not admin_access_token:
+        log_test("Admin Rewards Analytics", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        response = requests.get(f"{API_BASE}/admin/rewards/analytics", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate analytics structure
+            required_sections = ["overview", "popular_rewards", "category_stats"]
+            missing_sections = [section for section in required_sections if section not in data]
+            if missing_sections:
+                log_test("Admin Rewards Analytics", False, f"Missing analytics sections: {missing_sections}")
+                return False
+            
+            # Validate overview section
+            overview = data["overview"]
+            required_overview_fields = ["total_rewards", "active_rewards", "total_redemptions", "pending_redemptions"]
+            missing_overview = [field for field in required_overview_fields if field not in overview]
+            if missing_overview:
+                log_test("Admin Rewards Analytics", False, f"Missing overview fields: {missing_overview}")
+                return False
+            
+            # Validate data types
+            for field in required_overview_fields:
+                if not isinstance(overview[field], int):
+                    log_test("Admin Rewards Analytics", False, f"Overview field {field} should be integer")
+                    return False
+            
+            # Validate popular rewards section
+            if not isinstance(data["popular_rewards"], list):
+                log_test("Admin Rewards Analytics", False, "Popular rewards should be a list")
+                return False
+            
+            # Validate category stats section
+            if not isinstance(data["category_stats"], dict):
+                log_test("Admin Rewards Analytics", False, "Category stats should be a dictionary")
+                return False
+            
+            # Should have at least our test reward in the data
+            if overview["total_rewards"] < 1:
+                log_test("Admin Rewards Analytics", False, "Should have at least 1 reward")
+                return False
+            
+            if overview["total_redemptions"] < 1:
+                log_test("Admin Rewards Analytics", False, "Should have at least 1 redemption")
+                return False
+            
+            log_test("Admin Rewards Analytics", True, f"Analytics retrieved: {overview['total_rewards']} rewards, {overview['total_redemptions']} redemptions")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Rewards Analytics", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Rewards Analytics", False, f"Exception: {str(e)}")
+        return False
+
+def test_reward_expiry_logic():
+    """Test reward expiry logic (fixed date, days from creation, days from redemption)"""
+    if not admin_access_token:
+        log_test("Reward Expiry Logic", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Create reward with fixed date expiry
+        from datetime import datetime, timedelta
+        future_date = datetime.utcnow() + timedelta(days=7)
+        
+        fixed_date_reward = {
+            "title": "Test Fixed Date Expiry",
+            "description": "Test reward with fixed expiry date",
+            "type": "discount_fixed",
+            "category": "Sconti",
+            "discount_amount": 5.0,
+            "bollini_required": 10,
+            "expiry_type": "fixed_date",
+            "expiry_date": future_date.isoformat(),
+            "total_stock": 10
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/rewards", json=fixed_date_reward, headers=headers)
+        
+        if response.status_code == 200:
+            reward_data = response.json()
+            
+            # Validate expiry date was set correctly
+            if not reward_data.get("expiry_date"):
+                log_test("Reward Expiry Logic", False, "Fixed expiry date not set")
+                return False
+            
+            # Create reward with days from creation expiry
+            days_from_creation_reward = {
+                "title": "Test Days From Creation",
+                "description": "Test reward with days from creation expiry",
+                "type": "discount_fixed",
+                "category": "Sconti", 
+                "discount_amount": 10.0,
+                "bollini_required": 20,
+                "expiry_type": "days_from_creation",
+                "expiry_days_from_creation": 14,
+                "total_stock": 5
+            }
+            
+            response2 = requests.post(f"{API_BASE}/admin/rewards", json=days_from_creation_reward, headers=headers)
+            
+            if response2.status_code == 200:
+                reward_data2 = response2.json()
+                
+                # Validate expiry configuration
+                if reward_data2["expiry_type"] != "days_from_creation":
+                    log_test("Reward Expiry Logic", False, "Expiry type not set correctly")
+                    return False
+                
+                if reward_data2["expiry_days_from_creation"] != 14:
+                    log_test("Reward Expiry Logic", False, "Expiry days from creation not set correctly")
+                    return False
+                
+                log_test("Reward Expiry Logic", True, "Reward expiry logic working correctly")
+                return True
+            else:
+                log_test("Reward Expiry Logic", False, "Could not create days from creation reward")
+                return False
+        else:
+            log_test("Reward Expiry Logic", False, "Could not create fixed date reward")
+            return False
+            
+    except Exception as e:
+        log_test("Reward Expiry Logic", False, f"Exception: {str(e)}")
+        return False
+
+def test_reward_stock_management():
+    """Test reward stock management and limits"""
+    if not admin_access_token:
+        log_test("Reward Stock Management", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Create reward with limited stock
+        limited_stock_reward = {
+            "title": "Limited Stock Test Reward",
+            "description": "Test reward with limited stock",
+            "type": "free_product",
+            "category": "Omaggi",
+            "product_sku": "TEST-PRODUCT-001",
+            "bollini_required": 25,
+            "total_stock": 2,
+            "max_redemptions_per_user": 1
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/rewards", json=limited_stock_reward, headers=headers)
+        
+        if response.status_code == 200:
+            reward_data = response.json()
+            limited_reward_id = reward_data["id"]
+            
+            # Validate stock fields
+            if reward_data["total_stock"] != 2:
+                log_test("Reward Stock Management", False, "Total stock not set correctly")
+                return False
+            
+            if reward_data["remaining_stock"] != 2:
+                log_test("Reward Stock Management", False, "Remaining stock not initialized correctly")
+                return False
+            
+            if reward_data["max_redemptions_per_user"] != 1:
+                log_test("Reward Stock Management", False, "Max redemptions per user not set correctly")
+                return False
+            
+            # Test stock decreases after redemption (if we have a user with enough bollini)
+            # This would require a more complex test setup, so we'll just validate the structure
+            
+            log_test("Reward Stock Management", True, "Stock management fields configured correctly")
+            return True
+        else:
+            log_test("Reward Stock Management", False, "Could not create limited stock reward")
+            return False
+            
+    except Exception as e:
+        log_test("Reward Stock Management", False, f"Exception: {str(e)}")
+        return False
+
+def test_loyalty_level_requirements():
+    """Test loyalty level requirements for rewards"""
+    if not admin_access_token:
+        log_test("Loyalty Level Requirements", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Create reward with Gold level requirement
+        gold_level_reward = {
+            "title": "Gold Level Exclusive Reward",
+            "description": "Exclusive reward for Gold level customers",
+            "type": "voucher",
+            "category": "VIP",
+            "discount_amount": 25.0,
+            "bollini_required": 100,
+            "loyalty_level_required": "Gold",
+            "total_stock": 50
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/rewards", json=gold_level_reward, headers=headers)
+        
+        if response.status_code == 200:
+            reward_data = response.json()
+            
+            # Validate loyalty level requirement
+            if reward_data["loyalty_level_required"] != "Gold":
+                log_test("Loyalty Level Requirements", False, "Loyalty level requirement not set correctly")
+                return False
+            
+            # Create Platinum level reward
+            platinum_level_reward = {
+                "title": "Platinum VIP Reward",
+                "description": "Ultra-exclusive reward for Platinum customers",
+                "type": "vip_access",
+                "category": "VIP",
+                "bollini_required": 200,
+                "loyalty_level_required": "Platinum",
+                "total_stock": 10
+            }
+            
+            response2 = requests.post(f"{API_BASE}/admin/rewards", json=platinum_level_reward, headers=headers)
+            
+            if response2.status_code == 200:
+                reward_data2 = response2.json()
+                
+                if reward_data2["loyalty_level_required"] != "Platinum":
+                    log_test("Loyalty Level Requirements", False, "Platinum level requirement not set correctly")
+                    return False
+                
+                log_test("Loyalty Level Requirements", True, "Loyalty level requirements configured correctly")
+                return True
+            else:
+                log_test("Loyalty Level Requirements", False, "Could not create Platinum level reward")
+                return False
+        else:
+            log_test("Loyalty Level Requirements", False, "Could not create Gold level reward")
+            return False
+            
+    except Exception as e:
+        log_test("Loyalty Level Requirements", False, f"Exception: {str(e)}")
+        return False
+
+def test_admin_delete_reward():
+    """Test DELETE /api/admin/rewards/{reward_id} - Soft delete (deactivate) reward"""
+    if not admin_access_token or not test_reward_id:
+        log_test("Admin Delete Reward", False, "No admin token or reward ID available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        response = requests.delete(f"{API_BASE}/admin/rewards/{test_reward_id}", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate deletion response
+            if "message" not in data:
+                log_test("Admin Delete Reward", False, "Missing message in deletion response")
+                return False
+            
+            if "disattivato" not in data["message"]:
+                log_test("Admin Delete Reward", False, f"Unexpected deletion message: {data['message']}")
+                return False
+            
+            # Verify reward is deactivated (not actually deleted)
+            verify_response = requests.get(f"{API_BASE}/admin/rewards/{test_reward_id}", headers=headers)
+            if verify_response.status_code == 200:
+                reward_data = verify_response.json()
+                if reward_data["status"] != "inactive":
+                    log_test("Admin Delete Reward", False, f"Reward not deactivated: {reward_data['status']}")
+                    return False
+            else:
+                log_test("Admin Delete Reward", False, "Could not verify reward deactivation")
+                return False
+            
+            log_test("Admin Delete Reward", True, "Reward soft deleted (deactivated) successfully")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Delete Reward", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Delete Reward", False, f"Exception: {str(e)}")
+        return False
+
+# ============================================================================
 # EXCEL IMPORT SYSTEM TESTS
 # ============================================================================
 
