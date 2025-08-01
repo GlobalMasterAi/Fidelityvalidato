@@ -2681,6 +2681,714 @@ async def import_excel_data(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Errore import: {str(e)}")
 
+# ============================================================================
+# ADVANCED REWARDS SYSTEM API ENDPOINTS
+# ============================================================================
+
+@api_router.get("/admin/rewards")
+async def get_all_rewards(
+    status: Optional[RewardStatus] = None,
+    category: Optional[RewardCategory] = None,
+    page: int = 1,
+    limit: int = 20,
+    search: Optional[str] = None,
+    current_admin = Depends(get_current_admin)
+):
+    """Get all rewards with filtering and pagination"""
+    try:
+        # Build filter
+        filter_dict = {}
+        if status:
+            filter_dict["status"] = status
+        if category:
+            filter_dict["category"] = category
+        if search:
+            filter_dict["$or"] = [
+                {"title": {"$regex": search, "$options": "i"}},
+                {"description": {"$regex": search, "$options": "i"}}
+            ]
+        
+        # Get total count
+        total = await db.rewards.count_documents(filter_dict)
+        
+        # Get paginated results
+        skip = (page - 1) * limit
+        rewards = await db.rewards.find(filter_dict)\
+            .sort("sort_order", 1)\
+            .skip(skip)\
+            .limit(limit)\
+            .to_list(None)
+        
+        # Remove _id fields
+        for reward in rewards:
+            if "_id" in reward:
+                del reward["_id"]
+        
+        return {
+            "rewards": rewards,
+            "total": total,
+            "page": page,
+            "pages": (total + limit - 1) // limit,
+            "has_next": skip + limit < total,
+            "has_prev": page > 1
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nel recupero premi: {str(e)}")
+
+@api_router.post("/admin/rewards")
+async def create_reward(reward_data: CreateReward, current_admin = Depends(get_current_admin)):
+    """Create a new reward"""
+    try:
+        # Validate reward configuration
+        if reward_data.type == RewardType.DISCOUNT_PERCENTAGE and not reward_data.discount_percentage:
+            raise HTTPException(status_code=400, detail="Percentuale sconto richiesta per premio percentuale")
+        if reward_data.type == RewardType.DISCOUNT_FIXED and not reward_data.discount_amount:
+            raise HTTPException(status_code=400, detail="Importo sconto richiesto per premio importo fisso")
+        if reward_data.type == RewardType.VOUCHER and not reward_data.discount_amount:
+            raise HTTPException(status_code=400, detail="Valore buono richiesto per voucher")
+        if reward_data.type == RewardType.FREE_PRODUCT and not reward_data.product_sku:
+            raise HTTPException(status_code=400, detail="SKU prodotto richiesto per prodotto gratuito")
+        if reward_data.type == RewardType.CUSTOM and not reward_data.custom_instructions:
+            raise HTTPException(status_code=400, detail="Istruzioni richieste per premio personalizzato")
+        
+        # Validate expiry configuration
+        if reward_data.expiry_type == ExpiryType.FIXED_DATE and not reward_data.expiry_date:
+            raise HTTPException(status_code=400, detail="Data scadenza richiesta per scadenza fissa")
+        if reward_data.expiry_type == ExpiryType.DAYS_FROM_CREATION and not reward_data.expiry_days_from_creation:
+            raise HTTPException(status_code=400, detail="Giorni dalla creazione richiesti")
+        if reward_data.expiry_type == ExpiryType.DAYS_FROM_REDEMPTION and not reward_data.expiry_days_from_redemption:
+            raise HTTPException(status_code=400, detail="Giorni dal riscatto richiesti")
+        
+        # Create reward document
+        reward_doc = reward_data.dict()
+        reward_doc["id"] = str(uuid.uuid4())
+        reward_doc["status"] = RewardStatus.ACTIVE
+        reward_doc["created_by"] = current_admin.id
+        reward_doc["created_at"] = datetime.utcnow()
+        reward_doc["updated_at"] = datetime.utcnow()
+        reward_doc["total_redemptions"] = 0
+        reward_doc["total_uses"] = 0
+        reward_doc["last_redeemed_at"] = None
+        
+        # Set remaining stock
+        if reward_doc.get("total_stock"):
+            reward_doc["remaining_stock"] = reward_doc["total_stock"]
+        
+        # Insert into database
+        await db.rewards.insert_one(reward_doc)
+        
+        # Remove _id for response
+        if "_id" in reward_doc:
+            del reward_doc["_id"]
+        
+        return {"message": "Premio creato con successo", "reward": reward_doc}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nella creazione del premio: {str(e)}")
+
+@api_router.get("/admin/rewards/{reward_id}")
+async def get_reward(reward_id: str, current_admin = Depends(get_current_admin)):
+    """Get a specific reward by ID"""
+    try:
+        reward = await db.rewards.find_one({"id": reward_id})
+        if not reward:
+            raise HTTPException(status_code=404, detail="Premio non trovato")
+        
+        if "_id" in reward:
+            del reward["_id"]
+        
+        return reward
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nel recupero del premio: {str(e)}")
+
+@api_router.put("/admin/rewards/{reward_id}")
+async def update_reward(reward_id: str, update_data: UpdateReward, current_admin = Depends(get_current_admin)):
+    """Update a reward"""
+    try:
+        # Check if reward exists
+        existing_reward = await db.rewards.find_one({"id": reward_id})
+        if not existing_reward:
+            raise HTTPException(status_code=404, detail="Premio non trovato")
+        
+        # Prepare update data
+        update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
+        update_dict["updated_at"] = datetime.utcnow()
+        
+        # Update remaining stock if total stock is updated
+        if "total_stock" in update_dict:
+            current_redemptions = await db.reward_redemptions.count_documents({
+                "reward_id": reward_id,
+                "status": {"$in": [RedemptionStatus.APPROVED, RedemptionStatus.USED]}
+            })
+            update_dict["remaining_stock"] = max(0, update_dict["total_stock"] - current_redemptions)
+        
+        # Update in database
+        result = await db.rewards.update_one(
+            {"id": reward_id},
+            {"$set": update_dict}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Nessuna modifica effettuata")
+        
+        # Get updated reward
+        updated_reward = await db.rewards.find_one({"id": reward_id})
+        if "_id" in updated_reward:
+            del updated_reward["_id"]
+        
+        return {"message": "Premio aggiornato con successo", "reward": updated_reward}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nell'aggiornamento del premio: {str(e)}")
+
+@api_router.delete("/admin/rewards/{reward_id}")
+async def delete_reward(reward_id: str, current_admin = Depends(get_current_admin)):
+    """Delete a reward (soft delete by setting status to inactive)"""
+    try:
+        # Check if reward exists
+        reward = await db.rewards.find_one({"id": reward_id})
+        if not reward:
+            raise HTTPException(status_code=404, detail="Premio non trovato")
+        
+        # Check if there are pending redemptions
+        pending_redemptions = await db.reward_redemptions.count_documents({
+            "reward_id": reward_id,
+            "status": RedemptionStatus.PENDING
+        })
+        
+        if pending_redemptions > 0:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Impossibile eliminare: {pending_redemptions} riscatti in attesa"
+            )
+        
+        # Soft delete by setting status to inactive
+        await db.rewards.update_one(
+            {"id": reward_id},
+            {"$set": {"status": RewardStatus.INACTIVE, "updated_at": datetime.utcnow()}}
+        )
+        
+        return {"message": "Premio disattivato con successo"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nella disattivazione del premio: {str(e)}")
+
+@api_router.get("/admin/rewards/{reward_id}/redemptions")
+async def get_reward_redemptions(
+    reward_id: str,
+    status: Optional[RedemptionStatus] = None,
+    page: int = 1,
+    limit: int = 20,
+    current_admin = Depends(get_current_admin)
+):
+    """Get redemptions for a specific reward"""
+    try:
+        # Build filter
+        filter_dict = {"reward_id": reward_id}
+        if status:
+            filter_dict["status"] = status
+        
+        # Get total count
+        total = await db.reward_redemptions.count_documents(filter_dict)
+        
+        # Get paginated results
+        skip = (page - 1) * limit
+        redemptions = await db.reward_redemptions.find(filter_dict)\
+            .sort("redeemed_at", -1)\
+            .skip(skip)\
+            .limit(limit)\
+            .to_list(None)
+        
+        # Enrich with user data
+        for redemption in redemptions:
+            if "_id" in redemption:
+                del redemption["_id"]
+            
+            # Add user info
+            user = await db.users.find_one({"id": redemption["user_id"]})
+            if user:
+                redemption["user_info"] = {
+                    "nome": user.get("nome"),
+                    "cognome": user.get("cognome"),
+                    "email": user.get("email"),
+                    "tessera_fisica": user.get("tessera_fisica")
+                }
+        
+        return {
+            "redemptions": redemptions,
+            "total": total,
+            "page": page,
+            "pages": (total + limit - 1) // limit,
+            "has_next": skip + limit < total,
+            "has_prev": page > 1
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nel recupero riscatti: {str(e)}")
+
+@api_router.get("/admin/redemptions")
+async def get_all_redemptions(
+    status: Optional[RedemptionStatus] = None,
+    reward_id: Optional[str] = None,
+    user_tessera: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_admin = Depends(get_current_admin)
+):
+    """Get all redemptions with filtering"""
+    try:
+        # Build filter
+        filter_dict = {}
+        if status:
+            filter_dict["status"] = status
+        if reward_id:
+            filter_dict["reward_id"] = reward_id
+        if user_tessera:
+            filter_dict["user_tessera"] = user_tessera
+        if date_from:
+            filter_dict["redeemed_at"] = {"$gte": datetime.fromisoformat(date_from)}
+        if date_to:
+            if "redeemed_at" in filter_dict:
+                filter_dict["redeemed_at"]["$lte"] = datetime.fromisoformat(date_to)
+            else:
+                filter_dict["redeemed_at"] = {"$lte": datetime.fromisoformat(date_to)}
+        
+        # Get total count
+        total = await db.reward_redemptions.count_documents(filter_dict)
+        
+        # Get paginated results
+        skip = (page - 1) * limit
+        redemptions = await db.reward_redemptions.find(filter_dict)\
+            .sort("redeemed_at", -1)\
+            .skip(skip)\
+            .limit(limit)\
+            .to_list(None)
+        
+        # Enrich with reward and user data
+        for redemption in redemptions:
+            if "_id" in redemption:
+                del redemption["_id"]
+            
+            # Add reward info
+            reward = await db.rewards.find_one({"id": redemption["reward_id"]})
+            if reward:
+                redemption["reward_info"] = {
+                    "title": reward.get("title"),
+                    "category": reward.get("category"),
+                    "type": reward.get("type")
+                }
+            
+            # Add user info
+            user = await db.users.find_one({"id": redemption["user_id"]})
+            if user:
+                redemption["user_info"] = {
+                    "nome": user.get("nome"),
+                    "cognome": user.get("cognome"),
+                    "email": user.get("email"),
+                    "tessera_fisica": user.get("tessera_fisica")
+                }
+        
+        return {
+            "redemptions": redemptions,
+            "total": total,
+            "page": page,
+            "pages": (total + limit - 1) // limit,
+            "has_next": skip + limit < total,
+            "has_prev": page > 1
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nel recupero riscatti: {str(e)}")
+
+@api_router.put("/admin/redemptions/{redemption_id}")
+async def process_redemption(
+    redemption_id: str,
+    action_data: ProcessRedemption,
+    current_admin = Depends(get_current_admin)
+):
+    """Approve or reject a redemption"""
+    try:
+        # Get redemption
+        redemption = await db.reward_redemptions.find_one({"id": redemption_id})
+        if not redemption:
+            raise HTTPException(status_code=404, detail="Riscatto non trovato")
+        
+        if redemption["status"] != RedemptionStatus.PENDING:
+            raise HTTPException(status_code=400, detail="Riscatto già processato")
+        
+        # Prepare update data
+        update_data = {
+            "updated_at": datetime.utcnow(),
+            "admin_notes": action_data.admin_notes
+        }
+        
+        if action_data.action == "approve":
+            update_data["status"] = RedemptionStatus.APPROVED
+            update_data["approved_by"] = current_admin.id
+            update_data["approved_at"] = datetime.utcnow()
+            
+            # Generate QR code for approved redemption
+            reward = await db.rewards.find_one({"id": redemption["reward_id"]})
+            if reward:
+                qr_code = generate_redemption_qr_code(redemption["redemption_code"], reward["title"])
+                update_data["qr_code"] = qr_code
+                
+                # Calculate expiry if needed
+                expires_at = calculate_reward_expiry(reward, datetime.utcnow())
+                if expires_at:
+                    update_data["expires_at"] = expires_at
+        
+        elif action_data.action == "reject":
+            update_data["status"] = RedemptionStatus.REJECTED
+            update_data["rejected_by"] = current_admin.id
+            update_data["rejection_reason"] = action_data.rejection_reason
+            
+            # Refund bollini to user
+            user = await db.users.find_one({"id": redemption["user_id"]})
+            reward = await db.rewards.find_one({"id": redemption["reward_id"]})
+            if user and reward:
+                await db.users.update_one(
+                    {"id": user["id"]},
+                    {"$inc": {"bollini": reward["bollini_required"]}}
+                )
+        
+        # Update redemption
+        await db.reward_redemptions.update_one(
+            {"id": redemption_id},
+            {"$set": update_data}
+        )
+        
+        # Get updated redemption
+        updated_redemption = await db.reward_redemptions.find_one({"id": redemption_id})
+        if "_id" in updated_redemption:
+            del updated_redemption["_id"]
+        
+        action_msg = "approvato" if action_data.action == "approve" else "rifiutato"
+        return {"message": f"Riscatto {action_msg} con successo", "redemption": updated_redemption}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nel processare il riscatto: {str(e)}")
+
+@api_router.post("/admin/redemptions/{redemption_id}/use")
+async def mark_redemption_used(
+    redemption_id: str,
+    usage_data: UseRedemption,
+    current_admin = Depends(get_current_admin)
+):
+    """Mark a redemption as used"""
+    try:
+        # Get redemption
+        redemption = await db.reward_redemptions.find_one({"id": redemption_id})
+        if not redemption:
+            raise HTTPException(status_code=404, detail="Riscatto non trovato")
+        
+        if redemption["status"] != RedemptionStatus.APPROVED:
+            raise HTTPException(status_code=400, detail="Riscatto non approvato")
+        
+        if redemption.get("expires_at") and datetime.utcnow() > redemption["expires_at"]:
+            # Mark as expired
+            await db.reward_redemptions.update_one(
+                {"id": redemption_id},
+                {"$set": {"status": RedemptionStatus.EXPIRED, "updated_at": datetime.utcnow()}}
+            )
+            raise HTTPException(status_code=400, detail="Riscatto scaduto")
+        
+        if redemption.get("uses_remaining", 1) <= 0:
+            raise HTTPException(status_code=400, detail="Riscatto già utilizzato completamente")
+        
+        # Record usage
+        usage_record = {
+            "used_at": datetime.utcnow(),
+            "used_by_admin": current_admin.id,
+            "store_id": usage_data.store_id,
+            "cashier_id": usage_data.cashier_id,
+            "transaction_id": usage_data.transaction_id,
+            "notes": usage_data.usage_notes
+        }
+        
+        # Update redemption
+        new_uses_remaining = redemption.get("uses_remaining", 1) - 1
+        update_data = {
+            "uses_remaining": new_uses_remaining,
+            "updated_at": datetime.utcnow(),
+            "$push": {"usage_history": usage_record}
+        }
+        
+        if new_uses_remaining <= 0:
+            update_data["status"] = RedemptionStatus.USED
+            update_data["used_at"] = datetime.utcnow()
+        
+        await db.reward_redemptions.update_one(
+            {"id": redemption_id},
+            update_data
+        )
+        
+        # Update reward statistics
+        await db.rewards.update_one(
+            {"id": redemption["reward_id"]},
+            {"$inc": {"total_uses": 1}, "$set": {"updated_at": datetime.utcnow()}}
+        )
+        
+        return {"message": "Utilizzo registrato con successo"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nella registrazione utilizzo: {str(e)}")
+
+@api_router.get("/admin/rewards/analytics")
+async def get_rewards_analytics(current_admin = Depends(get_current_admin)):
+    """Get comprehensive rewards analytics"""
+    try:
+        # Get all rewards and redemptions
+        rewards = await db.rewards.find({}).to_list(None)
+        redemptions = await db.reward_redemptions.find({}).to_list(None)
+        
+        # Generate analytics
+        analytics = get_reward_analytics_data(rewards, redemptions)
+        
+        # Add time-based analytics
+        now = datetime.utcnow()
+        
+        # Last 30 days redemptions
+        month_ago = now - timedelta(days=30)
+        recent_redemptions = [r for r in redemptions if r.get("redeemed_at") and r["redeemed_at"] >= month_ago]
+        
+        # Daily redemptions for last 30 days
+        daily_redemptions = defaultdict(int)
+        for redemption in recent_redemptions:
+            date_key = redemption["redeemed_at"].strftime("%Y-%m-%d")
+            daily_redemptions[date_key] += 1
+        
+        # Convert to chart data
+        chart_data = []
+        for i in range(30):
+            date = now - timedelta(days=29-i)
+            date_key = date.strftime("%Y-%m-%d")
+            chart_data.append({
+                "date": date_key,
+                "redemptions": daily_redemptions.get(date_key, 0)
+            })
+        
+        analytics["time_series"] = {
+            "daily_redemptions": chart_data,
+            "total_last_30_days": len(recent_redemptions)
+        }
+        
+        # Status breakdown
+        status_counts = defaultdict(int)
+        for redemption in redemptions:
+            status_counts[redemption["status"]] += 1
+        
+        analytics["status_breakdown"] = dict(status_counts)
+        
+        return analytics
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nel recupero analytics: {str(e)}")
+
+# User-facing reward endpoints
+@api_router.get("/user/rewards")
+async def get_user_rewards(current_user = Depends(get_current_user)):
+    """Get available rewards for the current user"""
+    try:
+        if current_user["type"] != "user":
+            raise HTTPException(status_code=403, detail="User access required")
+        
+        user_data = current_user["data"]
+        
+        # Get all active rewards
+        rewards = await db.rewards.find({"status": RewardStatus.ACTIVE}).to_list(None)
+        
+        # Get user's existing redemptions
+        user_redemptions = await db.reward_redemptions.find({"user_id": user_data.id}).to_list(None)
+        
+        # Filter and enrich rewards for this user
+        available_rewards = []
+        for reward in rewards:
+            if "_id" in reward:
+                del reward["_id"]
+            
+            # Check if user can redeem this reward
+            can_redeem, reason = can_user_redeem_reward(user_data.dict(), reward, user_redemptions)
+            
+            # Count user's redemptions for this reward
+            user_redemption_count = len([r for r in user_redemptions if r["reward_id"] == reward["id"]])
+            
+            # Calculate expiry for display
+            expires_at = None
+            if reward["expiry_type"] == ExpiryType.FIXED_DATE:
+                expires_at = reward.get("expiry_date")
+            elif reward["expiry_type"] == ExpiryType.DAYS_FROM_CREATION and reward.get("expiry_days_from_creation"):
+                expires_at = reward["created_at"] + timedelta(days=reward["expiry_days_from_creation"])
+            
+            reward_response = {
+                **reward,
+                "user_can_redeem": can_redeem,
+                "redemption_message": reason if not can_redeem else None,
+                "user_redemptions_count": user_redemption_count,
+                "expires_at": expires_at
+            }
+            
+            available_rewards.append(reward_response)
+        
+        # Sort by featured first, then by sort_order
+        available_rewards.sort(key=lambda x: (not x.get("featured", False), x.get("sort_order", 0)))
+        
+        return {"rewards": available_rewards}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nel recupero premi: {str(e)}")
+
+@api_router.post("/user/rewards/{reward_id}/redeem")
+async def redeem_reward(reward_id: str, redeem_data: RedeemReward, current_user = Depends(get_current_user)):
+    """Redeem a reward"""
+    try:
+        if current_user["type"] != "user":
+            raise HTTPException(status_code=403, detail="User access required")
+        
+        user_data = current_user["data"]
+        
+        # Get reward
+        reward = await db.rewards.find_one({"id": reward_id})
+        if not reward:
+            raise HTTPException(status_code=404, detail="Premio non trovato")
+        
+        # Get user's existing redemptions
+        user_redemptions = await db.reward_redemptions.find({"user_id": user_data.id}).to_list(None)
+        
+        # Check if user can redeem
+        can_redeem, reason = can_user_redeem_reward(user_data.dict(), reward, user_redemptions)
+        if not can_redeem:
+            raise HTTPException(status_code=400, detail=reason)
+        
+        # Deduct bollini from user
+        await db.users.update_one(
+            {"id": user_data.id},
+            {"$inc": {"bollini": -reward["bollini_required"]}}
+        )
+        
+        # Create redemption record
+        redemption_doc = {
+            "id": str(uuid.uuid4()),
+            "reward_id": reward_id,
+            "user_id": user_data.id,
+            "user_tessera": user_data.tessera_fisica,
+            "status": RedemptionStatus.PENDING,  # Requires admin approval
+            "redemption_code": f"RWD{uuid.uuid4().hex[:8].upper()}",
+            "redeemed_at": datetime.utcnow(),
+            "uses_remaining": reward.get("max_uses_per_redemption", 1),
+            "usage_history": []
+        }
+        
+        # Calculate expiry for user redemption
+        expires_at = calculate_reward_expiry(reward, datetime.utcnow())
+        if expires_at:
+            redemption_doc["expires_at"] = expires_at
+        
+        await db.reward_redemptions.insert_one(redemption_doc)
+        
+        # Update reward statistics
+        await db.rewards.update_one(
+            {"id": reward_id},
+            {
+                "$inc": {"total_redemptions": 1},
+                "$set": {"last_redeemed_at": datetime.utcnow(), "updated_at": datetime.utcnow()}
+            }
+        )
+        
+        # Update stock if applicable
+        if reward.get("remaining_stock") is not None:
+            await db.rewards.update_one(
+                {"id": reward_id},
+                {"$inc": {"remaining_stock": -1}}
+            )
+        
+        # Remove _id for response
+        if "_id" in redemption_doc:
+            del redemption_doc["_id"]
+        
+        return {
+            "message": "Premio riscattato con successo! In attesa di approvazione.",
+            "redemption": redemption_doc
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Refund bollini if something went wrong
+        try:
+            await db.users.update_one(
+                {"id": user_data.id},
+                {"$inc": {"bollini": reward["bollini_required"]}}
+            )
+        except:
+            pass
+        raise HTTPException(status_code=500, detail=f"Errore nel riscatto: {str(e)}")
+
+@api_router.get("/user/redemptions")
+async def get_user_redemptions(
+    status: Optional[RedemptionStatus] = None,
+    current_user = Depends(get_current_user)
+):
+    """Get user's redemptions"""
+    try:
+        if current_user["type"] != "user":
+            raise HTTPException(status_code=403, detail="User access required")
+        
+        user_data = current_user["data"]
+        
+        # Build filter
+        filter_dict = {"user_id": user_data.id}
+        if status:
+            filter_dict["status"] = status
+        
+        # Get redemptions
+        redemptions = await db.reward_redemptions.find(filter_dict)\
+            .sort("redeemed_at", -1)\
+            .to_list(None)
+        
+        # Enrich with reward data
+        for redemption in redemptions:
+            if "_id" in redemption:
+                del redemption["_id"]
+            
+            # Add reward info
+            reward = await db.rewards.find_one({"id": redemption["reward_id"]})
+            if reward:
+                redemption["reward_info"] = {
+                    "title": reward.get("title"),
+                    "description": reward.get("description"),
+                    "category": reward.get("category"),
+                    "type": reward.get("type"),
+                    "icon": reward.get("icon"),
+                    "color": reward.get("color"),
+                    "usage_instructions": reward.get("usage_instructions")
+                }
+        
+        return {"redemptions": redemptions}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore nel recupero riscatti: {str(e)}")
+
 # Include the router in the main app
 app.include_router(api_router)
 
