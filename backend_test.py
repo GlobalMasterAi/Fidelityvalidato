@@ -2828,7 +2828,9 @@ def test_reward_stock_management():
             "product_sku": "TEST-PRODUCT-001",
             "bollini_required": 25,
             "total_stock": 2,
-            "max_redemptions_per_user": 1
+            "max_redemptions_per_user": 1,
+            "expiry_type": "days_from_redemption",
+            "expiry_days_from_redemption": 30
         }
         
         response = requests.post(f"{API_BASE}/admin/rewards", json=limited_stock_reward, headers=headers)
