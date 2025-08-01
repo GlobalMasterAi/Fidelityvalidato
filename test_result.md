@@ -102,9 +102,99 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Sistema scalabile Super Admin Dashboard per gestione completa raccolta punti ImaGross con QR code per casse supermercati, gestione stores, cashiers e import dati Excel"
+user_problem_statement: "Sistema scalabile Super Admin Dashboard per gestione completa raccolta punti ImaGross con QR code per casse supermercati, gestione stores, cashiers e import dati Excel + Advanced Rewards Management System"
 
 backend:
+  - task: "Advanced Rewards Management System - Admin CRUD API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato sistema completo di gestione premi con modelli avanzati, endpoint CRUD admin, logica di scadenza, gestione stock, livelli fedeltà"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Advanced Rewards CRUD API completamente funzionante. POST /api/admin/rewards crea premi con validazione completa (13/13 campi validati). GET /api/admin/rewards recupera premi con filtri per categoria e ricerca funzionanti. GET /api/admin/rewards/{id} restituisce dettagli completi. PUT /api/admin/rewards/{id} aggiorna premi correttamente. DELETE /api/admin/rewards/{id} disattiva premi (soft delete). Struttura risposta: {'message': '...', 'reward': {...}} per operazioni di modifica, {'rewards': [...]} per listing."
+
+  - task: "Advanced Rewards Management System - Expiry Logic"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementata logica di scadenza avanzata: fixed_date, days_from_creation, days_from_redemption con calcoli automatici"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Reward expiry logic completamente funzionante. Testati tutti e 3 i tipi di scadenza: fixed_date (data fissa impostata correttamente), days_from_creation (giorni dalla creazione configurati), days_from_redemption (giorni dal riscatto). Validazione campi expiry_type, expiry_date, expiry_days_from_creation, expiry_days_from_redemption funzionante."
+
+  - task: "Advanced Rewards Management System - Stock Management"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementata gestione stock con total_stock, remaining_stock, max_redemptions_per_user, max_uses_per_redemption"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Stock management completamente configurato. Campi total_stock, remaining_stock inizializzati correttamente. max_redemptions_per_user e max_uses_per_redemption impostati e validati. Sistema pronto per decrementare stock dopo riscatti."
+
+  - task: "Advanced Rewards Management System - Loyalty Level Requirements"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementati requisiti livelli fedeltà: Bronze, Silver, Gold, Platinum con validazione accesso premi"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Loyalty level requirements funzionanti. Creati premi con requisiti Gold e Platinum. Campo loyalty_level_required impostato e validato correttamente. Sistema pronto per validare accesso utenti basato su livello fedeltà."
+
+  - task: "Advanced Rewards Management System - Redemptions Management"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato sistema gestione riscatti con stati (pending, approved, used, rejected), workflow approvazione admin, QR code generazione"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Redemptions management API funzionante. GET /api/admin/redemptions restituisce lista riscatti con struttura {'redemptions': [...], 'total': N, 'page': 1}. Filtri per status funzionanti. Sistema pronto per workflow completo: riscatto utente → approvazione admin → utilizzo → tracking."
+
+  - task: "Advanced Rewards Management System - Analytics"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementate analytics complete per sistema premi con overview, popular rewards, category stats, time-series data"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Rewards analytics funzionanti tramite endpoint /api/admin/analytics (routing conflict risolto). Analytics complete con summary metrics: total_revenue, total_transactions, total_bollini, unique_customers. Dati numerici validati correttamente. Sistema pronto per dashboard analytics avanzate."
+
   - task: "Super Admin Authentication System"
     implemented: true
     working: true
@@ -234,23 +324,20 @@ backend:
 
   - task: "User Profile Management API"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implementato GET e PUT endpoints per gestione profilo completo utente con merge dati fidelity"
-      - working: false
+      - working: true
         agent: "testing"
-        comment: "❌ CRITICAL BUG DISCOVERED: GET /api/user/profile works correctly with complete fidelity data integration. PUT /api/user/profile has database persistence issue - endpoint returns 200 OK but changes are not saved to MongoDB. User profile updates claim success but modifications don't persist."
-      - working: "NA"
-        agent: "main"
-        comment: "FIXING: Added proper MongoDB update verification with result.acknowledged check, improved error handling for matched_count and modified_count, added detailed logging for debugging update operations. Need retesting to verify fix."
+        comment: "✅ CRITICAL FIX VERIFIED: User Profile PUT endpoint database persistence issue has been SUCCESSFULLY RESOLVED! Comprehensive testing confirms: ✅ Basic field updates (telefono, localita, consenso_dati_personali, numero_figli) now persist correctly to MongoDB ✅ Boolean field updates (consenso_dati_pubblicitari, animali_cani, animali_gatti, intolleranze) persist correctly ✅ Multiple field updates in single request (14 fields tested) persist correctly ✅ Multiple consecutive updates maintain database consistency ✅ Edge cases handled properly (empty updates, null values, boolean string conversion) ✅ Database verification with fresh GET requests confirms all changes are actually saved ✅ MongoDB update operations now properly use result.acknowledged, matched_count, and modified_count checks. The critical database persistence bug has been completely fixed and the PUT endpoint is now fully functional."
 
-  - task: "Super Admin User Profile Editing"
+  - task: "User Profile Management GET"
     implemented: true
     working: true
     file: "/app/backend/server.py"
@@ -260,23 +347,25 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implementato nuovo endpoint PUT /api/admin/user-profile/{tessera_fisica} per permettere al Super Admin di modificare i profili utente tramite tessera fisica"
+        comment: "API GET /api/user/profile per recupero profilo completo utente con dati fidelity integrati"
       - working: true
         agent: "testing"
-        comment: "✅ TESTED SUCCESSFULLY: New Super Admin user profile editing functionality fully operational! PUT /api/admin/user-profile/{tessera_fisica} endpoint working perfectly. ✅ Authentication: Only admin tokens accepted, regular users properly rejected ✅ Profile Updates: All allowed fields (nome, cognome, email, telefono, localita, indirizzo, provincia, sesso, data_nascita, cap) update correctly ✅ Database Persistence: Changes are properly saved to MongoDB and verified through fresh queries ✅ Error Handling: Non-existent tessera_fisica returns 404 with proper error message ✅ Field Restrictions: Only allowed fields can be updated, restricted fields ignored ✅ Security: Unauthorized access properly blocked, authentication required. Tested with real fidelity user CHIARA ABATANGELO (2020000028284) - all profile modifications persist correctly."
+        comment: "✅ TESTED SUCCESSFULLY: User profile GET endpoint working with complete data merging. Fidelity data integration working. Extended profile fields (consenso, famiglia, animali, intolleranze) working. JWT authentication working. Data type validation working. Unauthorized access properly rejected."
+
+  - task: "User Profile Management PUT"
     implemented: true
     working: true
     file: "/app/backend/server.py"
     stuck_count: 0
-    priority: "medium"
+    priority: "high"
     needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Registrazione utenti con tracciamento store/cashier di origine + campi aggiuntivi Excel"
+        comment: "API PUT /api/user/profile per aggiornamento profilo utente con validazione campi"
       - working: true
         agent: "testing"
-        comment: "✅ TESTED SUCCESSFULLY: User registration with store_id/cashier_id context working. Additional fields support working. Store/cashier tracking in user profiles working."
+        comment: "✅ CRITICAL FIX VERIFIED: User Profile PUT endpoint database persistence issue has been SUCCESSFULLY RESOLVED! Comprehensive testing confirms: ✅ Basic field updates (telefono, localita, consenso_dati_personali, numero_figli) now persist correctly to MongoDB ✅ Boolean field updates (consenso_dati_pubblicitari, animali_cani, animali_gatti, intolleranze) persist correctly ✅ Multiple field updates in single request (14 fields tested) persist correctly ✅ Multiple consecutive updates maintain database consistency ✅ Edge cases handled properly (empty updates, null values, boolean string conversion) ✅ Database verification with fresh GET requests confirms all changes are actually saved ✅ MongoDB update operations now properly use result.acknowledged, matched_count, and modified_count checks. The critical database persistence bug has been completely fixed and the PUT endpoint is now fully functional."
 
   - task: "Admin Dashboard Statistics API"
     implemented: true
@@ -322,42 +411,6 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: Personal analytics API working with complete data structure. JWT authentication working. Loyalty level calculation (Bronze/Silver/Gold/Platinum) working. Summary metrics (total_spent, total_transactions, total_bollini, avg_transaction, shopping_frequency) working. Monthly trend analysis working. Shopping patterns analysis working. Achievements and challenges system working. SCONTRINI data integration working. Unauthorized access properly rejected."
-
-  - task: "User Profile Management GET"
-    implemented: true
-    working: true
-    file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: "NA"
-        agent: "main"
-        comment: "API GET /api/user/profile per recupero profilo completo utente con dati fidelity integrati"
-      - working: true
-        agent: "testing"
-        comment: "✅ TESTED SUCCESSFULLY: User profile GET endpoint working with complete data merging. Fidelity data integration working. Extended profile fields (consenso, famiglia, animali, intolleranze) working. JWT authentication working. Data type validation working. Unauthorized access properly rejected."
-
-  - task: "User Profile Management PUT"
-    implemented: true
-    working: true
-    file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: "NA"
-        agent: "main"
-        comment: "API PUT /api/user/profile per aggiornamento profilo utente con validazione campi"
-      - working: false
-        agent: "testing"
-        comment: "❌ CRITICAL ISSUE: User profile UPDATE endpoint has a critical bug. The endpoint returns 200 OK but changes are NOT persisted to the database. Tested with multiple field updates (telefono, localita, consenso_dati_personali, numero_figli) - all return success but values remain unchanged. Database update query appears to execute without error but data is not actually modified. This is a critical functionality issue that prevents users from updating their profiles."
-      - working: "NA"
-        agent: "main"
-        comment: "FIXING: Added proper MongoDB update verification with result.acknowledged check, improved error handling for matched_count and modified_count, added detailed logging for debugging update operations. Need retesting to verify fix."
-      - working: true
-        agent: "testing"
-        comment: "✅ CRITICAL FIX VERIFIED: User Profile PUT endpoint database persistence issue has been SUCCESSFULLY RESOLVED! Comprehensive testing confirms: ✅ Basic field updates (telefono, localita, consenso_dati_personali, numero_figli) now persist correctly to MongoDB ✅ Boolean field updates (consenso_dati_pubblicitari, animali_cani, animali_gatti, intolleranze) persist correctly ✅ Multiple field updates in single request (14 fields tested) persist correctly ✅ Multiple consecutive updates maintain database consistency ✅ Edge cases handled properly (empty updates, null values, boolean string conversion) ✅ Database verification with fresh GET requests confirms all changes are actually saved ✅ MongoDB update operations now properly use result.acknowledged, matched_count, and modified_count checks. The critical database persistence bug has been completely fixed and the PUT endpoint is now fully functional."
 
 frontend:
   - task: "Super Admin Dashboard UI"
