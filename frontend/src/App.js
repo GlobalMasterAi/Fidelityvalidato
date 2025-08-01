@@ -4127,6 +4127,177 @@ const RewardManagement = () => {
   );
 };
 
+const RewardOverview = ({ analytics, rewards, redemptions, onViewAllRewards, onViewAllRedemptions }) => {
+  if (!analytics) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-lg p-6 shadow-sm border animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const { overview } = analytics;
+
+  return (
+    <div className="space-y-6">
+      {/* Overview Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm opacity-90">Premi Totali</div>
+              <div className="text-3xl font-bold">{overview.total_rewards}</div>
+            </div>
+            <div className="text-4xl opacity-75">🎁</div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm opacity-90">Premi Attivi</div>
+              <div className="text-3xl font-bold">{overview.active_rewards}</div>
+            </div>
+            <div className="text-4xl opacity-75">✅</div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm opacity-90">Riscatti Totali</div>
+              <div className="text-3xl font-bold">{overview.total_redemptions}</div>
+            </div>
+            <div className="text-4xl opacity-75">🎫</div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm opacity-90">In Attesa</div>
+              <div className="text-3xl font-bold">{overview.pending_redemptions}</div>
+            </div>
+            <div className="text-4xl opacity-75">⏳</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Category Stats */}
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Premi per Categoria</h3>
+          <div className="space-y-3">
+            {Object.entries(analytics.category_stats).map(([category, stats]) => (
+              <div key={category} className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-imagross-orange"></div>
+                  <span className="text-sm font-medium text-gray-700">{category}</span>
+                </div>
+                <div className="flex space-x-4 text-sm text-gray-600">
+                  <span>Tot: {stats.total}</span>
+                  <span>Attivi: {stats.active}</span>
+                  <span>Riscatti: {stats.redemptions}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Attività Recente</h3>
+          <div className="space-y-3">
+            {redemptions.map((redemption, index) => (
+              <div key={redemption.id} className="flex items-center space-x-3 p-2 bg-gray-50 rounded">
+                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-900 truncate">
+                    {redemption.reward_info?.title || 'Premio'}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {redemption.user_info?.nome} {redemption.user_info?.cognome}
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {new Date(redemption.redeemed_at).toLocaleDateString('it-IT')}
+                </div>
+              </div>
+            ))}
+          </div>
+          {redemptions.length === 0 && (
+            <p className="text-gray-500 text-sm">Nessuna attività recente</p>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Premi Recenti</h3>
+          <div className="space-y-3 mb-4">
+            {rewards.map((reward) => (
+              <div key={reward.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">{reward.icon}</span>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{reward.title}</div>
+                    <div className="text-xs text-gray-600">{reward.bollini_required} bollini</div>
+                  </div>
+                </div>
+                <span className={`px-2 py-1 text-xs rounded-full ${reward.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  {reward.status === 'active' ? 'Attivo' : 'Inattivo'}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={onViewAllRewards}
+            className="w-full px-4 py-2 text-sm bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+          >
+            Vedi Tutti i Premi
+          </button>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Riscatti in Attesa</h3>
+          <div className="space-y-3 mb-4">
+            {redemptions.filter(r => r.status === 'pending').map((redemption) => (
+              <div key={redemption.id} className="flex items-center justify-between p-2 bg-yellow-50 rounded border border-yellow-200">
+                <div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {redemption.reward_info?.title || 'Premio'}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {redemption.user_info?.nome} {redemption.user_info?.cognome}
+                  </div>
+                </div>
+                <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                  In Attesa
+                </span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={onViewAllRedemptions}
+            className="w-full px-4 py-2 text-sm bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+          >
+            Gestisci Riscatti
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RewardsList = ({ rewards, total, page, onPageChange, filters, onFiltersChange, onEdit, onDelete, getStatusColor, getCategoryColor, loading }) => {
+
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { admin } = useAuth();
