@@ -3147,6 +3147,27 @@ def run_all_tests():
         test_super_admin_only_endpoints
     ]
     
+    print("\n🎁 ADVANCED REWARDS MANAGEMENT SYSTEM TESTS - CRITICAL NEW FUNCTIONALITY")
+    print("-" * 50)
+    rewards_tests = [
+        test_admin_create_reward,
+        test_admin_get_rewards,
+        test_admin_get_reward_details,
+        test_admin_update_reward,
+        test_user_get_available_rewards,
+        test_user_redeem_reward,
+        test_user_get_redemptions,
+        test_admin_get_all_redemptions,
+        test_admin_get_reward_redemptions,
+        test_admin_approve_redemption,
+        test_admin_use_redemption,
+        test_admin_rewards_analytics,
+        test_reward_expiry_logic,
+        test_reward_stock_management,
+        test_loyalty_level_requirements,
+        test_admin_delete_reward
+    ]
+    
     print("\n📄 EXCEL IMPORT SYSTEM TESTS")
     print("-" * 50)
     excel_tests = [
