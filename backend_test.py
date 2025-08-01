@@ -2834,19 +2834,26 @@ def test_reward_stock_management():
         response = requests.post(f"{API_BASE}/admin/rewards", json=limited_stock_reward, headers=headers)
         
         if response.status_code == 200:
-            reward_data = response.json()
-            limited_reward_id = reward_data["id"]
+            data = response.json()
+            
+            # API returns {"message": "...", "reward": {...}} structure
+            if "reward" not in data:
+                log_test("Reward Stock Management", False, "Missing reward in response")
+                return False
+            
+            reward_data_response = data["reward"]
+            limited_reward_id = reward_data_response["id"]
             
             # Validate stock fields
-            if reward_data["total_stock"] != 2:
+            if reward_data_response["total_stock"] != 2:
                 log_test("Reward Stock Management", False, "Total stock not set correctly")
                 return False
             
-            if reward_data["remaining_stock"] != 2:
+            if reward_data_response.get("remaining_stock") != 2:
                 log_test("Reward Stock Management", False, "Remaining stock not initialized correctly")
                 return False
             
-            if reward_data["max_redemptions_per_user"] != 1:
+            if reward_data_response["max_redemptions_per_user"] != 1:
                 log_test("Reward Stock Management", False, "Max redemptions per user not set correctly")
                 return False
             
