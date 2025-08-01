@@ -2894,10 +2894,17 @@ def test_loyalty_level_requirements():
         response = requests.post(f"{API_BASE}/admin/rewards", json=gold_level_reward, headers=headers)
         
         if response.status_code == 200:
-            reward_data = response.json()
+            data = response.json()
+            
+            # API returns {"message": "...", "reward": {...}} structure
+            if "reward" not in data:
+                log_test("Loyalty Level Requirements", False, "Missing reward in response")
+                return False
+            
+            reward_data_response = data["reward"]
             
             # Validate loyalty level requirement
-            if reward_data["loyalty_level_required"] != "Gold":
+            if reward_data_response["loyalty_level_required"] != "Gold":
                 log_test("Loyalty Level Requirements", False, "Loyalty level requirement not set correctly")
                 return False
             
@@ -2915,7 +2922,8 @@ def test_loyalty_level_requirements():
             response2 = requests.post(f"{API_BASE}/admin/rewards", json=platinum_level_reward, headers=headers)
             
             if response2.status_code == 200:
-                reward_data2 = response2.json()
+                data2 = response2.json()
+                reward_data2 = data2["reward"]
                 
                 if reward_data2["loyalty_level_required"] != "Platinum":
                     log_test("Loyalty Level Requirements", False, "Platinum level requirement not set correctly")
