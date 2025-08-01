@@ -3201,57 +3201,6 @@ async def mark_redemption_used(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Errore nella registrazione utilizzo: {str(e)}")
 
-@api_router.get("/admin/rewards/analytics")
-async def get_rewards_analytics(current_admin = Depends(get_current_admin)):
-    """Get comprehensive rewards analytics"""
-    try:
-        # Get all rewards and redemptions
-        rewards = await db.rewards.find({}).to_list(None)
-        redemptions = await db.reward_redemptions.find({}).to_list(None)
-        
-        # Generate analytics
-        analytics = get_reward_analytics_data(rewards, redemptions)
-        
-        # Add time-based analytics
-        now = datetime.utcnow()
-        
-        # Last 30 days redemptions
-        month_ago = now - timedelta(days=30)
-        recent_redemptions = [r for r in redemptions if r.get("redeemed_at") and r["redeemed_at"] >= month_ago]
-        
-        # Daily redemptions for last 30 days
-        daily_redemptions = defaultdict(int)
-        for redemption in recent_redemptions:
-            date_key = redemption["redeemed_at"].strftime("%Y-%m-%d")
-            daily_redemptions[date_key] += 1
-        
-        # Convert to chart data
-        chart_data = []
-        for i in range(30):
-            date = now - timedelta(days=29-i)
-            date_key = date.strftime("%Y-%m-%d")
-            chart_data.append({
-                "date": date_key,
-                "redemptions": daily_redemptions.get(date_key, 0)
-            })
-        
-        analytics["time_series"] = {
-            "daily_redemptions": chart_data,
-            "total_last_30_days": len(recent_redemptions)
-        }
-        
-        # Status breakdown
-        status_counts = defaultdict(int)
-        for redemption in redemptions:
-            status_counts[redemption["status"]] += 1
-        
-        analytics["status_breakdown"] = dict(status_counts)
-        
-        return analytics
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Errore nel recupero analytics: {str(e)}")
-
 # User-facing reward endpoints
 @api_router.get("/user/rewards")
 async def get_user_rewards(current_user = Depends(get_current_user)):
