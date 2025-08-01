@@ -3769,6 +3769,8 @@ const AdminPanel = () => {
         return <CashierManagement />;
       case 'users':
         return <UserManagement />;
+      case 'rewards':
+        return <RewardManagement />;
       case 'statistics':
         return <div className="text-center py-12"><p className="text-gray-500">Statistiche avanzate in arrivo...</p></div>;
       default:
