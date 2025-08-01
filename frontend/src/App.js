@@ -3753,6 +3753,7 @@ const AdminPanel = () => {
     { id: 'stores', name: 'Supermercati', icon: '🏪' },
     { id: 'cashiers', name: 'Casse', icon: '💳' },
     { id: 'users', name: 'Utenti', icon: '👥' },
+    { id: 'rewards', name: 'Gestione Premi', icon: '🎁' },
     { id: 'statistics', name: 'Statistiche', icon: '📈' }
   ];
 
