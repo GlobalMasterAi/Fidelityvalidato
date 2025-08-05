@@ -2804,7 +2804,357 @@ class SalesReport(BaseModel):
     summary: dict
 
 # ============================================================================
-# ADVANCED REWARDS SYSTEM API ENDPOINTS
+# VENDITE DATA ANALYSIS HELPER FUNCTIONS
+# ============================================================================
+
+def get_customer_sales_analytics(codice_cliente: str) -> dict:
+    """Get comprehensive sales analytics for a specific customer"""
+    try:
+        # Filter sales for this customer
+        customer_sales = [sale for sale in VENDITE_DATA if sale.get('CODICE_CLIENTE') == codice_cliente]
+        
+        if not customer_sales:
+            return None
+            
+        # Basic metrics
+        total_spent = sum(float(sale.get('TOT_IMPORTO', 0)) for sale in customer_sales)
+        total_transactions = len(customer_sales)
+        total_items = sum(float(sale.get('TOT_QNT', 0)) for sale in customer_sales)
+        total_bollini = sum(int(sale.get('TOT_BOLLINI', 0)) for sale in customer_sales)
+        avg_transaction = total_spent / total_transactions if total_transactions > 0 else 0
+        
+        # Department analysis
+        dept_spending = defaultdict(float)
+        for sale in customer_sales:
+            dept = sale.get('REPARTO', '000')
+            dept_spending[dept] += float(sale.get('TOT_IMPORTO', 0))
+        favorite_department = max(dept_spending.items(), key=lambda x: x[1])[0] if dept_spending else '000'
+        
+        # Product analysis  
+        product_purchases = defaultdict(lambda: {'quantity': 0, 'spent': 0})
+        for sale in customer_sales:
+            barcode = sale.get('BARCODE')
+            if barcode:
+                product_purchases[barcode]['quantity'] += float(sale.get('TOT_QNT', 0))
+                product_purchases[barcode]['spent'] += float(sale.get('TOT_IMPORTO', 0))
+        
+        favorite_products = sorted([
+            {'barcode': k, 'quantity': v['quantity'], 'spent': v['spent']}
+            for k, v in product_purchases.items()
+        ], key=lambda x: x['spent'], reverse=True)[:5]
+        
+        # Monthly trends
+        monthly_spending = defaultdict(float)
+        for sale in customer_sales:
+            month = sale.get('MESE', '')
+            monthly_spending[month] += float(sale.get('TOT_IMPORTO', 0))
+        
+        monthly_trends = [
+            {'month': k, 'spent': v} 
+            for k, v in sorted(monthly_spending.items())
+        ]
+        
+        # Customer segmentation
+        if total_spent >= 1000:
+            segment = "VIP"
+        elif total_spent >= 500:
+            segment = "Gold"
+        elif total_spent >= 200:
+            segment = "Silver"
+        else:
+            segment = "Bronze"
+            
+        return {
+            'codice_cliente': codice_cliente,
+            'total_spent': total_spent,
+            'total_transactions': total_transactions,
+            'total_items': total_items,
+            'total_bollini': total_bollini,
+            'avg_transaction': avg_transaction,
+            'favorite_department': favorite_department,
+            'favorite_products': favorite_products,
+            'monthly_trends': monthly_trends,
+            'customer_segment': segment
+        }
+        
+    except Exception as e:
+        print(f"Error calculating customer analytics: {e}")
+        return None
+
+def get_product_analytics(barcode: str = None, limit: int = 100) -> List[dict]:
+    """Get analytics for products"""
+    try:
+        if barcode:
+            # Analytics for specific product
+            product_sales = [sale for sale in VENDITE_DATA if sale.get('BARCODE') == barcode]
+        else:
+            # Analytics for all products (grouped)
+            product_sales = VENDITE_DATA
+            
+        # Group by barcode
+        product_metrics = defaultdict(lambda: {
+            'total_quantity': 0,
+            'total_revenue': 0,
+            'customers': set(),
+            'reparto': '',
+            'transactions': []
+        })
+        
+        for sale in product_sales:
+            bc = sale.get('BARCODE')
+            if bc:
+                product_metrics[bc]['total_quantity'] += float(sale.get('TOT_QNT', 0))
+                product_metrics[bc]['total_revenue'] += float(sale.get('TOT_IMPORTO', 0))
+                product_metrics[bc]['customers'].add(sale.get('CODICE_CLIENTE', ''))
+                product_metrics[bc]['reparto'] = sale.get('REPARTO', '000')
+                product_metrics[bc]['transactions'].append(sale)
+        
+        # Convert to list and calculate derived metrics
+        products = []
+        for barcode, metrics in product_metrics.items():
+            unique_customers = len(metrics['customers'])
+            avg_price = metrics['total_revenue'] / metrics['total_quantity'] if metrics['total_quantity'] > 0 else 0
+            
+            # Monthly trends
+            monthly_sales = defaultdict(float)
+            for tx in metrics['transactions']:
+                month = tx.get('MESE', '')
+                monthly_sales[month] += float(tx.get('TOT_IMPORTO', 0))
+            
+            monthly_trends = [
+                {'month': k, 'sales': v}
+                for k, v in sorted(monthly_sales.items())
+            ]
+            
+            products.append({
+                'barcode': barcode,
+                'reparto': metrics['reparto'],
+                'total_quantity': metrics['total_quantity'],
+                'total_revenue': metrics['total_revenue'],
+                'unique_customers': unique_customers,
+                'avg_price': avg_price,
+                'monthly_trends': monthly_trends
+            })
+        
+        # Sort by revenue and add popularity rank
+        products.sort(key=lambda x: x['total_revenue'], reverse=True)
+        for i, product in enumerate(products[:limit]):
+            product['popularity_rank'] = i + 1
+            
+        return products[:limit]
+        
+    except Exception as e:
+        print(f"Error calculating product analytics: {e}")
+        return []
+
+def get_department_analytics() -> List[dict]:
+    """Get analytics for all departments"""
+    try:
+        # Department names mapping
+        dept_names = {
+            '01': 'Alimentari', '02': 'Bevande', '03': 'Latticini', 
+            '04': 'Carne', '05': 'Pesce', '06': 'Frutta/Verdura',
+            '07': 'Panetteria', '08': 'Casa/Pulizia', '09': 'Igiene',
+            '10': 'Altro', '000': 'Generico'
+        }
+        
+        dept_metrics = defaultdict(lambda: {
+            'total_revenue': 0,
+            'total_quantity': 0,
+            'products': set(),
+            'customers': set(),
+            'transactions': []
+        })
+        
+        for sale in VENDITE_DATA:
+            dept = sale.get('REPARTO', '000')
+            dept_metrics[dept]['total_revenue'] += float(sale.get('TOT_IMPORTO', 0))
+            dept_metrics[dept]['total_quantity'] += float(sale.get('TOT_QNT', 0))
+            dept_metrics[dept]['customers'].add(sale.get('CODICE_CLIENTE', ''))
+            dept_metrics[dept]['transactions'].append(sale)
+            
+            barcode = sale.get('BARCODE')
+            if barcode:
+                dept_metrics[dept]['products'].add(barcode)
+        
+        departments = []
+        for dept_code, metrics in dept_metrics.items():
+            unique_customers = len(metrics['customers'])
+            unique_products = len(metrics['products'])
+            avg_transaction = metrics['total_revenue'] / len(metrics['transactions']) if metrics['transactions'] else 0
+            
+            # Top products in this department
+            product_sales = defaultdict(float)
+            for tx in metrics['transactions']:
+                barcode = tx.get('BARCODE')
+                if barcode:
+                    product_sales[barcode] += float(tx.get('TOT_IMPORTO', 0))
+            
+            top_products = [
+                {'barcode': k, 'revenue': v}
+                for k, v in sorted(product_sales.items(), key=lambda x: x[1], reverse=True)[:5]
+            ]
+            
+            departments.append({
+                'reparto_code': dept_code,
+                'reparto_name': dept_names.get(dept_code, f'Reparto {dept_code}'),
+                'total_revenue': metrics['total_revenue'],
+                'total_quantity': metrics['total_quantity'],
+                'unique_products': unique_products,
+                'unique_customers': unique_customers,
+                'avg_transaction': avg_transaction,
+                'top_products': top_products
+            })
+        
+        return sorted(departments, key=lambda x: x['total_revenue'], reverse=True)
+        
+    except Exception as e:
+        print(f"Error calculating department analytics: {e}")
+        return []
+
+def get_promotion_analytics() -> List[dict]:
+    """Get analytics for promotions"""
+    try:
+        promo_metrics = defaultdict(lambda: {
+            'total_usage': 0,
+            'total_discount': 0,
+            'customers': set(),
+            'transactions': []
+        })
+        
+        for sale in VENDITE_DATA:
+            promo_type = sale.get('TIPO_PROMOZ', 0)
+            promo_number = sale.get('NUMERO_PROMOZ', 0)
+            
+            if promo_type != 0 or promo_number != 0:  # Has promotion
+                promo_key = f"{promo_type}_{promo_number}"
+                promo_metrics[promo_key]['total_usage'] += 1
+                promo_metrics[promo_key]['customers'].add(sale.get('CODICE_CLIENTE', ''))
+                promo_metrics[promo_key]['transactions'].append(sale)
+                
+                # Estimate discount (simplified)
+                if sale.get('TOT_IMPORTO', 0) == 0:  # Free item promotion
+                    promo_metrics[promo_key]['total_discount'] += 5  # Estimated value
+        
+        promotions = []
+        for promo_id, metrics in promo_metrics.items():
+            if metrics['total_usage'] > 0:
+                promo_type, promo_num = promo_id.split('_')
+                unique_customers = len(metrics['customers'])
+                
+                # Calculate performance score (usage * unique customers)
+                performance_score = metrics['total_usage'] * unique_customers
+                
+                # Simple ROI calculation
+                roi = performance_score / max(metrics['total_discount'], 1)
+                
+                promotions.append({
+                    'promotion_id': promo_id,
+                    'promotion_type': promo_type,
+                    'promotion_number': promo_num,
+                    'total_usage': metrics['total_usage'],
+                    'total_discount': metrics['total_discount'],
+                    'unique_customers': unique_customers,
+                    'performance_score': performance_score,
+                    'roi': roi
+                })
+        
+        return sorted(promotions, key=lambda x: x['performance_score'], reverse=True)
+        
+    except Exception as e:
+        print(f"Error calculating promotion analytics: {e}")
+        return []
+
+def generate_sales_report(report_type: str, filters: dict = None) -> dict:
+    """Generate various types of sales reports"""
+    try:
+        if filters is None:
+            filters = {}
+            
+        filtered_data = VENDITE_DATA
+        
+        # Apply filters
+        if 'month_from' in filters and 'month_to' in filters:
+            filtered_data = [
+                sale for sale in filtered_data
+                if filters['month_from'] <= sale.get('MESE', '') <= filters['month_to']
+            ]
+            
+        if 'department' in filters:
+            filtered_data = [
+                sale for sale in filtered_data
+                if sale.get('REPARTO') == filters['department']
+            ]
+            
+        if 'customer' in filters:
+            filtered_data = [
+                sale for sale in filtered_data
+                if sale.get('CODICE_CLIENTE') == filters['customer']
+            ]
+        
+        # Generate report based on type
+        if report_type == 'monthly_summary':
+            monthly_data = defaultdict(lambda: {'revenue': 0, 'transactions': 0, 'customers': set()})
+            for sale in filtered_data:
+                month = sale.get('MESE', '')
+                monthly_data[month]['revenue'] += float(sale.get('TOT_IMPORTO', 0))
+                monthly_data[month]['transactions'] += 1
+                monthly_data[month]['customers'].add(sale.get('CODICE_CLIENTE', ''))
+            
+            data = [
+                {
+                    'month': k,
+                    'revenue': v['revenue'],
+                    'transactions': v['transactions'],
+                    'unique_customers': len(v['customers'])
+                }
+                for k, v in sorted(monthly_data.items())
+            ]
+            
+        elif report_type == 'top_customers':
+            customer_spending = defaultdict(float)
+            for sale in filtered_data:
+                customer_spending[sale.get('CODICE_CLIENTE', '')] += float(sale.get('TOT_IMPORTO', 0))
+            
+            data = [
+                {'customer': k, 'total_spent': v}
+                for k, v in sorted(customer_spending.items(), key=lambda x: x[1], reverse=True)[:50]
+            ]
+            
+        elif report_type == 'department_performance':
+            data = get_department_analytics()
+            
+        else:
+            data = []
+        
+        # Calculate summary
+        total_revenue = sum(float(sale.get('TOT_IMPORTO', 0)) for sale in filtered_data)
+        total_transactions = len(filtered_data)
+        unique_customers = len(set(sale.get('CODICE_CLIENTE', '') for sale in filtered_data))
+        
+        summary = {
+            'total_revenue': total_revenue,
+            'total_transactions': total_transactions,
+            'unique_customers': unique_customers,
+            'avg_transaction': total_revenue / total_transactions if total_transactions > 0 else 0
+        }
+        
+        return {
+            'report_type': report_type,
+            'filters': filters,
+            'data': data,
+            'summary': summary
+        }
+        
+    except Exception as e:
+        print(f"Error generating sales report: {e}")
+        return {
+            'report_type': report_type,
+            'filters': filters or {},
+            'data': [],
+            'summary': {},
+            'error': str(e)
+        }
 # ============================================================================
 
 @api_router.get("/admin/rewards")
