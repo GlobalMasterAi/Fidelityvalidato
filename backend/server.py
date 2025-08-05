@@ -4186,11 +4186,29 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the application"""
+    """Initialize the application with enhanced MongoDB Atlas support"""
+    print("🚀 Starting ImaGross Backend...")
+    
+    # Test MongoDB connection first
+    connection_ok = await test_mongodb_connection()
+    if not connection_ok:
+        print("❌ CRITICAL: MongoDB connection failed. Retrying...")
+        # Retry connection once
+        await asyncio.sleep(2)
+        connection_ok = await test_mongodb_connection()
+        if not connection_ok:
+            print("❌ FATAL: Unable to connect to MongoDB Atlas")
+            return
+    
+    # Load data files
     await load_fidelity_data()
     await load_scontrini_data() 
-    await load_vendite_data()  # Load detailed sales data
+    await load_vendite_data()
+    
+    # Initialize super admin
     await init_super_admin()
+    
+    print("🎉 ImaGross Backend startup completed successfully!")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
