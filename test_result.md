@@ -706,6 +706,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ DEPLOYMENT TESTING FAILED: Telefono login not working. Email and tessera_fisica login work correctly, but telefono login returns 401 'Credenziali non valide' even with correct credentials. This breaks the multi-format login promise and will prevent users from logging in with phone numbers in production."
+      - working: false
+        agent: "testing"
+        comment: "❌ DEPLOYMENT RE-TEST PARTIAL SUCCESS: Multi-format login shows 75% success rate (3/4 tests passed). Email and tessera_fisica login work correctly. Telefono login issue persists - returns 401 'Credenziali non valide' for newly created test user, but when tested with existing user phone number, it successfully logs in a different user, indicating potential duplicate phone number issue in database rather than login logic failure."
 
 metadata:
   created_by: "main_agent"
