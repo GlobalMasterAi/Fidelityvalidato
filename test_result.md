@@ -536,6 +536,36 @@ frontend:
         agent: "main"
         comment: "RESOLVED! Frontend routing working correctly. Manual verification confirms TesseraCheckPage is accessible at /register with complete fidelity import functionality: card 2020000028284 successfully imports CHIARA ABATANGELO data with pre-population of all form fields (nome: CHIARA, cognome: ABATANGELO, email: chiara.abatangelo@libero.it, telefono: 3497312268, localita: MOLA, indirizzo: VIA G. DI VITTORIO N.52, progressivo_spesa: €100.01). Success message and import summary displaying correctly. Complete integration working."
 
+  - task: "Enhanced Fidelity Validation with Cognome + Tessera"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Enhanced /api/check-tessera endpoint to support optional cognome parameter for secure validation. When cognome provided, both tessera_fisica AND cognome must match for successful import. Maintains backward compatibility with tessera-only validation."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Enhanced fidelity validation working perfectly (11/11 tests passed - 100% success rate). ✅ Fidelity Data Validation: 30,287 records loaded with known test cards available ✅ Backward Compatibility: /api/check-tessera with only tessera_fisica works (card 2020000400004 found with cognome 'SCHEDA 202000040000') ✅ Enhanced Validation: tessera_fisica + correct cognome successfully validates and returns user_data ✅ Security Enhancement: tessera_fisica + wrong cognome correctly rejected with 'Numero tessera e cognome non combaciano' message ✅ Real Card Testing: Verified with actual fidelity data cards from the 30K+ record dataset. Enhanced cognome+tessera validation provides secure import protection as requested."
+
+  - task: "Enhanced Multi-Format Login System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Enhanced /api/login endpoint to support multiple username formats: email (traditional), tessera_fisica, or telefono. Users can now login with any of these three identifiers using the same password."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Multi-format login system working perfectly (6/6 login tests passed - 100% success rate). ✅ Email Login: Traditional email-based login working correctly with proper JWT token generation ✅ Tessera Login: Users can login using tessera_fisica as username, returns same user data and valid token ✅ Telefono Login: Users can login using telefono as username, authentication successful with proper user data ✅ Invalid Credentials: Wrong passwords correctly rejected with 'Credenziali non valide' message ✅ Non-existent Users: Non-existent usernames properly rejected with appropriate error handling ✅ Security: All three login methods return same JWT token for same user, maintaining session consistency. Enhanced login flexibility implemented as requested."
+
 metadata:
   created_by: "main_agent"
   version: "2.0"
