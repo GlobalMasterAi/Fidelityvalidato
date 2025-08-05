@@ -4356,6 +4356,12 @@ const AdminPanel = () => {
     { id: 'cashiers', name: 'Casse', icon: '💳' },
     { id: 'users', name: 'Utenti', icon: '👥' },
     { id: 'rewards', name: 'Gestione Premi', icon: '🎁' },
+    { id: 'vendite-dashboard', name: 'Dashboard Vendite', icon: '💰' },
+    { id: 'customer-analytics', name: 'Analytics Clienti', icon: '👤' },
+    { id: 'product-analytics', name: 'Analytics Prodotti', icon: '📦' },
+    { id: 'department-analytics', name: 'Analytics Reparti', icon: '🏬' },
+    { id: 'promotion-analytics', name: 'Analytics Promozioni', icon: '🎯' },
+    { id: 'reports-generator', name: 'Report & Export', icon: '📋' },
     { id: 'statistics', name: 'Statistiche', icon: '📈' }
   ];
 
