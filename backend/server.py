@@ -2310,7 +2310,7 @@ async def create_cashier(cashier_data: CashierCreate, current_admin = Depends(ge
     # Generate QR code data and image
     qr_data = f"{store['code']}-CASSA{cashier_data.cashier_number}"
     # Generate full URL for QR code
-    base_url = "https://b08489e0-feb6-4aa3-ba36-5ba713d29d91.preview.emergentagent.com"
+    base_url = "https://17c1a8bf-4b74-4bc9-a21f-5a583eefcaf5.preview.emergentagent.com"
     qr_url = f"{base_url}/register?qr={qr_data}"
     qr_image = generate_qr_code(qr_url)
     
@@ -2602,7 +2602,7 @@ async def get_stores_stats(current_admin = Depends(get_current_admin)):
 async def regenerate_all_qr_codes(current_admin = Depends(get_current_admin)):
     """Regenerate all QR codes with full URLs"""
     try:
-        base_url = "https://b08489e0-feb6-4aa3-ba36-5ba713d29d91.preview.emergentagent.com"
+        base_url = "https://17c1a8bf-4b74-4bc9-a21f-5a583eefcaf5.preview.emergentagent.com"
         
         cashiers = await db.cashiers.find().to_list(1000)
         updated_count = 0
@@ -2636,7 +2636,7 @@ async def regenerate_all_qr_codes(current_admin = Depends(get_current_admin)):
 async def regenerate_single_qr_code(cashier_id: str, current_admin = Depends(get_current_admin)):
     """Regenerate single QR code with full URL"""
     try:
-        base_url = "https://b08489e0-feb6-4aa3-ba36-5ba713d29d91.preview.emergentagent.com"
+        base_url = "https://17c1a8bf-4b74-4bc9-a21f-5a583eefcaf5.preview.emergentagent.com"
         
         # Get cashier
         cashier = await db.cashiers.find_one({"id": cashier_id})
