@@ -62,6 +62,11 @@ const VenditeDashboard = ({ adminToken }) => {
     );
   }
 
+  console.log('Rendering dashboard with data:', dashboardData);
+  console.log('Overview:', dashboardData.overview);
+  console.log('Monthly trends length:', dashboardData.monthly_trends?.length);
+  console.log('Top customers length:', dashboardData.top_customers?.length);
+
   return (
     <div className="space-y-6">
       {/* Overview Cards */}
