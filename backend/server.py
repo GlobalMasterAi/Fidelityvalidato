@@ -72,6 +72,20 @@ async def initialize_mongo_connection():
         # Don't raise - let the app start anyway
         return False
 
+def get_db():
+    """Get database instance with safety check"""
+    global db
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database not ready yet, please try again in a few seconds")
+    return db
+
+def get_client():
+    """Get MongoDB client with safety check"""
+    global client
+    if client is None:
+        raise HTTPException(status_code=503, detail="Database client not ready yet, please try again in a few seconds")
+    return client
+
 # Create the main app without a prefix
 app = FastAPI()
 
