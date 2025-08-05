@@ -652,9 +652,9 @@ frontend:
 
   - task: "Enhanced Fidelity Validation with Cognome + Tessera"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
@@ -664,6 +664,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: Enhanced fidelity validation working perfectly (11/11 tests passed - 100% success rate). ✅ Fidelity Data Validation: 30,287 records loaded with known test cards available ✅ Backward Compatibility: /api/check-tessera with only tessera_fisica works (card 2020000400004 found with cognome 'SCHEDA 202000040000') ✅ Enhanced Validation: tessera_fisica + correct cognome successfully validates and returns user_data ✅ Security Enhancement: tessera_fisica + wrong cognome correctly rejected with 'Numero tessera e cognome non combaciano' message ✅ Real Card Testing: Verified with actual fidelity data cards from the 30K+ record dataset. Enhanced cognome+tessera validation provides secure import protection as requested."
+      - working: false
+        agent: "testing"
+        comment: "❌ DEPLOYMENT TESTING FAILED: Fidelity validation issues detected. Test card 2020000028284 (CHIARA ABATANGELO) returns 'già migrata' status when tested alone, and 'Numero tessera e cognome non combaciano' when tested with correct cognome 'ABATANGELO'. This indicates either: 1) Card already migrated to user account, or 2) Cognome validation logic not working correctly. System should handle migrated cards properly and provide clear user feedback."
 
   - task: "Enhanced Multi-Format Login System"
     implemented: true
