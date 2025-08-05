@@ -548,8 +548,7 @@ def run_all_tests():
         test_enhanced_check_tessera_only,
         test_enhanced_check_tessera_with_correct_cognome,
         test_enhanced_check_tessera_with_wrong_cognome,
-        test_check_tessera_with_abatangelo_card,
-        test_check_tessera_with_verdi_card,
+        test_check_tessera_with_real_card,
         
         # Setup for login tests
         setup_test_user,
