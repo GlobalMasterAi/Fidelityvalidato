@@ -749,15 +749,19 @@ const LoginPage = () => {
             <form className="space-y-6" onSubmit={handleLogin}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
+                  Username (Email, Tessera o Telefono)
                 </label>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                  placeholder="email@esempio.com oppure 2020000028284 oppure 3331234567"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Puoi usare email, numero tessera o telefono per accedere
+                </p>
               </div>
 
               <div>
