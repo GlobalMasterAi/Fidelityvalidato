@@ -526,6 +526,18 @@ backend:
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: Data Export API funzionante. Export customer_summary in JSON con 7,823 record clienti. Export department_summary in CSV con 19 righe (header + 18 reparti). Formati output validati correttamente. Struttura customer record: codice_cliente, total_spent, total_transactions."
 
+  - task: "Health and Readiness Endpoints for Kubernetes Deployment"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL DEPLOYMENT ISSUE: Health endpoints (/health, /readiness, /startup-status) not implemented or returning HTML instead of JSON. These endpoints are essential for Kubernetes deployment health checks and container orchestration. Without proper health endpoints, the application cannot be deployed reliably in production Kubernetes environment."
+
 frontend:
   - task: "Super Admin Dashboard UI"
     implemented: true
