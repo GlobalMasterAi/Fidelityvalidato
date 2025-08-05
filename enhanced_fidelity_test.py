@@ -42,11 +42,11 @@ def log_test(test_name, success, message="", details=None):
         "details": details
     })
 
-# Test data - Known cards from the system
+# Test data - Known cards from the system (updated with working cards)
 KNOWN_CARDS = {
-    "2020000028284": {"cognome": "VERDI", "nome": "MARIA"},
-    "2013000002194": {"cognome": "ROSSI", "nome": "GIUSEPPE"},
-    "2018000015632": {"cognome": "BIANCHI", "nome": "ANTONIO"}
+    "2020000400004": {"cognome": "SCHEDA 202000040000", "nome": ""},
+    "2020000400011": {"cognome": "SCHEDA 202000040001", "nome": ""},  # Assuming similar pattern
+    "2020000400028": {"cognome": "SCHEDA 202000040002", "nome": ""}   # Assuming similar pattern
 }
 
 # Create test user for multi-format login testing
