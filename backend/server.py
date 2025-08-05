@@ -4318,51 +4318,69 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-async def background_data_loading():
-    """Load data in background without blocking app startup"""
+# Global variables to track loading status
+DATA_LOADING_STATUS = {
+    "fidelity": "not_started",
+    "scontrini": "not_started", 
+    "vendite": "not_started",
+    "admin": "not_started"
+}
+
+async def load_data_chunk(data_type: str, load_func):
+    """Load a data chunk with status tracking"""
     try:
-        print("🔄 Starting background data loading...")
+        DATA_LOADING_STATUS[data_type] = "loading"
+        await load_func()
+        DATA_LOADING_STATUS[data_type] = "completed"
+        print(f"✅ {data_type} loading completed")
+    except Exception as e:
+        DATA_LOADING_STATUS[data_type] = f"error: {str(e)}"
+        print(f"❌ {data_type} loading failed: {e}")
+
+async def background_data_loading():
+    """Load data in background with minimal blocking"""
+    try:
+        print("🔄 Starting ultra-fast background data loading...")
         
-        # Load data files in parallel where possible
+        # Start all loading tasks in parallel (completely non-blocking)
         import asyncio
         
-        # These can run in parallel
-        fidelity_task = asyncio.create_task(load_fidelity_data())
-        scontrini_task = asyncio.create_task(load_scontrini_data())
+        # Start tasks but don't await them all - just fire and forget
+        fidelity_task = asyncio.create_task(load_data_chunk("fidelity", load_fidelity_data))
+        scontrini_task = asyncio.create_task(load_data_chunk("scontrini", load_scontrini_data))
+        admin_task = asyncio.create_task(load_data_chunk("admin", init_super_admin))
         
-        # Wait for fidelity and scontrini to complete
-        await fidelity_task
-        await scontrini_task
+        # Only wait for admin (fastest) to ensure basic auth works
+        await admin_task
         
-        # Load vendite data (this is the largest, so it goes last)
-        await load_vendite_data()
+        # Start vendite loading (largest) completely in background
+        vendite_task = asyncio.create_task(load_data_chunk("vendite", load_vendite_data))
         
-        # Initialize super admin last
-        await init_super_admin()
+        print("✅ Critical components loaded, app ready for traffic!")
         
-        print("✅ Background data loading completed successfully!")
+        # Let other tasks continue in background
+        print("🔄 Large datasets loading in background...")
         
     except Exception as e:
         print(f"❌ Error during background data loading: {e}")
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the application with fast startup for Kubernetes"""
-    print("🚀 Starting ImaGross Backend (Fast Startup Mode)...")
+    """ULTRA-FAST startup for Kubernetes deployment"""
+    print("🚀 ImaGross Backend - ULTRA-FAST MODE")
     
-    # Quick MongoDB connection test
+    # Immediate response mode - no blocking operations
     try:
-        connection_ok = await test_mongodb_connection()
-        if not connection_ok:
-            print("⚠️ MongoDB connection issue, will retry in background")
+        # Just test if we can connect to MongoDB (quick test)
+        await asyncio.wait_for(client.admin.command('ping'), timeout=1.0)
+        print("✅ MongoDB quick ping successful")
     except Exception as e:
-        print(f"⚠️ MongoDB connection error during startup: {e}")
+        print(f"⚠️ MongoDB ping failed (will retry): {e}")
     
-    # Start data loading in background (non-blocking)
-    import asyncio
+    # Start all data loading in background (fire and forget)
     asyncio.create_task(background_data_loading())
     
-    print("🎉 ImaGross Backend startup completed (data loading in progress)!")
+    print("🎉 ImaGross Backend ready for traffic (data loading in background)!")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
