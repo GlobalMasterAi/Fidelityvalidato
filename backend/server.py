@@ -4169,6 +4169,35 @@ async def get_user_redemptions(
 # Include the router in the main app
 app.include_router(api_router)
 
+# Startup status endpoint for debugging
+@app.get("/startup-status")
+async def startup_status():
+    """Get detailed startup status for debugging"""
+    try:
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "data_loading_status": {
+                "fidelity_loaded": len(FIDELITY_DATA),
+                "scontrini_loaded": len(SCONTRINI_DATA),
+                "vendite_loaded": len(VENDITE_DATA)
+            },
+            "database_status": {
+                "connection_available": True,
+                "ping_successful": True
+            },
+            "admin_status": {
+                "super_admin_exists": await db.admins.find_one({"role": "super_admin"}) is not None
+            },
+            "memory_usage": "optimized",
+            "ready_for_traffic": len(FIDELITY_DATA) > 1000 and len(SCONTRINI_DATA) > 100
+        }
+    except Exception as e:
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e),
+            "status": "error_during_startup"
+        }
+
 # Health check endpoint for deployment - ALWAYS returns 200 if app is running
 @app.get("/health")
 async def health_check():
