@@ -3377,8 +3377,37 @@ async def generate_vendite_report(
 
 @api_router.get("/admin/vendite/dashboard")
 async def get_vendite_dashboard(admin = Depends(get_current_admin)):
-    """Get comprehensive dashboard data for vendite analytics"""
+    """Get comprehensive dashboard data for vendite analytics with deployment-safe fallbacks"""
     try:
+        # If vendite data is not loaded yet, return minimal working dashboard
+        if not is_data_ready("vendite") or len(VENDITE_DATA) == 0:
+            return {
+                "success": True,
+                "message": "Vendite data is still loading, showing minimal dashboard",
+                "dashboard": {
+                    "overview": {
+                        "total_sales": 0,
+                        "unique_customers": 0,
+                        "total_revenue": 0.0,
+                        "avg_transaction": 0.0
+                    },
+                    "charts": {
+                        "monthly_trends": [{"month": "Loading...", "revenue": 0, "transactions": 0}],
+                        "top_customers": [{"codice_cliente": "Loading...", "spent": 0}],
+                        "top_departments": [{"reparto_name": "Loading...", "total_revenue": 0}],
+                        "top_products": [{"barcode": "Loading...", "total_revenue": 0}],
+                        "top_promotions": [{"promotion_id": "Loading...", "total_usage": 0}]
+                    },
+                    "cards": {
+                        "total_sales": 0,
+                        "unique_customers": 0,
+                        "total_revenue": 0.0,
+                        "avg_transaction": 0.0
+                    }
+                },
+                "data_loading_status": DATA_LOADING_STATUS.get("vendite", "not_started")
+            }
+        
         # Overview statistics
         total_sales = len(VENDITE_DATA)
         unique_customers = len(set(sale.get('CODICE_CLIENTE', '') for sale in VENDITE_DATA))
