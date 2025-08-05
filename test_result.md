@@ -685,6 +685,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ DEPLOYMENT TESTING FAILED: Fidelity validation issues detected. Test card 2020000028284 (CHIARA ABATANGELO) returns 'già migrata' status when tested alone, and 'Numero tessera e cognome non combaciano' when tested with correct cognome 'ABATANGELO'. This indicates either: 1) Card already migrated to user account, or 2) Cognome validation logic not working correctly. System should handle migrated cards properly and provide clear user feedback."
+      - working: false
+        agent: "testing"
+        comment: "❌ DEPLOYMENT RE-TEST FAILED: Enhanced fidelity validation API structure issue detected. API returns {found: true, migrated: false/true, user_data: {...}} but test expects {status: 'found'/'già migrata'/'not_found'} format. API response format inconsistency between implementation and test expectations. Card 2020000400004 correctly returns user data with cognome 'SCHEDA 202000040000', but response structure mismatch prevents proper validation testing."
 
   - task: "Enhanced Multi-Format Login System"
     implemented: true
