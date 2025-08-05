@@ -23,10 +23,47 @@ from collections import defaultdict, Counter
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Enhanced MongoDB connection for Atlas production deployment
+def get_mongo_connection():
+    """Get MongoDB connection with proper Atlas configuration"""
+    try:
+        # Get MongoDB URL from environment
+        mongo_url = os.environ.get('MONGO_URL')
+        if not mongo_url:
+            raise Exception("MONGO_URL environment variable not found")
+        
+        # Get database name from environment with fallback
+        db_name = os.environ.get('DB_NAME', 'imagross_loyalty')
+        
+        print(f"Connecting to MongoDB Atlas...")
+        print(f"Database name: {db_name}")
+        
+        # Create client with Atlas-optimized settings
+        client = AsyncIOMotorClient(
+            mongo_url,
+            maxPoolSize=10,
+            minPoolSize=1,
+            maxIdleTimeMS=30000,
+            waitQueueTimeoutMS=5000,
+            connectTimeoutMS=10000,
+            serverSelectionTimeoutMS=10000,
+            socketTimeoutMS=20000,
+            retryWrites=True,
+            retryReads=True
+        )
+        
+        # Get database instance
+        database = client[db_name]
+        
+        print(f"✅ MongoDB connection configured successfully")
+        return client, database
+        
+    except Exception as e:
+        print(f"❌ MongoDB connection error: {e}")
+        raise
+
+# Initialize MongoDB connection
+client, db = get_mongo_connection()
 
 # Create the main app without a prefix
 app = FastAPI()
