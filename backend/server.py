@@ -4397,13 +4397,36 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Global variables to track loading status
+# Global variables to track loading status with deployment-safe defaults
 DATA_LOADING_STATUS = {
     "fidelity": "not_started",
     "scontrini": "not_started", 
     "vendite": "not_started",
     "admin": "not_started"
 }
+
+# Global variables for data - initialize with empty defaults for deployment safety
+FIDELITY_DATA = []
+SCONTRINI_DATA = []
+VENDITE_DATA = []
+
+def is_data_ready(data_type: str) -> bool:
+    """Check if specific data is ready, with deployment-safe fallbacks"""
+    status = DATA_LOADING_STATUS.get(data_type, "not_started")
+    return status == "completed"
+
+def get_safe_data_response(data_type: str, default_response: dict):
+    """Get data with fallback for deployment safety"""
+    if is_data_ready(data_type):
+        return default_response
+    else:
+        return {
+            "success": True,
+            "message": f"{data_type} data is still loading",
+            "status": "loading",
+            "data_loading_status": DATA_LOADING_STATUS.get(data_type, "not_started"),
+            **default_response
+        }
 
 async def load_data_chunk(data_type: str, load_func):
     """Load a data chunk with status tracking and timeout handling"""
