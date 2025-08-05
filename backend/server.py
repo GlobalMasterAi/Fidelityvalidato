@@ -4274,31 +4274,51 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+async def background_data_loading():
+    """Load data in background without blocking app startup"""
+    try:
+        print("🔄 Starting background data loading...")
+        
+        # Load data files in parallel where possible
+        import asyncio
+        
+        # These can run in parallel
+        fidelity_task = asyncio.create_task(load_fidelity_data())
+        scontrini_task = asyncio.create_task(load_scontrini_data())
+        
+        # Wait for fidelity and scontrini to complete
+        await fidelity_task
+        await scontrini_task
+        
+        # Load vendite data (this is the largest, so it goes last)
+        await load_vendite_data()
+        
+        # Initialize super admin last
+        await init_super_admin()
+        
+        print("✅ Background data loading completed successfully!")
+        
+    except Exception as e:
+        print(f"❌ Error during background data loading: {e}")
+
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the application with enhanced MongoDB Atlas support"""
-    print("🚀 Starting ImaGross Backend...")
+    """Initialize the application with fast startup for Kubernetes"""
+    print("🚀 Starting ImaGross Backend (Fast Startup Mode)...")
     
-    # Test MongoDB connection first
-    connection_ok = await test_mongodb_connection()
-    if not connection_ok:
-        print("❌ CRITICAL: MongoDB connection failed. Retrying...")
-        # Retry connection once
-        await asyncio.sleep(2)
+    # Quick MongoDB connection test
+    try:
         connection_ok = await test_mongodb_connection()
         if not connection_ok:
-            print("❌ FATAL: Unable to connect to MongoDB Atlas")
-            return
+            print("⚠️ MongoDB connection issue, will retry in background")
+    except Exception as e:
+        print(f"⚠️ MongoDB connection error during startup: {e}")
     
-    # Load data files
-    await load_fidelity_data()
-    await load_scontrini_data() 
-    await load_vendite_data()
+    # Start data loading in background (non-blocking)
+    import asyncio
+    asyncio.create_task(background_data_loading())
     
-    # Initialize super admin
-    await init_super_admin()
-    
-    print("🎉 ImaGross Backend startup completed successfully!")
+    print("🎉 ImaGross Backend startup completed (data loading in progress)!")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
