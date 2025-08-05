@@ -1870,17 +1870,33 @@ async def test_mongodb_connection():
         return False
 
 async def init_super_admin():
-    existing_admin = await db.admins.find_one({"role": "super_admin"})
-    if not existing_admin:
-        super_admin = AdminUser(
-            username="superadmin",
-            email="superadmin@imagross.it",
-            password_hash=hash_password("ImaGross2024!"),
-            role=UserRole.SUPER_ADMIN,
-            full_name="Super Administrator"
-        )
-        await db.admins.insert_one(super_admin.dict())
-        print("Super admin created - Username: superadmin, Password: ImaGross2024!")
+    """Initialize super admin with database safety check"""
+    try:
+        # Wait for database to be ready
+        max_retries = 10
+        for i in range(max_retries):
+            if db is not None:
+                break
+            await asyncio.sleep(1)
+        
+        if db is None:
+            print("⚠️ Database not ready for super admin initialization")
+            return
+            
+        existing_admin = await db.admins.find_one({"role": "super_admin"})
+        if not existing_admin:
+            super_admin = AdminUser(
+                username="superadmin",
+                email="superadmin@imagross.it",
+                password_hash=hash_password("ImaGross2024!"),
+                role=UserRole.SUPER_ADMIN,
+                full_name="Super Administrator"
+            )
+            await db.admins.insert_one(super_admin.dict())
+            print("Super admin created - Username: superadmin, Password: ImaGross2024!")
+    except Exception as e:
+        print(f"❌ Error initializing super admin: {e}")
+        # Don't raise - let the app continue
 
 # Routes
 
