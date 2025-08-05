@@ -4207,6 +4207,34 @@ async def startup_status():
             "ready_for_basic_traffic": True  # Still ready even with errors
         }
 
+# Startup status with /api prefix for Kubernetes ingress
+@api_router.get("/startup-status")
+async def api_startup_status():
+    """Get detailed startup status via /api route for debugging deployment issues"""
+    try:
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "app_status": "running",
+            "deployment_mode": "kubernetes",
+            "data_loading_status": DATA_LOADING_STATUS,
+            "data_counts": {
+                "fidelity_loaded": len(FIDELITY_DATA),
+                "scontrini_loaded": len(SCONTRINI_DATA),
+                "vendite_loaded": len(VENDITE_DATA)
+            },
+            "ready_for_basic_traffic": True,  # Always ready for basic operations
+            "deployment_health": "ok",
+            "route": "api_startup_status"
+        }
+    except Exception as e:
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "app_status": "running_with_errors",
+            "error": str(e),
+            "ready_for_basic_traffic": True,  # Still ready even with errors
+            "route": "api_startup_status"
+        }
+
 # Ultra-simple root health check for deployment
 @app.get("/")
 async def root_health():
