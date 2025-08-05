@@ -105,9 +105,13 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const checkTessera = async (tesseraFisica) => {
+  const checkTessera = async (tesseraFisica, cognome = null) => {
     try {
-      const response = await axios.post(`${API}/check-tessera`, { tessera_fisica: tesseraFisica });
+      const payload = { tessera_fisica: tesseraFisica };
+      if (cognome && cognome.trim()) {
+        payload.cognome = cognome.trim();
+      }
+      const response = await axios.post(`${API}/check-tessera`, payload);
       return response.data;
     } catch (error) {
       console.error('Check tessera error:', error);
