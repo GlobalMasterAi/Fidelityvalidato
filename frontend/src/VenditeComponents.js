@@ -26,6 +26,8 @@ const VenditeDashboard = ({ adminToken }) => {
       const response = await axios.get(`${API}/admin/vendite/dashboard`, {
         headers: { Authorization: `Bearer ${adminToken}` }
       });
+      console.log('Full API Response:', response.data);
+      console.log('Dashboard data to set:', response.data.dashboard);
       setDashboardData(response.data.dashboard);
     } catch (error) {
       console.error('Error fetching dashboard:', error);
