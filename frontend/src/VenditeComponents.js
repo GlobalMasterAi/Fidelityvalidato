@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+const API = `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001'}/api`;
 
 // Color palette for charts
 const COLORS = ['#FF6B35', '#F7931E', '#FFD23F', '#06FFA5', '#3B82F6', '#8B5CF6', '#EF4444', '#10B981'];
