@@ -466,22 +466,26 @@ def test_promotions_analytics():
                 log_test("Promotions Analytics", True, "No active promotions found (expected)")
                 return True
             
-            # If promotions exist, validate structure
+            # If promotions exist, validate structure (based on actual backend implementation)
             promotion = promotions[0]
-            required_fields = ["promotion_id", "promotion_name", "usage_count", "total_discount", 
-                             "unique_customers", "performance_score"]
+            required_fields = ["promotion_id", "promotion_type", "promotion_number", "total_usage", 
+                             "total_discount", "unique_customers", "performance_score", "roi"]
             missing_fields = [field for field in required_fields if field not in promotion]
             if missing_fields:
                 log_test("Promotions Analytics", False, f"Missing promotion fields: {missing_fields}")
                 return False
             
             # Validate data types
-            if not isinstance(promotion["usage_count"], int) or promotion["usage_count"] < 0:
-                log_test("Promotions Analytics", False, f"Invalid usage_count: {promotion['usage_count']}")
+            if not isinstance(promotion["total_usage"], int) or promotion["total_usage"] < 0:
+                log_test("Promotions Analytics", False, f"Invalid total_usage: {promotion['total_usage']}")
                 return False
             
             if not isinstance(promotion["total_discount"], (int, float)) or promotion["total_discount"] < 0:
                 log_test("Promotions Analytics", False, f"Invalid total_discount: {promotion['total_discount']}")
+                return False
+            
+            if not isinstance(promotion["unique_customers"], int) or promotion["unique_customers"] < 0:
+                log_test("Promotions Analytics", False, f"Invalid unique_customers: {promotion['unique_customers']}")
                 return False
             
             total_promotions = data.get("total", 0)
