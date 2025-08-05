@@ -4201,6 +4201,18 @@ async def startup_status():
             "status": "error_during_startup"
         }
 
+# Ultra-simple root health check for deployment
+@app.get("/")
+async def root_health():
+    """Ultra-simple root endpoint that ALWAYS returns 200 - for deployment health checks"""
+    return {"status": "ok", "app": "imagross", "timestamp": datetime.utcnow().isoformat()}
+
+# Simple ping endpoint
+@app.get("/ping")
+async def ping():
+    """Simple ping endpoint that always returns pong"""
+    return {"message": "pong", "timestamp": datetime.utcnow().isoformat()}
+
 # Health check endpoint for deployment - ALWAYS returns 200 if app is running
 @app.get("/health")
 async def health_check():
