@@ -1842,12 +1842,23 @@ async def admin_check_tessera(tessera_data: TesseraCheck, credentials: HTTPAutho
 
 @api_router.post("/check-tessera")
 async def check_tessera(tessera_data: TesseraCheck):
-    """Check if tessera fisica exists and return user data"""
+    """Check if tessera fisica exists and return user data with enhanced validation"""
     try:
         # Check in current users first
         user = await db.users.find_one({"tessera_fisica": tessera_data.tessera_fisica})
         
         if user:
+            # If cognome is provided, validate it matches
+            if tessera_data.cognome:
+                user_cognome = user.get("cognome", "").upper().strip()
+                provided_cognome = tessera_data.cognome.upper().strip()
+                if user_cognome != provided_cognome:
+                    return {
+                        "found": False,
+                        "migrated": False,
+                        "message": "Numero tessera e cognome non combaciano"
+                    }
+            
             if user.get("migrated", False):
                 return {
                     "found": True,
@@ -1875,6 +1886,17 @@ async def check_tessera(tessera_data: TesseraCheck):
         fidelity_data = get_fidelity_user_data(tessera_data.tessera_fisica)
         
         if fidelity_data:
+            # If cognome is provided, validate it matches fidelity data
+            if tessera_data.cognome:
+                fidelity_cognome = fidelity_data.get("cognome", "").upper().strip()
+                provided_cognome = tessera_data.cognome.upper().strip()
+                if fidelity_cognome != provided_cognome:
+                    return {
+                        "found": False,
+                        "migrated": False,
+                        "message": "Numero tessera e cognome non combaciano"
+                    }
+            
             return {
                 "found": True,
                 "migrated": False,
@@ -1885,7 +1907,7 @@ async def check_tessera(tessera_data: TesseraCheck):
         return {
             "found": False,
             "migrated": False,
-            "message": "Tessera non trovata"
+            "message": "Tessera non trovata" if not tessera_data.cognome else "Numero tessera e cognome non trovati o non combaciano"
         }
         
     except Exception as e:
