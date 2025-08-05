@@ -4380,17 +4380,17 @@ const AdminPanel = () => {
       case 'rewards':
         return <RewardManagement />;
       case 'vendite-dashboard':
-        return <VenditeDashboard adminToken={admin?.token} />;
+        return <VenditeDashboard adminToken={adminToken} />;
       case 'customer-analytics':
-        return <CustomerAnalytics adminToken={admin?.token} />;
+        return <CustomerAnalytics adminToken={adminToken} />;
       case 'product-analytics':
-        return <ProductAnalytics adminToken={admin?.token} />;
+        return <ProductAnalytics adminToken={adminToken} />;
       case 'department-analytics':
-        return <DepartmentAnalytics adminToken={admin?.token} />;
+        return <DepartmentAnalytics adminToken={adminToken} />;
       case 'promotion-analytics':
-        return <PromotionAnalytics adminToken={admin?.token} />;
+        return <PromotionAnalytics adminToken={adminToken} />;
       case 'reports-generator':
-        return <ReportsGenerator adminToken={admin?.token} />;
+        return <ReportsGenerator adminToken={adminToken} />;
       case 'statistics':
         return <div className="text-center py-12"><p className="text-gray-500">Statistiche avanzate in arrivo...</p></div>;
       default:
