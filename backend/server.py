@@ -4285,6 +4285,27 @@ async def ping():
     """Simple ping endpoint that always returns pong"""
     return {"message": "pong", "timestamp": datetime.utcnow().isoformat()}
 
+# Simple API root endpoint for ingress testing
+@api_router.get("/")
+async def api_root():
+    """Ultra-simple API root endpoint for Kubernetes ingress testing"""
+    return {
+        "status": "ok", 
+        "app": "imagross", 
+        "route": "api_root",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+# Simple API ping endpoint for ingress testing
+@api_router.get("/ping")
+async def api_ping():
+    """Simple API ping endpoint for Kubernetes ingress testing"""
+    return {
+        "message": "pong", 
+        "route": "api_ping",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
 # Health check endpoint for deployment - ALWAYS returns 200 if app is running
 @app.get("/health")
 async def health_check():
