@@ -186,6 +186,7 @@ const Header = () => {
 const TesseraCheckPage = () => {
   const [step, setStep] = useState('check'); // 'check', 'register', 'import'
   const [tesseraFisica, setTesseraFisica] = useState('');
+  const [cognomeVerifica, setCognomeVerifica] = useState(''); // For validation
   const [userData, setUserData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
