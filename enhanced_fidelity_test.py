@@ -494,6 +494,45 @@ def test_enhanced_login_nonexistent_user():
         log_test("Enhanced Login (Nonexistent)", False, f"Exception: {str(e)}")
         return False
 
+def test_check_tessera_with_real_card():
+    """Test card 2020000400004 with correct cognome"""
+    try:
+        test_data = {
+            "tessera_fisica": "2020000400004",
+            "cognome": "SCHEDA 202000040000"
+        }
+        response = requests.post(f"{API_BASE}/check-tessera", json=test_data)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Should find the card
+            if not data["found"]:
+                log_test("Check-Tessera Real Card", False, f"Card not found: {data.get('message', 'No message')}")
+                return False
+            
+            # Should have user_data
+            if "user_data" not in data:
+                log_test("Check-Tessera Real Card", False, "Missing user_data in response")
+                return False
+            
+            user_data = data["user_data"]
+            if "SCHEDA" not in user_data.get("cognome", ""):
+                log_test("Check-Tessera Real Card", False, f"Wrong cognome: {user_data.get('cognome')}")
+                return False
+            
+            log_test("Check-Tessera Real Card", True, f"Successfully found: {user_data.get('cognome')}")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Check-Tessera Real Card", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Check-Tessera Real Card", False, f"Exception: {str(e)}")
+        return False
+
 def run_all_tests():
     """Run all enhanced fidelity validation tests"""
     print("🚀 Starting Enhanced Fidelity Validation Tests")
