@@ -410,8 +410,6 @@ const TesseraCheckPage = () => {
                     ✨ Nuova Registrazione (senza tessera esistente)
                   </button>
                 </div>
-                  </button>
-                </div>
               </form>
             </div>
           )}
