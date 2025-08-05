@@ -26,7 +26,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 # Enhanced MongoDB connection for Atlas production deployment
 def get_mongo_connection():
-    """Get MongoDB connection with proper Atlas configuration"""
+    """Get MongoDB connection with Atlas-optimized settings for fast startup"""
     try:
         # Get MongoDB URL from environment
         mongo_url = os.environ.get('MONGO_URL')
@@ -36,27 +36,30 @@ def get_mongo_connection():
         # Get database name from environment with fallback
         db_name = os.environ.get('DB_NAME', 'imagross_loyalty')
         
-        print(f"Connecting to MongoDB Atlas...")
+        print(f"Connecting to MongoDB Atlas (Fast Mode)...")
         print(f"Database name: {db_name}")
         
-        # Create client with Atlas-optimized settings
+        # Create client with Atlas-optimized settings for fast startup
         client = AsyncIOMotorClient(
             mongo_url,
-            maxPoolSize=10,
-            minPoolSize=1,
-            maxIdleTimeMS=30000,
-            waitQueueTimeoutMS=5000,
-            connectTimeoutMS=10000,
-            serverSelectionTimeoutMS=10000,
-            socketTimeoutMS=20000,
+            maxPoolSize=5,                # Reduced for faster startup
+            minPoolSize=1,                # Keep minimum low
+            maxIdleTimeMS=10000,         # Reduced idle time
+            waitQueueTimeoutMS=3000,     # Faster timeout
+            connectTimeoutMS=5000,       # Faster connection timeout
+            serverSelectionTimeoutMS=5000, # Faster server selection
+            socketTimeoutMS=10000,       # Reduced socket timeout
             retryWrites=True,
-            retryReads=True
+            retryReads=True,
+            # Additional Atlas optimizations
+            w='majority',                # Write concern
+            readPreference='primary'     # Read from primary
         )
         
         # Get database instance
         database = client[db_name]
         
-        print(f"✅ MongoDB connection configured successfully")
+        print(f"✅ MongoDB connection configured for fast startup")
         return client, database
         
     except Exception as e:
