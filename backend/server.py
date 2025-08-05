@@ -619,11 +619,9 @@ async def get_super_admin(credentials: HTTPAuthorizationCredentials = Depends(se
         raise HTTPException(status_code=403, detail="Super admin access required")
     return admin
 
-# Load scontrini data
-SCONTRINI_DATA = []
+# Load scontrini data will be loaded async
 
-# Load detailed sales data (Vendite)
-VENDITE_DATA = []
+# Load detailed sales data (Vendite) will be loaded async
 
 async def load_scontrini_data():
     """Load scontrini data from JSON file"""
