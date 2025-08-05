@@ -414,9 +414,9 @@ backend:
 
   - task: "Advanced Sales Analytics - Dashboard API"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
@@ -429,6 +429,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "🚨 CRITICAL RE-TEST COMPLETED: API Dashboard Vendite is WORKING PERFECTLY! Comprehensive testing confirms: ✅ Authentication: superadmin/ImaGross2024! login successful ✅ API Response: GET /api/admin/vendite/dashboard returns 200 OK ✅ Data Structure: Correct {success: true, dashboard: {...}} format ✅ Overview Data: 1,067,280 sales, 7,823 customers, €3,584,524.55 revenue, €3.36 avg transaction ✅ Charts Data: 5 chart sources available (monthly_trends: 6 months, top_customers: 10, top_departments: 5, top_products: 10, top_promotions: 5) ✅ Cards Data: 4 card sources available (all overview metrics present) ✅ Authentication Security: Invalid tokens correctly rejected with 401. CONCLUSION: Backend API is PERFECT - the issue is in the frontend JavaScript code not properly parsing/displaying the API response."
+      - working: false
+        agent: "testing"
+        comment: "❌ DEPLOYMENT TESTING FAILED: API structure mismatch detected. Expected nested 'charts' and 'cards' objects but API returns data at root level (monthly_trends, top_customers, etc. directly in dashboard object). Frontend expects dashboard.charts.monthly_trends but API provides dashboard.monthly_trends. This structural inconsistency will cause frontend parsing failures in production deployment."
 
   - task: "Advanced Sales Analytics - Customer Analytics API"
     implemented: true
