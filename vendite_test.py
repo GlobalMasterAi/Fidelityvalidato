@@ -528,20 +528,32 @@ def test_reports_monthly_summary():
                 log_test("Reports Monthly Summary", False, "Missing report data")
                 return False
             
-            # Validate report structure
-            if "report_type" not in report or report["report_type"] != "monthly_summary":
+            # Validate report structure (based on actual backend implementation)
+            required_fields = ["report_type", "filters", "data", "summary"]
+            missing_fields = [field for field in required_fields if field not in report]
+            if missing_fields:
+                log_test("Reports Monthly Summary", False, f"Missing report fields: {missing_fields}")
+                return False
+            
+            if report["report_type"] != "monthly_summary":
                 log_test("Reports Monthly Summary", False, "Invalid report type")
                 return False
             
-            if "generated_at" not in report:
-                log_test("Reports Monthly Summary", False, "Missing generated_at timestamp")
+            # Validate data structure
+            report_data = report["data"]
+            if not isinstance(report_data, list):
+                log_test("Reports Monthly Summary", False, "Report data should be a list")
                 return False
             
-            if "data" not in report:
-                log_test("Reports Monthly Summary", False, "Missing report data")
+            # Validate summary
+            summary = report["summary"]
+            required_summary_fields = ["total_revenue", "total_transactions", "unique_customers", "avg_transaction"]
+            missing_summary = [field for field in required_summary_fields if field not in summary]
+            if missing_summary:
+                log_test("Reports Monthly Summary", False, f"Missing summary fields: {missing_summary}")
                 return False
             
-            log_test("Reports Monthly Summary", True, "Monthly summary report generated successfully")
+            log_test("Reports Monthly Summary", True, f"Monthly summary report generated successfully with {len(report_data)} months")
             return True
             
         else:
