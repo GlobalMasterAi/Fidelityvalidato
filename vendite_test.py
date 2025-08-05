@@ -281,10 +281,10 @@ def test_products_analytics():
                 log_test("Products Analytics", False, "No products found")
                 return False
             
-            # Validate first product structure
+            # Validate first product structure (based on actual backend implementation)
             product = products[0]
-            required_fields = ["barcode", "description", "total_revenue", "total_quantity", 
-                             "unique_customers", "avg_price", "popularity_rank"]
+            required_fields = ["barcode", "reparto", "total_revenue", "total_quantity", 
+                             "unique_customers", "avg_price", "popularity_rank", "monthly_trends"]
             missing_fields = [field for field in required_fields if field not in product]
             if missing_fields:
                 log_test("Products Analytics", False, f"Missing product fields: {missing_fields}")
@@ -297,6 +297,10 @@ def test_products_analytics():
             
             if not isinstance(product["total_quantity"], (int, float)) or product["total_quantity"] < 0:
                 log_test("Products Analytics", False, f"Invalid total_quantity: {product['total_quantity']}")
+                return False
+            
+            if not isinstance(product["popularity_rank"], int) or product["popularity_rank"] <= 0:
+                log_test("Products Analytics", False, f"Invalid popularity_rank: {product['popularity_rank']}")
                 return False
             
             total_products = data.get("total", 0)
