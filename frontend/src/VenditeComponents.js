@@ -216,6 +216,11 @@ const CustomerAnalytics = ({ adminToken }) => {
     e.preventDefault();
     if (!customerCode.trim()) return;
 
+    if (!adminToken) {
+      setError('Token admin non disponibile');
+      return;
+    }
+
     setLoading(true);
     setError('');
     
@@ -225,6 +230,7 @@ const CustomerAnalytics = ({ adminToken }) => {
       });
       setCustomerData(response.data.analytics);
     } catch (error) {
+      console.error('Customer search error:', error);
       setError('Cliente non trovato o errore nel caricamento dati');
       setCustomerData(null);
     } finally {
