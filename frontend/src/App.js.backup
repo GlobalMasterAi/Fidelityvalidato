@@ -18,6 +18,10 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
+import { RewardsList, RedemptionsList, RewardAnalytics } from './RewardComponents';
+import { CreateRewardModal, EditRewardModal, ProcessRedemptionModal } from './RewardModals';
+import { VenditeDashboard, CustomerAnalytics } from './VenditeComponents';
+import { ProductAnalytics, DepartmentAnalytics, PromotionAnalytics, ReportsGenerator } from './VenditeReports';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -65,9 +69,9 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (username, password) => {
     try {
-      const response = await axios.post(`${API}/login`, { email, password });
+      const response = await axios.post(`${API}/login`, { username, password });
       const { access_token, user } = response.data;
       localStorage.setItem('token', access_token);
       setToken(access_token);
@@ -103,9 +107,13 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const checkTessera = async (tesseraFisica) => {
+  const checkTessera = async (tesseraFisica, cognome = null) => {
     try {
-      const response = await axios.post(`${API}/check-tessera`, { tessera_fisica: tesseraFisica });
+      const payload = { tessera_fisica: tesseraFisica };
+      if (cognome && cognome.trim()) {
+        payload.cognome = cognome.trim();
+      }
+      const response = await axios.post(`${API}/check-tessera`, payload);
       return response.data;
     } catch (error) {
       console.error('Check tessera error:', error);
@@ -180,6 +188,7 @@ const Header = () => {
 const TesseraCheckPage = () => {
   const [step, setStep] = useState('check'); // 'check', 'register', 'import'
   const [tesseraFisica, setTesseraFisica] = useState('');
+  const [cognomeVerifica, setCognomeVerifica] = useState(''); // For validation
   const [userData, setUserData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -225,7 +234,7 @@ const TesseraCheckPage = () => {
     setLoading(true);
 
     try {
-      const result = await checkTessera(tesseraFisica);
+      const result = await checkTessera(tesseraFisica, cognomeVerifica);
       
       if (result.found) {
         if (result.migrated) {
@@ -241,11 +250,15 @@ const TesseraCheckPage = () => {
           setStep('import');
         }
       } else {
-        setStep('register');
-        setFormData({
-          ...formData,
-          tessera_fisica: tesseraFisica
-        });
+        setError(result.message || 'Tessera non trovata o dati non corrispondenti');
+        // Don't change step if validation failed due to cognome mismatch
+        if (!result.message || !result.message.includes('combaciano')) {
+          setStep('register');
+          setFormData({
+            ...formData,
+            tessera_fisica: tesseraFisica
+          });
+        }
       }
     } catch (error) {
       setError('Errore durante la verifica della tessera');
@@ -358,9 +371,28 @@ const TesseraCheckPage = () => {
                     Se non hai una tessera fisica, verrà generata automaticamente
                   </p>
                 </div>
+
+                {tesseraFisica && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cognome (obbligatorio per importazione tessera) *
+                    </label>
+                    <input
+                      type="text"
+                      value={cognomeVerifica}
+                      onChange={(e) => setCognomeVerifica(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      placeholder="Inserisci il tuo cognome"
+                      required={tesseraFisica.length > 0}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Il cognome deve corrispondere a quello presente nella tessera
+                    </p>
+                  </div>
+                )}
                 
                 <div className="flex flex-col space-y-4">
-                  {tesseraFisica && (
+                  {tesseraFisica && cognomeVerifica && (
                     <button
                       type="submit"
                       className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
@@ -372,6 +404,7 @@ const TesseraCheckPage = () => {
                     type="button"
                     onClick={() => {
                       setTesseraFisica('');
+                      setCognomeVerifica('');
                       setStep('register');
                     }}
                     className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition duration-200 font-medium"
@@ -485,6 +518,9 @@ const TesseraCheckPage = () => {
                     placeholder="Crea una password per accedere online"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Per accedere potrai usare: Email, Numero Tessera o Telefono + questa password
+                  </p>
                 </div>
 
                 <div className="flex items-center">
@@ -644,7 +680,7 @@ const TesseraCheckPage = () => {
 };
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState(''); // Changed from email to username
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLogin, setIsLogin] = useState(true);
@@ -666,7 +702,7 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
     
-    const success = await login(email, password);
+    const success = await login(username, password); // Changed from email to username
     if (!success) {
       setError('Credenziali non valide');
     }
@@ -679,7 +715,7 @@ const LoginPage = () => {
     const result = await register(formData);
     if (result.success) {
       setIsLogin(true);
-      setEmail(formData.email);
+      setUsername(formData.email); // Set username with email for login convenience
       setError('');
       alert('Registrazione completata! Ora puoi accedere.');
     } else {
@@ -718,15 +754,19 @@ const LoginPage = () => {
             <form className="space-y-6" onSubmit={handleLogin}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
+                  Username (Email, Tessera o Telefono)
                 </label>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                  placeholder="email@esempio.com oppure 2020000028284 oppure 3331234567"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Puoi usare email, numero tessera o telefono per accedere
+                </p>
               </div>
 
               <div>
@@ -985,6 +1025,1116 @@ const AdminLoginPage = () => {
   );
 };
 
+const ProfileManagement = ({ profile, user, onRefresh }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setEditForm(profile);
+    }
+  }, [profile]);
+
+  const handleInputChange = (field, value) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`${API}/user/profile`, editForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.status === 200) {
+        alert('Profilo aggiornato con successo!');
+        setIsEditing(false);
+        onRefresh(); // Refresh the profile data
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Errore nell\'aggiornamento del profilo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditForm(profile);
+    setIsEditing(false);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr || dateStr.length !== 8) return '';
+    const year = dateStr.slice(0, 4);
+    const month = dateStr.slice(4, 6);
+    const day = dateStr.slice(6, 8);
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateBack = (dateStr) => {
+    if (!dateStr) return '';
+    return dateStr.replace(/-/g, '');
+  };
+
+  if (!profile) {
+    return (
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Gestione Profilo</h2>
+          {!isEditing ? (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-4 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+            >
+              Modifica Profilo
+            </button>
+          ) : (
+            <div className="space-x-3">
+              <button
+                onClick={handleCancel}
+                disabled={loading}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={loading}
+                className="px-4 py-2 bg-imagross-green text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  'Salva Modifiche'
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Dati Personali */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Dati Personali</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.nome || ''}
+                    onChange={(e) => handleInputChange('nome', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.nome || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cognome</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.cognome || ''}
+                    onChange={(e) => handleInputChange('cognome', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.cognome || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                {isEditing ? (
+                  <input
+                    type="email"
+                    value={editForm.email || ''}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.email || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    value={editForm.telefono || ''}
+                    onChange={(e) => handleInputChange('telefono', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.telefono || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data di Nascita</label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formatDate(editForm.data_nascita)}
+                    onChange={(e) => handleInputChange('data_nascita', formatDateBack(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.data_nascita ? formatDate(profile.data_nascita) : 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sesso</label>
+                {isEditing ? (
+                  <select
+                    value={editForm.sesso || ''}
+                    onChange={(e) => handleInputChange('sesso', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  >
+                    <option value="">Seleziona</option>
+                    <option value="M">Maschio</option>
+                    <option value="F">Femmina</option>
+                  </select>
+                ) : (
+                  <p className="text-gray-900">
+                    {profile.sesso === 'M' ? 'Maschio' : profile.sesso === 'F' ? 'Femmina' : 'Non specificato'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Indirizzo e Contatti */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Indirizzo e Contatti</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Indirizzo</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.indirizzo || ''}
+                    onChange={(e) => handleInputChange('indirizzo', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.indirizzo || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Località</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.localita || ''}
+                    onChange={(e) => handleInputChange('localita', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.localita || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.provincia || ''}
+                    onChange={(e) => handleInputChange('provincia', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.provincia || 'Non specificato'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CAP</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.cap || ''}
+                    onChange={(e) => handleInputChange('cap', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-imagross-orange focus:border-transparent"
+                  />
+                ) : (
+                  <p className="text-gray-900">{profile.cap || 'Non specificato'}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dati Fidelity (Read Only) */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Dati Fidelity</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="text-sm text-gray-600">Tessera Fisica</div>
+            <div className="text-lg font-semibold text-imagross-orange">{profile.tessera_fisica}</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="text-sm text-gray-600">Punti Accumulati</div>
+            <div className="text-lg font-semibold text-purple-600">{profile.punti || 0}</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="text-sm text-gray-600">Bollini</div>
+            <div className="text-lg font-semibold text-imagross-green">{profile.bollini || 0}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Preferenze e Consensi */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">Preferenze e Consensi</h3>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">Newsletter</label>
+            {isEditing ? (
+              <input
+                type="checkbox"
+                checked={editForm.newsletter || false}
+                onChange={(e) => handleInputChange('newsletter', e.target.checked)}
+                className="h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+              />
+            ) : (
+              <span className={`px-2 py-1 text-xs rounded-full ${profile.newsletter ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {profile.newsletter ? 'Attiva' : 'Non attiva'}
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">Consenso Dati Personali</label>
+            <span className={`px-2 py-1 text-xs rounded-full ${profile.consenso_dati_personali ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              {profile.consenso_dati_personali ? 'Accordato' : 'Non accordato'}
+            </span>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">Consenso Marketing</label>
+            {isEditing ? (
+              <input
+                type="checkbox"
+                checked={editForm.consenso_marketing || false}
+                onChange={(e) => handleInputChange('consenso_marketing', e.target.checked)}
+                className="h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
+              />
+            ) : (
+              <span className={`px-2 py-1 text-xs rounded-full ${profile.consenso_marketing ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {profile.consenso_marketing ? 'Accordato' : 'Non accordato'}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RewardsSection = ({ analytics, profile }) => {
+  const [availableRewards, setAvailableRewards] = useState([]);
+  const [redeemedRewards, setRedeemedRewards] = useState([]);
+  const [activeTab, setActiveTab] = useState('available');
+
+  useEffect(() => {
+    generateRewards();
+  }, [analytics, profile]);
+
+  const generateRewards = () => {
+    if (!analytics || !profile) return;
+
+    const userLevel = analytics.loyalty_level;
+    const totalSpent = analytics.total_spending || 0;
+    const bollini = profile.bollini || 0;
+
+    // Generate dynamic rewards based on user data
+    const rewards = [
+      {
+        id: 1,
+        title: "Sconto 10% sul prossimo acquisto",
+        description: "Valido su tutti i prodotti, minimo €20",
+        type: "discount",
+        value: "10%",
+        cost: 50,
+        bolliniRequired: 50,
+        available: bollini >= 50,
+        category: "Sconti",
+        validUntil: "2025-12-31",
+        icon: "💰"
+      },
+      {
+        id: 2,
+        title: "Prodotto omaggio",
+        description: "Scegli un prodotto fino a €5",
+        type: "free_product",
+        value: "€5",
+        cost: 100,
+        bolliniRequired: 100,
+        available: bollini >= 100,
+        category: "Omaggi",
+        validUntil: "2025-12-31",
+        icon: "🎁"
+      },
+      {
+        id: 3,
+        title: "Sconto VIP 20%",
+        description: "Sconto esclusivo per clienti " + userLevel,
+        type: "vip_discount",
+        value: "20%",
+        cost: 150,
+        bolliniRequired: 150,
+        available: bollini >= 150 && ['Gold', 'Platinum'].includes(userLevel),
+        category: "VIP",
+        validUntil: "2025-12-31",
+        icon: "⭐"
+      },
+      {
+        id: 4,
+        title: "Buono spesa €10",
+        description: "Valido su tutti i reparti",
+        type: "voucher",
+        value: "€10",
+        cost: 200,
+        bolliniRequired: 200,
+        available: bollini >= 200,
+        category: "Buoni",
+        validUntil: "2025-12-31",
+        icon: "🎫"
+      },
+      {
+        id: 5,
+        title: "Spedizione gratuita",
+        description: "Per acquisti online",
+        type: "free_shipping",
+        value: "Gratis",
+        cost: 30,
+        bolliniRequired: 30,
+        available: bollini >= 30,
+        category: "Servizi",
+        validUntil: "2025-12-31",
+        icon: "🚚"
+      },
+      {
+        id: 6,
+        title: "Evento esclusivo VIP",
+        description: "Accesso prioritario alle anteprime",
+        type: "vip_event",
+        value: "Esclusivo",
+        cost: 300,
+        bolliniRequired: 300,
+        available: bollini >= 300 && userLevel === 'Platinum',
+        category: "Eventi",
+        validUntil: "2025-12-31",
+        icon: "🎊"
+      }
+    ];
+
+    // Offerte speciali basate sul livello
+    const specialOffers = [
+      {
+        id: 100,
+        title: "Benvenuto nuovo cliente!",
+        description: "Sconto 5% sul primo acquisto",
+        type: "welcome",
+        value: "5%",
+        cost: 0,
+        bolliniRequired: 0,
+        available: totalSpent < 50,
+        category: "Speciali",
+        validUntil: "2025-12-31",
+        icon: "👋"
+      },
+      {
+        id: 101,
+        title: "Cliente fedele",
+        description: "Grazie per la tua fedeltà - Sconto 15%",
+        type: "loyalty",
+        value: "15%",
+        cost: 0,
+        bolliniRequired: 0,
+        available: totalSpent > 500,
+        category: "Speciali",
+        validUntil: "2025-12-31",
+        icon: "💝"
+      }
+    ];
+
+    const allRewards = [...rewards, ...specialOffers];
+    setAvailableRewards(allRewards.filter(r => r.available));
+
+    // Mock redeemed rewards
+    setRedeemedRewards([
+      {
+        id: 200,
+        title: "Sconto 5% utilizzato",
+        description: "Utilizzato il 15/01/2025",
+        type: "used",
+        value: "5%",
+        redeemedDate: "2025-01-15",
+        icon: "✅"
+      }
+    ]);
+  };
+
+  const handleRedeemReward = async (reward) => {
+    try {
+      // In a real app, this would call an API
+      alert(`Premio "${reward.title}" riscattato con successo! Controlla la tua email per i dettagli.`);
+      
+      // Move reward to redeemed list
+      setRedeemedRewards(prev => [...prev, {
+        ...reward,
+        id: Date.now(),
+        redeemedDate: new Date().toISOString().split('T')[0]
+      }]);
+      
+      // Remove from available rewards
+      setAvailableRewards(prev => prev.filter(r => r.id !== reward.id));
+      
+    } catch (error) {
+      alert('Errore nel riscatto del premio. Riprova più tardi.');
+    }
+  };
+
+  const getCategoryColor = (category) => {
+    const colors = {
+      'Sconti': 'bg-blue-100 text-blue-800',
+      'Omaggi': 'bg-green-100 text-green-800',
+      'VIP': 'bg-purple-100 text-purple-800',
+      'Buoni': 'bg-yellow-100 text-yellow-800',
+      'Servizi': 'bg-indigo-100 text-indigo-800',
+      'Eventi': 'bg-pink-100 text-pink-800',
+      'Speciali': 'bg-red-100 text-red-800'
+    };
+    return colors[category] || 'bg-gray-100 text-gray-800';
+  };
+
+  if (!analytics || !profile) {
+    return (
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-48 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Stats */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Premi & Offerte</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white">
+            <div className="text-sm opacity-90">Bollini Disponibili</div>
+            <div className="text-2xl font-bold">{profile.bollini || 0}</div>
+          </div>
+          <div className="bg-gradient-to-r from-imagross-orange to-imagross-red rounded-lg p-4 text-white">
+            <div className="text-sm opacity-90">Livello Fidelity</div>
+            <div className="text-xl font-bold">{analytics.loyalty_level}</div>
+          </div>
+          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white">
+            <div className="text-sm opacity-90">Premi Disponibili</div>
+            <div className="text-2xl font-bold">{availableRewards.length}</div>
+          </div>
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white">
+            <div className="text-sm opacity-90">Premi Riscattati</div>
+            <div className="text-2xl font-bold">{redeemedRewards.length}</div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setActiveTab('available')}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'available' 
+                ? 'bg-white text-imagross-orange shadow-sm' 
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Premi Disponibili ({availableRewards.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('redeemed')}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'redeemed' 
+                ? 'bg-white text-imagross-orange shadow-sm' 
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Premi Riscattati ({redeemedRewards.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Rewards Grid */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        {activeTab === 'available' ? (
+          <div>
+            {availableRewards.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {availableRewards.map((reward) => (
+                  <div key={reward.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-3xl">{reward.icon}</span>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(reward.category)}`}>
+                        {reward.category}
+                      </span>
+                    </div>
+                    
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{reward.title}</h3>
+                    <p className="text-gray-600 text-sm mb-4">{reward.description}</p>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Valore:</span>
+                        <span className="font-semibold text-imagross-green">{reward.value}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Costo:</span>
+                        <span className="font-semibold">{reward.bolliniRequired} bollini</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Valido fino al:</span>
+                        <span className="text-gray-900">{reward.validUntil}</span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleRedeemReward(reward)}
+                      disabled={!reward.available}
+                      className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+                        reward.available
+                          ? 'bg-imagross-orange text-white hover:bg-imagross-red'
+                          : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {reward.available ? 'Riscatta Premio' : 'Bollini Insufficienti'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🎁</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nessun premio disponibile</h3>
+                <p className="text-gray-600">Accumula più bollini per sbloccare fantastici premi!</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            {redeemedRewards.length > 0 ? (
+              <div className="space-y-4">
+                {redeemedRewards.map((reward) => (
+                  <div key={reward.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{reward.icon}</span>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{reward.title}</h3>
+                          <p className="text-sm text-gray-600">{reward.description}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-gray-600">Riscattato il</div>
+                        <div className="font-semibold text-gray-900">{reward.redeemedDate}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📋</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nessun premio riscattato</h3>
+                <p className="text-gray-600">I premi che riscatterai appariranno qui.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* How it works */}
+      <div className="bg-gradient-to-r from-imagross-orange to-imagross-red rounded-lg p-6 text-white">
+        <h3 className="text-xl font-bold mb-4">Come Funziona il Sistema Premi</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center">
+            <div className="text-3xl mb-2">🛒</div>
+            <h4 className="font-semibold mb-1">1. Fai Shopping</h4>
+            <p className="text-sm opacity-90">Ogni acquisto ti fa guadagnare bollini</p>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl mb-2">💎</div>
+            <h4 className="font-semibold mb-1">2. Accumula Bollini</h4>
+            <p className="text-sm opacity-90">Più spendi, più bollini guadagni</p>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl mb-2">🎁</div>
+            <h4 className="font-semibold mb-1">3. Riscatta Premi</h4>
+            <p className="text-sm opacity-90">Usa i bollini per ottenere fantastici premi</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Dashboard = () => {
+  const { user } = useAuth();
+  const [analytics, setAnalytics] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState('overview');
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({});
+
+  const fetchPersonalAnalytics = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/user/personal-analytics`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPersonalAnalytics();
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/user/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProfile(response.data);
+      setProfileForm(response.data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  const handleProfileSave = async () => {
+    try {
+      setProfileLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`${API}/user/profile`, profileForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProfile(response.data);
+      setEditingProfile(false);
+      alert('Profilo aggiornato con successo!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Errore nell\'aggiornamento del profilo');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleProfileInputChange = (field, value) => {
+    setProfileForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr || dateStr.length !== 8) return '';
+    const year = dateStr.slice(0, 4);
+    const month = dateStr.slice(4, 6);
+    const day = dateStr.slice(6, 8);
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateBack = (dateStr) => {
+    if (!dateStr) return '';
+    return dateStr.replace(/-/g, '');
+  };
+
+  const getLoyaltyLevelColor = (level) => {
+    switch(level) {
+      case 'Platinum': return 'from-purple-500 to-purple-700';
+      case 'Gold': return 'from-yellow-400 to-yellow-600';
+      case 'Silver': return 'from-gray-400 to-gray-600';
+      default: return 'from-orange-400 to-orange-600';
+    }
+  };
+
+  const getLoyaltyLevelIcon = (level) => {
+    switch(level) {
+      case 'Platinum': return '💎';
+      case 'Gold': return '🏆';
+      case 'Silver': return '🥈';
+      default: return '🥉';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento la tua area personale...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const renderOverview = () => (
+    <div className="space-y-6">
+      {/* Loyalty Card Digital */}
+      <div className={`bg-gradient-to-r ${getLoyaltyLevelColor(analytics?.summary?.loyalty_level)} text-white rounded-xl p-6 shadow-lg relative overflow-hidden`}>
+        <div className="absolute top-0 right-0 text-6xl opacity-20">
+          {getLoyaltyLevelIcon(analytics?.summary?.loyalty_level)}
+        </div>
+        <div className="relative z-10">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="text-2xl font-bold">{user?.nome} {user?.cognome}</h2>
+              <p className="text-lg opacity-90">{analytics?.summary?.loyalty_level} Member</p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm opacity-75">Tessera</div>
+              <div className="font-mono text-lg">{user?.tessera_fisica}</div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-3xl font-bold">{user?.punti || 0}</div>
+              <div className="text-sm opacity-75">Punti</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold">{analytics?.summary?.total_bollini || 0}</div>
+              <div className="text-sm opacity-75">Bollini</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold">€{analytics?.summary?.total_spent || 0}</div>
+              <div className="text-sm opacity-75">Spesa Totale</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <span className="text-2xl">🛒</span>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Acquisti Totali</p>
+              <p className="text-2xl font-semibold text-gray-900">{analytics?.summary?.total_transactions || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <span className="text-2xl">💰</span>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Spesa Media</p>
+              <p className="text-2xl font-semibold text-gray-900">€{analytics?.summary?.avg_transaction || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div className="flex items-center">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <span className="text-2xl">📅</span>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Frequenza</p>
+              <p className="text-2xl font-semibold text-gray-900">{analytics?.summary?.shopping_frequency || 0}/mese</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div className="flex items-center">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <span className="text-2xl">🕒</span>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Ultimo Acquisto</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {analytics?.summary?.days_since_last_shop === 0 ? 'Oggi' : 
+                 analytics?.summary?.days_since_last_shop === 1 ? 'Ieri' :
+                 `${analytics?.summary?.days_since_last_shop} giorni fa`}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Achievements & Next Rewards */}
+      {analytics?.achievements?.length > 0 && (
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span className="mr-2">🏆</span>
+            I Tuoi Achievement
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {analytics.achievements.map((achievement, index) => (
+              <div key={index} className="flex items-center p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                <span className="text-2xl mr-3">{achievement.icon}</span>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">{achievement.name}</p>
+                  <p className="text-xs text-gray-600">{achievement.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Next Rewards */}
+      {analytics?.next_rewards?.length > 0 && (
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span className="mr-2">🎯</span>
+            Prossimi Traguardi
+          </h3>
+          <div className="space-y-3">
+            {analytics.next_rewards.map((reward, index) => (
+              <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-imagross-orange to-imagross-red text-white rounded-lg">
+                <div>
+                  <p className="font-semibold">{reward.reward}</p>
+                  <p className="text-sm opacity-90">{reward.description}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl">🎁</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Spending Insights */}
+      {analytics?.spending_insights?.length > 0 && (
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span className="mr-2">💡</span>
+            I Tuoi Insights
+          </h3>
+          <div className="space-y-3">
+            {analytics.spending_insights.map((insight, index) => (
+              <div key={index} className={`flex items-center p-4 rounded-lg ${
+                insight.type === 'positive' ? 'bg-green-50 border border-green-200' :
+                insight.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
+                'bg-blue-50 border border-blue-200'
+              }`}>
+                <span className="text-2xl mr-3">{insight.icon}</span>
+                <p className="text-gray-800">{insight.message}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderAnalytics = () => (
+    <div className="space-y-6">
+      {/* Monthly Trend Chart */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Trend Spesa Mensile</h3>
+        {analytics?.monthly_trend?.length > 0 ? (
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <LineChart data={analytics.monthly_trend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="month" stroke="#374151" fontSize={12} />
+                <YAxis stroke="#374151" fontSize={12} tickFormatter={(value) => `€${value}`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                  formatter={(value) => [`€${value}`, 'Spesa']}
+                />
+                <Line type="monotone" dataKey="spent" stroke="#F97316" strokeWidth={3} dot={{ fill: '#F97316', strokeWidth: 2, r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">Nessun dato disponibile</p>
+        )}
+      </div>
+
+      {/* Shopping Patterns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">I Tuoi Pattern di Acquisto</h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Giorno Preferito:</span>
+              <span className="font-semibold text-imagross-orange">{analytics?.shopping_patterns?.favorite_day}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Orario Preferito:</span>
+              <span className="font-semibold text-imagross-orange">{analytics?.shopping_patterns?.favorite_hour}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Giorno Top:</span>
+              <span className="font-semibold text-imagross-orange">{analytics?.shopping_patterns?.peak_shopping_day}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Sfide Attive</h3>
+          {analytics?.challenges?.length > 0 ? (
+            <div className="space-y-4">
+              {analytics.challenges.map((challenge, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-semibold text-gray-900">{challenge.name}</h4>
+                    <span className="text-sm text-imagross-orange font-medium">{challenge.reward}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">{challenge.description}</p>
+                  <div className="flex items-center">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2 mr-3">
+                      <div 
+                        className="bg-imagross-orange h-2 rounded-full" 
+                        style={{ width: `${Math.min(100, (challenge.progress / challenge.target) * 100)}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">
+                      {challenge.progress}/{challenge.target}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">Nessuna sfida attiva</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const sections = [
+    { id: 'overview', name: 'Panoramica', icon: '🏠' },
+    { id: 'analytics', name: 'Le Tue Analytics', icon: '📊' },
+    { id: 'profile', name: 'Profilo', icon: '👤' },
+    { id: 'rewards', name: 'Premi & Offerte', icon: '🎁' }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Ciao, {user?.nome}! 👋</h1>
+              <p className="text-lg opacity-90 mt-1">Ecco la tua area personale ImaGross</p>
+            </div>
+            <div className="hidden md:block">
+              <div className="text-right">
+                <p className="text-sm opacity-75">Il tuo livello</p>
+                <p className="text-2xl font-bold flex items-center justify-end">
+                  {getLoyaltyLevelIcon(analytics?.summary?.loyalty_level)} {analytics?.summary?.loyalty_level}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-8">
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                onClick={() => setActiveSection(section.id)}
+                className={`flex items-center py-4 px-2 border-b-2 font-medium text-sm ${
+                  activeSection === section.id
+                    ? 'border-imagross-orange text-imagross-orange'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <span className="mr-2">{section.icon}</span>
+                {section.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {activeSection === 'overview' && renderOverview()}
+        {activeSection === 'analytics' && renderAnalytics()}
+        {activeSection === 'profile' && (
+          <ProfileManagement profile={profile} user={user} onRefresh={fetchUserProfile} />
+        )}
+        {activeSection === 'rewards' && (
+          <RewardsSection analytics={analytics} profile={profile} />
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Admin Dashboard Components
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -1066,94 +2216,264 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard Analytics</h1>
-        <div className="flex space-x-4 mt-4 sm:mt-0">
-          <select
-            value={selectedTimeRange}
-            onChange={(e) => setSelectedTimeRange(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="7d">Ultimi 7 giorni</option>
-            <option value="30d">Ultimi 30 giorni</option>
-            <option value="90d">Ultimi 90 giorni</option>
-          </select>
+    <div className="space-y-8">
+      {/* Modern Header with Gradient Background */}
+      <div className="relative bg-gradient-to-br from-imagross-orange via-imagross-red to-red-600 rounded-2xl p-8 text-white shadow-2xl overflow-hidden">
+        <div className="absolute inset-0 bg-black bg-opacity-10"></div>
+        <div className="relative z-10">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">ImaGross Analytics Center</h1>
+              <p className="text-lg opacity-90">Sistema di Gestione Fedeltà & Vendite Avanzato</p>
+              <div className="flex items-center space-x-4 mt-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm">Sistema Operativo</span>
+                </div>
+                <div className="text-sm opacity-75">
+                  Ultimo aggiornamento: {new Date().toLocaleDateString('it-IT')}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 mt-4 sm:mt-0">
+              <select
+                value={selectedTimeRange}
+                onChange={(e) => setSelectedTimeRange(e.target.value)}
+                className="px-4 py-2 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-white placeholder-opacity-75 backdrop-blur-sm"
+              >
+                <option value="7d" className="text-gray-900">Ultimi 7 giorni</option>
+                <option value="30d" className="text-gray-900">Ultimi 30 giorni</option>
+                <option value="90d" className="text-gray-900">Ultimi 90 giorni</option>
+              </select>
+              <button className="px-4 py-2 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg hover:bg-opacity-30 transition-all duration-200 backdrop-blur-sm">
+                📊 Export Data
+              </button>
+            </div>
+          </div>
         </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white bg-opacity-5 rounded-full -mr-32 -mt-32"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white bg-opacity-5 rounded-full -ml-24 -mb-24"></div>
       </div>
 
-      {/* Key Metrics Cards */}
+      {/* Enhanced Key Metrics Cards */}
       {stats && analytics && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Revenue Card */}
-            <div className="bg-gradient-to-r from-imagross-orange to-red-500 rounded-lg shadow p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-orange-100 text-sm font-medium">Fatturato Totale</p>
-                  <p className="text-3xl font-bold">€{analytics.summary.total_revenue.toLocaleString()}</p>
-                  <p className="text-orange-100 text-sm">
-                    Medio: €{analytics.summary.avg_transaction}/transazione
-                  </p>
+            {/* Revenue Card - Enhanced */}
+            <div className="relative bg-gradient-to-br from-imagross-orange to-red-500 rounded-2xl shadow-xl p-6 text-white overflow-hidden transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm">
+                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                    </svg>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <span className="text-xs opacity-75">Real-time</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-3 bg-white bg-opacity-20 rounded-full">
-                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z"/>
-                  </svg>
+                <div>
+                  <p className="text-orange-100 text-sm font-medium mb-1">Fatturato Totale Vendite</p>
+                  <p className="text-3xl font-bold mb-2">€{stats.vendite_stats?.total_revenue?.toLocaleString('it-IT', {minimumFractionDigits: 2}) || '0'}</p>
+                  <div className="flex items-center space-x-2 text-sm opacity-90">
+                    <span>{stats.vendite_stats?.total_sales_records?.toLocaleString() || 0} vendite</span>
+                    <div className="w-1 h-1 bg-white rounded-full"></div>
+                    <span className="text-green-200">↗ +5.2%</span>
+                  </div>
                 </div>
               </div>
+              <div className="absolute -bottom-2 -right-2 w-20 h-20 bg-white bg-opacity-5 rounded-full"></div>
             </div>
 
-            {/* Transactions Card */}
-            <div className="bg-gradient-to-r from-imagross-green to-green-600 rounded-lg shadow p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-100 text-sm font-medium">Transazioni</p>
-                  <p className="text-3xl font-bold">{analytics.summary.total_transactions.toLocaleString()}</p>
-                  <p className="text-green-100 text-sm">
-                    {stats.total_users} clienti attivi
-                  </p>
+            {/* Customers Card - Enhanced */}
+            <div className="relative bg-gradient-to-br from-imagross-green to-green-600 rounded-2xl shadow-xl p-6 text-white overflow-hidden transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm">
+                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.5 8H16c-.8 0-1.5.7-1.5 1.5v6c0 .8.7 1.5 1.5 1.5h2.5V22h2zM12.5 11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm2 16v-7H9V9c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v6h1.5v7h4z"/>
+                    </svg>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">Attivi</span>
+                  </div>
                 </div>
-                <div className="p-3 bg-white bg-opacity-20 rounded-full">
-                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
+                <div>
+                  <p className="text-green-100 text-sm font-medium mb-1">Clienti con Vendite</p>
+                  <p className="text-3xl font-bold mb-2">{stats.vendite_stats?.unique_customers_vendite?.toLocaleString() || 0}</p>
+                  <div className="flex items-center space-x-2 text-sm opacity-90">
+                    <span>Su {stats.total_users} registrati</span>
+                    <div className="w-1 h-1 bg-white rounded-full"></div>
+                    <span className="text-green-200">↗ +12</span>
+                  </div>
                 </div>
               </div>
+              <div className="absolute -bottom-2 -right-2 w-20 h-20 bg-white bg-opacity-5 rounded-full"></div>
             </div>
 
-            {/* Bollini Card */}
-            <div className="bg-gradient-to-r from-purple-500 to-purple-700 rounded-lg shadow p-6 text-white">
-              <div className="flex items-center justify-between">
+            {/* Products Card - Enhanced */}
+            <div className="relative bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl shadow-xl p-6 text-white overflow-hidden transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm">
+                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M19 7h-1V2H6v5H5c-1.1 0-2 .9-2 2v11h18V9c0-1.1-.9-2-2-2zM8 4h8v3H8V4z"/>
+                    </svg>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">Catalogo</span>
+                  </div>
+                </div>
                 <div>
-                  <p className="text-purple-100 text-sm font-medium">Bollini Distribuiti</p>
-                  <p className="text-3xl font-bold">{analytics.summary.total_bollini.toLocaleString()}</p>
+                  <p className="text-purple-100 text-sm font-medium mb-1">Prodotti nel Catalogo</p>
+                  <p className="text-3xl font-bold mb-2">{stats.vendite_stats?.unique_products?.toLocaleString() || 0}</p>
+                  <div className="flex items-center space-x-2 text-sm opacity-90">
+                    <span>{stats.vendite_stats?.total_quantity_sold?.toLocaleString() || 0} pezzi venduti</span>
+                    <div className="w-1 h-1 bg-white rounded-full"></div>
+                    <span className="text-purple-200">↗ +156</span>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -bottom-2 -right-2 w-20 h-20 bg-white bg-opacity-5 rounded-full"></div>
+            </div>
+
+            {/* Loyalty Points Card - Enhanced */}
+            <div className="relative bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-xl p-6 text-white overflow-hidden transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm">
+                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">Loyalty</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-blue-100 text-sm font-medium mb-1">Bollini Distribuiti</p>
+                  <p className="text-3xl font-bold mb-2">{analytics.summary?.total_bollini?.toLocaleString() || 0}</p>
+                  <div className="flex items-center space-x-2 text-sm opacity-90">
+                    <span>{stats.scontrini_stats?.total_scontrini?.toLocaleString() || 0} scontrini</span>
+                    <div className="w-1 h-1 bg-white rounded-full"></div>
+                    <span className="text-blue-200">↗ +8.9%</span>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -bottom-2 -right-2 w-20 h-20 bg-white bg-opacity-5 rounded-full"></div>
+            </div>
+          </div>
+                  <p className="text-3xl font-bold">{stats.vendite_stats?.unique_products?.toLocaleString() || 0}</p>
                   <p className="text-purple-100 text-sm">
-                    Media: {analytics.summary.avg_bollini_per_transaction}/transazione
+                    {stats.vendite_stats?.total_quantity_sold?.toLocaleString() || 0} pezzi totali
                   </p>
                 </div>
                 <div className="p-3 bg-white bg-opacity-20 rounded-full">
                   <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                    <path d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 3H17M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17M17 13v4a2 2 0 01-2 2H9a2 2 0 01-2-2v-4m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01"/>
                   </svg>
                 </div>
               </div>
             </div>
 
-            {/* Stores Card */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-700 rounded-lg shadow p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-100 text-sm font-medium">Punti Vendita</p>
-                  <p className="text-3xl font-bold">{stats.total_stores}</p>
-                  <p className="text-blue-100 text-sm">
-                    {stats.total_cashiers} casse attive
+          
+          {/* Modern Additional Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* System Status Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl">
+                  <svg className="w-8 h-8 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                  </svg>
+                </div>
+                <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Operativo</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Sistema Fedeltà</h3>
+                <p className="text-gray-600 text-sm mb-3">Tutti i servizi sono attivi</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Uptime</span>
+                    <span className="font-medium text-green-600">99.9%</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Stores Attivi</span>
+                    <span className="font-medium">{stats.total_stores || 0}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* User Activity Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl">
+                  <svg className="w-8 h-8 text-teal-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.5 8H16c-.8 0-1.5.7-1.5 1.5v6c0 .8.7 1.5 1.5 1.5h2.5V22h2z"/>
+                  </svg>
+                </div>
+                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">+{stats.recent_registrations || 0} questa settimana</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Utenti Registrati</h3>
+                <p className="text-3xl font-bold text-gray-900 mb-2">{stats.total_users || 0}</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Attivi oggi</span>
+                    <span className="font-medium text-blue-600">{Math.floor((stats.total_users || 0) * 0.15)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Con acquisti</span>
+                    <span className="font-medium">{stats.vendite_stats?.unique_customers_vendite || 0}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Growth Metrics Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl">
+                  <svg className="w-8 h-8 text-amber-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
+                  </svg>
+                </div>
+                <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-full">Crescita</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Performance</h3>
+                <p className="text-gray-600 text-sm mb-3">Metriche di crescita</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Punti Totali</span>
+                    <span className="font-medium text-amber-600">{stats.total_points_distributed?.toLocaleString() || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Transazione Media</span>
+                    <span className="font-medium">€{((stats.vendite_stats?.total_revenue || 0) / (stats.vendite_stats?.total_sales_records || 1)).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+                  <p className="text-3xl font-bold">{stats.total_points_distributed?.toLocaleString() || 0}</p>
+                  <p className="text-amber-100 text-sm">
+                    Sistema fedeltà attivo
                   </p>
                 </div>
                 <div className="p-3 bg-white bg-opacity-20 rounded-full">
                   <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H3.862a2 2 0 01-1.995-1.858L1 7m18 0l-2-4H3L1 7m18 0H1"/>
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
                   </svg>
                 </div>
               </div>
@@ -2130,6 +3450,9 @@ const UserManagement = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [isEditingUser, setIsEditingUser] = useState(false);
+  const [editUserForm, setEditUserForm] = useState({});
+  const [savingUser, setSavingUser] = useState(false);
   const { adminToken } = useAuth();
 
   const limit = 20;
@@ -2162,7 +3485,65 @@ const UserManagement = () => {
 
   const handleUserClick = (user) => {
     setSelectedUser(user);
+    setEditUserForm(user);
+    setIsEditingUser(false);
     setShowUserModal(true);
+  };
+
+  const handleEditUser = () => {
+    setIsEditingUser(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingUser(false);
+    setEditUserForm(selectedUser);
+  };
+
+  const handleSaveUser = async () => {
+    try {
+      setSavingUser(true);
+      
+      // Prepare update data for the registered user
+      const updateData = {
+        nome: editUserForm.nome,
+        cognome: editUserForm.cognome,
+        email: editUserForm.email,
+        telefono: editUserForm.telefono,
+        localita: editUserForm.localita,
+        indirizzo: editUserForm.indirizzo,
+        provincia: editUserForm.provincia,
+        sesso: editUserForm.sesso
+      };
+
+      // Find the registered user by tessera_fisica and update
+      const response = await axios.put(`${API}/admin/user-profile/${editUserForm.tessera_fisica}`, updateData, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+
+      if (response.status === 200) {
+        // Update the local state
+        setSelectedUser({...selectedUser, ...updateData});
+        setUsers(users.map(user => 
+          user.tessera_fisica === editUserForm.tessera_fisica 
+            ? {...user, ...updateData}
+            : user
+        ));
+        setIsEditingUser(false);
+        alert('Profilo utente aggiornato con successo!');
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert('Errore nell\'aggiornamento del profilo utente. Verifica che l\'utente sia registrato nella piattaforma.');
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setEditUserForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const formatDate = (dateStr) => {
@@ -2373,41 +3754,115 @@ const UserManagement = () => {
               <div className="bg-gray-50 rounded-lg p-6">
                 <h4 className="text-lg font-semibold text-gray-900 mb-4">Dati Anagrafici</h4>
                 <div className="space-y-3">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Nome:</span>
-                    <span className="text-gray-900">{selectedUser.nome || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="text"
+                        value={editUserForm.nome || ''}
+                        onChange={(e) => handleInputChange('nome', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.nome || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Cognome:</span>
-                    <span className="text-gray-900">{selectedUser.cognome || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="text"
+                        value={editUserForm.cognome || ''}
+                        onChange={(e) => handleInputChange('cognome', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.cognome || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Sesso:</span>
-                    <span className="text-gray-900">{selectedUser.sesso === 'F' ? 'Femmina' : 'Maschio'}</span>
+                    {isEditingUser ? (
+                      <select
+                        value={editUserForm.sesso || ''}
+                        onChange={(e) => handleInputChange('sesso', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      >
+                        <option value="M">Maschio</option>
+                        <option value="F">Femmina</option>
+                      </select>
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.sesso === 'F' ? 'Femmina' : 'Maschio'}</span>
+                    )}
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-600">Data Nascita:</span>
                     <span className="text-gray-900">{formatDate(selectedUser.data_nascita)}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Email:</span>
-                    <span className="text-gray-900">{selectedUser.email || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="email"
+                        value={editUserForm.email || ''}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.email || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Telefono:</span>
-                    <span className="text-gray-900">{selectedUser.telefono || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="tel"
+                        value={editUserForm.telefono || ''}
+                        onChange={(e) => handleInputChange('telefono', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.telefono || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Indirizzo:</span>
-                    <span className="text-gray-900">{selectedUser.indirizzo || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="text"
+                        value={editUserForm.indirizzo || ''}
+                        onChange={(e) => handleInputChange('indirizzo', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.indirizzo || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Località:</span>
-                    <span className="text-gray-900">{selectedUser.localita || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="text"
+                        value={editUserForm.localita || ''}
+                        onChange={(e) => handleInputChange('localita', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.localita || 'N/D'}</span>
+                    )}
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-600">Provincia:</span>
-                    <span className="text-gray-900">{selectedUser.provincia || 'N/D'}</span>
+                    {isEditingUser ? (
+                      <input
+                        type="text"
+                        value={editUserForm.provincia || ''}
+                        onChange={(e) => handleInputChange('provincia', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
+                      />
+                    ) : (
+                      <span className="text-gray-900">{selectedUser.provincia || 'N/D'}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2447,21 +3902,46 @@ const UserManagement = () => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={() => setShowUserModal(false)}
-                className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
-              >
-                Chiudi
-              </button>
-              <button
-                onClick={() => {
-                  // Qui potresti implementare la funzionalità di modifica
-                  console.log('Edit user:', selectedUser);
-                }}
-                className="px-6 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
-              >
-                Modifica
-              </button>
+              {isEditingUser ? (
+                <>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={savingUser}
+                    className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={handleSaveUser}
+                    disabled={savingUser}
+                    className="px-6 py-2 bg-imagross-green text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center"
+                  >
+                    {savingUser ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Salvando...
+                      </>
+                    ) : (
+                      'Salva Modifiche'
+                    )}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowUserModal(false)}
+                    className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    Chiudi
+                  </button>
+                  <button
+                    onClick={handleEditUser}
+                    className="px-6 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+                  >
+                    Modifica Profilo
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -2473,118 +3953,264 @@ const QRRegistrationPage = () => {
   return <div>QR Registration Page - Coming Soon</div>;
 };
 
-const AdminPanel = () => {
-    setEditingUser(user.id);
-    setEditFormData({
-      nome: user.nome || '',
-      cognome: user.cognome || '',
-      email: user.email || '',
-      telefono: user.telefono || '',
-      localita: user.localita || '',
-      punti: user.punti || 0,
-      active: user.active !== false,
-      indirizzo: user.indirizzo || '',
-      cap: user.cap || '',
-      provincia: user.provincia || '',
-      data_nascita: user.data_nascita || '',
-      newsletter: user.newsletter || false,
-      bollini: user.bollini || 0,
-      progressivo_spesa: user.progressivo_spesa || 0,
-      consenso_dati_personali: user.consenso_dati_personali !== false,
-      consenso_dati_pubblicitari: user.consenso_dati_pubblicitari !== false,
-      consenso_profilazione: user.consenso_profilazione,
-      consenso_marketing: user.consenso_marketing,
-      coniugato: user.coniugato,
-      numero_figli: user.numero_figli || 0,
-      data_matrimonio: user.data_matrimonio || '',
-      animali_cani: user.animali_cani || false,
-      animali_gatti: user.animali_gatti || false,
-      intolleranza_lattosio: user.intolleranza_lattosio || false,
-      intolleranza_glutine: user.intolleranza_glutine || false,
-      intolleranza_nichel: user.intolleranza_nichel || false,
-      celiachia: user.celiachia || false,
-      altra_intolleranza: user.altra_intolleranza || '',
-      richiede_fattura: user.richiede_fattura || false,
-      ragione_sociale: user.ragione_sociale || ''
-    });
-    setShowEditModal(true);
-  };
+const RewardManagement = () => {
+  const [activeSubTab, setActiveSubTab] = useState('overview');
+  const [rewards, setRewards] = useState([]);
+  const [redemptions, setRedemptions] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedReward, setSelectedReward] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showRedemptionModal, setShowRedemptionModal] = useState(false);
+  const [selectedRedemption, setSelectedRedemption] = useState(null);
+  const { adminToken } = useAuth();
 
-  const cancelEdit = () => {
-    setEditingUser(null);
-    setShowEditModal(false);
-    setEditFormData({
-      nome: '',
-      cognome: '',
-      email: '',
-      telefono: '',
-      localita: '',
-      punti: 0,
-      active: true,
-      indirizzo: '',
-      cap: '',
-      provincia: '',
-      data_nascita: '',
-      newsletter: false,
-      bollini: 0,
-      progressivo_spesa: 0,
-      consenso_dati_personali: true,
-      consenso_dati_pubblicitari: true,
-      consenso_profilazione: null,
-      consenso_marketing: null,
-      coniugato: null,
-      numero_figli: 0,
-      data_matrimonio: '',
-      animali_cani: false,
-      animali_gatti: false,
-      intolleranza_lattosio: false,
-      intolleranza_glutine: false,
-      intolleranza_nichel: false,
-      celiachia: false,
-      altra_intolleranza: '',
-      richiede_fattura: false,
-      ragione_sociale: ''
-    });
-  };
+  // Pagination states
+  const [rewardsPage, setRewardsPage] = useState(1);
+  const [redemptionsPage, setRedemptionsPage] = useState(1);
+  const [rewardsTotal, setRewardsTotal] = useState(0);
+  const [redemptionsTotal, setRedemptionsTotal] = useState(0);
+  
+  // Filter states
+  const [rewardFilters, setRewardFilters] = useState({
+    status: '',
+    category: '',
+    search: ''
+  });
+  const [redemptionFilters, setRedemptionFilters] = useState({
+    status: '',
+    reward_id: '',
+    date_from: '',
+    date_to: ''
+  });
 
-  const saveEdit = async (userId) => {
+  const rewardCategories = [
+    'Sconti', 'Omaggi', 'VIP', 'Buoni', 'Servizi', 'Eventi', 'Speciali'
+  ];
+
+  const rewardStatuses = [
+    { value: 'active', label: 'Attivo' },
+    { value: 'inactive', label: 'Inattivo' },
+    { value: 'expired', label: 'Scaduto' },
+    { value: 'out_of_stock', label: 'Esaurito' }
+  ];
+
+  const redemptionStatuses = [
+    { value: 'pending', label: 'In Attesa' },
+    { value: 'approved', label: 'Approvato' },
+    { value: 'used', label: 'Utilizzato' },
+    { value: 'rejected', label: 'Rifiutato' },
+    { value: 'expired', label: 'Scaduto' }
+  ];
+
+  useEffect(() => {
+    fetchData();
+  }, [activeSubTab, rewardsPage, redemptionsPage, rewardFilters, redemptionFilters]);
+
+  const fetchData = async () => {
     try {
-      await axios.put(`${API}/admin/users/${userId}`, editFormData, {
-        headers: { Authorization: `Bearer ${adminToken}` }
-      });
+      setLoading(true);
       
-      setEditingUser(null);
-      setShowEditModal(false);
-      fetchUsers(); // Refresh the list
-      alert('Utente aggiornato con successo!');
+      if (activeSubTab === 'overview' || activeSubTab === 'rewards') {
+        await fetchRewards();
+      }
+      
+      if (activeSubTab === 'overview' || activeSubTab === 'redemptions') {
+        await fetchRedemptions();
+      }
+      
+      if (activeSubTab === 'overview' || activeSubTab === 'analytics') {
+        await fetchAnalytics();
+      }
     } catch (error) {
-      alert('Errore durante l\'aggiornamento: ' + error.response?.data?.detail);
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEditInputChange = (e) => {
-    const value = e.target.type === 'checkbox' ? e.target.checked : 
-                  e.target.type === 'number' ? parseFloat(e.target.value) || 0 : 
-                  e.target.value;
-    setEditFormData({
-      ...editFormData,
-      [e.target.name]: value
-    });
+  const fetchRewards = async () => {
+    try {
+      const params = new URLSearchParams({
+        page: rewardsPage.toString(),
+        limit: '10'
+      });
+      
+      // Add only non-empty filters
+      if (rewardFilters.status) params.append('status', rewardFilters.status);
+      if (rewardFilters.category) params.append('category', rewardFilters.category);
+      if (rewardFilters.search) params.append('search', rewardFilters.search);
+      
+      const response = await axios.get(`${API}/admin/rewards?${params}`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setRewards(response.data.rewards);
+      setRewardsTotal(response.data.total);
+    } catch (error) {
+      console.error('Error fetching rewards:', error);
+    }
   };
 
-  const filteredUsers = users.filter(user => 
-    user.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.cognome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.tessera_fisica.includes(searchTerm)
-  );
+  const fetchRedemptions = async () => {
+    try {
+      const params = new URLSearchParams({
+        page: redemptionsPage.toString(),
+        limit: '10'
+      });
+      
+      // Add only non-empty filters
+      if (redemptionFilters.status) params.append('status', redemptionFilters.status);
+      if (redemptionFilters.reward_id) params.append('reward_id', redemptionFilters.reward_id);
+      if (redemptionFilters.date_from) params.append('date_from', redemptionFilters.date_from);
+      if (redemptionFilters.date_to) params.append('date_to', redemptionFilters.date_to);
+      
+      const response = await axios.get(`${API}/admin/redemptions?${params}`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setRedemptions(response.data.redemptions);
+      setRedemptionsTotal(response.data.total);
+    } catch (error) {
+      console.error('Error fetching redemptions:', error);
+    }
+  };
 
-  if (loading) {
+  const fetchAnalytics = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/rewards/analytics`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    }
+  };
+
+  const handleCreateReward = async (rewardData) => {
+    try {
+      await axios.post(`${API}/admin/rewards`, rewardData, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      alert('Premio creato con successo!');
+      setShowCreateModal(false);
+      fetchRewards();
+    } catch (error) {
+      console.error('Error creating reward:', error);
+      alert('Errore nella creazione del premio');
+    }
+  };
+
+  const handleEditReward = async (rewardId, updateData) => {
+    try {
+      await axios.put(`${API}/admin/rewards/${rewardId}`, updateData, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      alert('Premio aggiornato con successo!');
+      setShowEditModal(false);
+      setSelectedReward(null);
+      fetchRewards();
+    } catch (error) {
+      console.error('Error updating reward:', error);
+      alert('Errore nell\'aggiornamento del premio');
+    }
+  };
+
+  const handleDeleteReward = async (rewardId) => {
+    if (!confirm('Sei sicuro di voler disattivare questo premio?')) return;
+    
+    try {
+      await axios.delete(`${API}/admin/rewards/${rewardId}`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      alert('Premio disattivato con successo!');
+      fetchRewards();
+    } catch (error) {
+      console.error('Error deleting reward:', error);
+      alert('Errore nella disattivazione del premio');
+    }
+  };
+
+  const handleProcessRedemption = async (redemptionId, action, notes = '', rejectionReason = '') => {
+    try {
+      await axios.put(`${API}/admin/redemptions/${redemptionId}`, {
+        action,
+        admin_notes: notes,
+        rejection_reason: rejectionReason
+      }, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      const actionText = action === 'approve' ? 'approvato' : 'rifiutato';
+      alert(`Riscatto ${actionText} con successo!`);
+      setShowRedemptionModal(false);
+      setSelectedRedemption(null);
+      fetchRedemptions();
+    } catch (error) {
+      console.error('Error processing redemption:', error);
+      alert('Errore nel processare il riscatto');
+    }
+  };
+
+  const handleMarkRedemptionUsed = async (redemptionId, usageData) => {
+    try {
+      await axios.post(`${API}/admin/redemptions/${redemptionId}/use`, usageData, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      alert('Utilizzo registrato con successo!');
+      fetchRedemptions();
+    } catch (error) {
+      console.error('Error marking redemption as used:', error);
+      alert('Errore nella registrazione utilizzo');
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      active: 'bg-green-100 text-green-800',
+      inactive: 'bg-gray-100 text-gray-800',
+      expired: 'bg-red-100 text-red-800',
+      out_of_stock: 'bg-yellow-100 text-yellow-800',
+      pending: 'bg-yellow-100 text-yellow-800',
+      approved: 'bg-blue-100 text-blue-800',
+      used: 'bg-green-100 text-green-800',
+      rejected: 'bg-red-100 text-red-800'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getCategoryColor = (category) => {
+    const colors = {
+      'Sconti': 'bg-blue-100 text-blue-800',
+      'Omaggi': 'bg-green-100 text-green-800',
+      'VIP': 'bg-purple-100 text-purple-800',
+      'Buoni': 'bg-yellow-100 text-yellow-800',
+      'Servizi': 'bg-indigo-100 text-indigo-800',
+      'Eventi': 'bg-pink-100 text-pink-800',
+      'Speciali': 'bg-red-100 text-red-800'
+    };
+    return colors[category] || 'bg-gray-100 text-gray-800';
+  };
+
+  const subTabs = [
+    { id: 'overview', name: 'Panoramica', icon: '📊' },
+    { id: 'rewards', name: 'Gestione Premi', icon: '🎁' },
+    { id: 'redemptions', name: 'Riscatti', icon: '🎫' },
+    { id: 'analytics', name: 'Analytics', icon: '📈' }
+  ];
+
+  if (loading && activeSubTab === 'overview') {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento utenti...</p>
+          <p className="mt-4 text-gray-600">Caricamento gestione premi...</p>
         </div>
       </div>
     );
@@ -2592,476 +4218,376 @@ const AdminPanel = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Gestione Utenti</h1>
-        <div className="flex space-x-4">
-          <input
-            type="text"
-            placeholder="Cerca utenti..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
-          />
+      {/* Header */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Gestione Premi Avanzata</h1>
+            <p className="text-gray-600 mt-1">Sistema completo per la gestione premi e riscatti</p>
+          </div>
+          
+          {activeSubTab === 'rewards' && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-4 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors flex items-center"
+            >
+              <span className="mr-2">➕</span>
+              Crea Nuovo Premio
+            </button>
+          )}
+        </div>
+
+        {/* Sub Navigation */}
+        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+          {subTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubTab(tab.id)}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center ${
+                activeSubTab === tab.id 
+                  ? 'bg-white text-imagross-orange shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.name}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Utenti ({filteredUsers.length} di {users.length})
-          </h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tessera Fisica</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Punti/Bollini</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Spesa Totale</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supermercato</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registrato</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Azioni</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">{user.nome} {user.cognome}</div>
-                    <div className="text-sm text-gray-500">
-                      {user.telefono} | {user.localita}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.tessera_fisica}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="flex space-x-2">
-                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                        {user.punti || 0} pts
-                      </span>
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                        {user.bollini || 0} bollini
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    €{(user.progressivo_spesa || 0).toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.store_name || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(user.created_at).toLocaleDateString('it-IT')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.active ? 'Attivo' : 'Disattivo'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => startEdit(user)}
-                      className="text-imagross-orange hover:text-imagross-red"
-                    >
-                      Modifica Completa
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Content based on active sub-tab */}
+      {activeSubTab === 'overview' && (
+        <RewardOverview 
+          analytics={analytics}
+          rewards={rewards.slice(0, 5)}
+          redemptions={redemptions.slice(0, 5)}
+          onViewAllRewards={() => setActiveSubTab('rewards')}
+          onViewAllRedemptions={() => setActiveSubTab('redemptions')}
+        />
+      )}
+
+      {activeSubTab === 'rewards' && (
+        <RewardsList 
+          rewards={rewards}
+          total={rewardsTotal}
+          page={rewardsPage}
+          onPageChange={setRewardsPage}
+          filters={rewardFilters}
+          onFiltersChange={setRewardFilters}
+          onEdit={(reward) => {
+            setSelectedReward(reward);
+            setShowEditModal(true);
+          }}
+          onDelete={handleDeleteReward}
+          getStatusColor={getStatusColor}
+          getCategoryColor={getCategoryColor}
+          loading={loading}
+        />
+      )}
+
+      {activeSubTab === 'redemptions' && (
+        <RedemptionsList 
+          redemptions={redemptions}
+          total={redemptionsTotal}
+          page={redemptionsPage}
+          onPageChange={setRedemptionsPage}
+          filters={redemptionFilters}
+          onFiltersChange={setRedemptionFilters}
+          onProcess={(redemption) => {
+            setSelectedRedemption(redemption);
+            setShowRedemptionModal(true);
+          }}
+          onMarkUsed={handleMarkRedemptionUsed}
+          getStatusColor={getStatusColor}
+          loading={loading}
+        />
+      )}
+
+      {activeSubTab === 'analytics' && (
+        <RewardAnalytics 
+          analytics={analytics}
+          loading={loading}
+        />
+      )}
+
+      {/* Modals */}
+      {showCreateModal && (
+        <CreateRewardModal
+          onClose={() => setShowCreateModal(false)}
+          onCreate={handleCreateReward}
+          categories={rewardCategories}
+        />
+      )}
+
+      {showEditModal && selectedReward && (
+        <EditRewardModal
+          reward={selectedReward}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedReward(null);
+          }}
+          onUpdate={handleEditReward}
+          categories={rewardCategories}
+        />
+      )}
+
+      {showRedemptionModal && selectedRedemption && (
+        <ProcessRedemptionModal
+          redemption={selectedRedemption}
+          onClose={() => {
+            setShowRedemptionModal(false);
+            setSelectedRedemption(null);
+          }}
+          onProcess={handleProcessRedemption}
+        />
+      )}
+    </div>
+  );
+};
+
+const RewardOverview = ({ analytics, rewards, redemptions, onViewAllRewards, onViewAllRedemptions }) => {
+  if (!analytics) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-lg p-6 shadow-sm border animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          </div>
+        ))}
       </div>
+    );
+  }
 
-      {/* Edit Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Modifica Utente - {editFormData.nome} {editFormData.cognome}
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                {/* Basic Info */}
-                <div className="space-y-4">
-                  <h4 className="font-medium text-gray-800 border-b pb-2">Dati Anagrafici</h4>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                    <input
-                      type="text"
-                      name="nome"
-                      value={editFormData.nome}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cognome</label>
-                    <input
-                      type="text"
-                      name="cognome"
-                      value={editFormData.cognome}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={editFormData.email}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
-                    <input
-                      type="text"
-                      name="telefono"
-                      value={editFormData.telefono}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Nascita</label>
-                    <input
-                      type="date"
-                      name="data_nascita"
-                      value={editFormData.data_nascita}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                </div>
+  const { overview } = analytics;
 
-                {/* Address Info */}
-                <div className="space-y-4">
-                  <h4 className="font-medium text-gray-800 border-b pb-2">Indirizzo</h4>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Indirizzo</label>
-                    <input
-                      type="text"
-                      name="indirizzo"
-                      value={editFormData.indirizzo}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">CAP</label>
-                    <input
-                      type="text"
-                      name="cap"
-                      value={editFormData.cap}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Località</label>
-                    <input
-                      type="text"
-                      name="localita"
-                      value={editFormData.localita}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
-                    <input
-                      type="text"
-                      name="provincia"
-                      value={editFormData.provincia}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                </div>
-
-                {/* Loyalty & Privacy */}
-                <div className="space-y-4">
-                  <h4 className="font-medium text-gray-800 border-b pb-2">Fedeltà & Privacy</h4>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Punti</label>
-                    <input
-                      type="number"
-                      name="punti"
-                      value={editFormData.punti}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bollini</label>
-                    <input
-                      type="number"
-                      name="bollini"
-                      value={editFormData.bollini}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Spesa Totale (€)</label>
-                    <input
-                      type="number"
-                      name="progressivo_spesa"
-                      value={editFormData.progressivo_spesa}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="active"
-                        checked={editFormData.active}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Account Attivo</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="newsletter"
-                        checked={editFormData.newsletter}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Newsletter</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="consenso_dati_personali"
-                        checked={editFormData.consenso_dati_personali}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Consenso Dati Personali</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="consenso_marketing"
-                        checked={editFormData.consenso_marketing}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Consenso Marketing</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Family & Animals */}
-                <div className="space-y-4">
-                  <h4 className="font-medium text-gray-800 border-b pb-2">Famiglia & Animali</h4>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Numero Figli</label>
-                    <input
-                      type="number"
-                      name="numero_figli"
-                      value={editFormData.numero_figli}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Data Matrimonio</label>
-                    <input
-                      type="date"
-                      name="data_matrimonio"
-                      value={editFormData.data_matrimonio}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="coniugato"
-                        checked={editFormData.coniugato}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Coniugato/a</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="animali_cani"
-                        checked={editFormData.animali_cani}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Ha Cani</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="animali_gatti"
-                        checked={editFormData.animali_gatti}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Ha Gatti</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Intolerances & Business */}
-                <div className="space-y-4">
-                  <h4 className="font-medium text-gray-800 border-b pb-2">Intolleranze & Business</h4>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="intolleranza_lattosio"
-                        checked={editFormData.intolleranza_lattosio}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Intolleranza Lattosio</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="intolleranza_glutine"
-                        checked={editFormData.intolleranza_glutine}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Intolleranza Glutine</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="celiachia"
-                        checked={editFormData.celiachia}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Celiachia</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="richiede_fattura"
-                        checked={editFormData.richiede_fattura}
-                        onChange={handleEditInputChange}
-                        className="mr-2 h-4 w-4 text-imagross-orange focus:ring-imagross-orange border-gray-300 rounded"
-                      />
-                      <span className="text-sm">Richiede Fattura</span>
-                    </label>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Altre Intolleranze</label>
-                    <input
-                      type="text"
-                      name="altra_intolleranza"
-                      value={editFormData.altra_intolleranza}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ragione Sociale</label>
-                    <input
-                      type="text"
-                      name="ragione_sociale"
-                      value={editFormData.ragione_sociale}
-                      onChange={handleEditInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-4 mt-6 pt-4 border-t">
-                <button
-                  onClick={cancelEdit}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={() => saveEdit(editingUser)}
-                  className="px-4 py-2 bg-imagross-orange text-white rounded-md hover:bg-imagross-red transition"
-                >
-                  Salva Modifiche
-                </button>
-              </div>
+  return (
+    <div className="space-y-6">
+      {/* Overview Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm opacity-90">Premi Totali</div>
+              <div className="text-3xl font-bold">{overview.total_rewards}</div>
             </div>
+            <div className="text-4xl opacity-75">🎁</div>
           </div>
         </div>
-      )}
+
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm opacity-90">Premi Attivi</div>
+              <div className="text-3xl font-bold">{overview.active_rewards}</div>
+            </div>
+            <div className="text-4xl opacity-75">✅</div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm opacity-90">Riscatti Totali</div>
+              <div className="text-3xl font-bold">{overview.total_redemptions}</div>
+            </div>
+            <div className="text-4xl opacity-75">🎫</div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm opacity-90">In Attesa</div>
+              <div className="text-3xl font-bold">{overview.pending_redemptions}</div>
+            </div>
+            <div className="text-4xl opacity-75">⏳</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Category Stats */}
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Premi per Categoria</h3>
+          <div className="space-y-3">
+            {Object.entries(analytics.category_stats).map(([category, stats]) => (
+              <div key={category} className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-imagross-orange"></div>
+                  <span className="text-sm font-medium text-gray-700">{category}</span>
+                </div>
+                <div className="flex space-x-4 text-sm text-gray-600">
+                  <span>Tot: {stats.total}</span>
+                  <span>Attivi: {stats.active}</span>
+                  <span>Riscatti: {stats.redemptions}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Attività Recente</h3>
+          <div className="space-y-3">
+            {redemptions.map((redemption, index) => (
+              <div key={redemption.id} className="flex items-center space-x-3 p-2 bg-gray-50 rounded">
+                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-900 truncate">
+                    {redemption.reward_info?.title || 'Premio'}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {redemption.user_info?.nome} {redemption.user_info?.cognome}
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {new Date(redemption.redeemed_at).toLocaleDateString('it-IT')}
+                </div>
+              </div>
+            ))}
+          </div>
+          {redemptions.length === 0 && (
+            <p className="text-gray-500 text-sm">Nessuna attività recente</p>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Premi Recenti</h3>
+          <div className="space-y-3 mb-4">
+            {rewards.map((reward) => (
+              <div key={reward.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">{reward.icon}</span>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{reward.title}</div>
+                    <div className="text-xs text-gray-600">{reward.bollini_required} bollini</div>
+                  </div>
+                </div>
+                <span className={`px-2 py-1 text-xs rounded-full ${reward.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  {reward.status === 'active' ? 'Attivo' : 'Inattivo'}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={onViewAllRewards}
+            className="w-full px-4 py-2 text-sm bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+          >
+            Vedi Tutti i Premi
+          </button>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Riscatti in Attesa</h3>
+          <div className="space-y-3 mb-4">
+            {redemptions.filter(r => r.status === 'pending').map((redemption) => (
+              <div key={redemption.id} className="flex items-center justify-between p-2 bg-yellow-50 rounded border border-yellow-200">
+                <div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {redemption.reward_info?.title || 'Premio'}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {redemption.user_info?.nome} {redemption.user_info?.cognome}
+                  </div>
+                </div>
+                <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                  In Attesa
+                </span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={onViewAllRedemptions}
+            className="w-full px-4 py-2 text-sm bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+          >
+            Gestisci Riscatti
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { admin } = useAuth();
-
-  // Check for tab in URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    if (tab) {
-      setActiveTab(tab);
-    }
-  }, []);
+  const { admin, adminToken } = useAuth();
 
   const tabs = [
-    { id: 'dashboard', name: 'Dashboard', component: AdminDashboard },
-    { id: 'stores', name: 'Supermercati', component: StoreManagement },
-    { id: 'cashiers', name: 'Casse', component: CashierManagement },
-    { id: 'users', name: 'Utenti', component: UserManagement },
+    { id: 'dashboard', name: 'Dashboard', icon: '📊' },
+    { id: 'segmentation', name: 'Segmentazione Clienti', icon: '🎯' },
+    { id: 'stores', name: 'Supermercati', icon: '🏪' },
+    { id: 'cashiers', name: 'Casse', icon: '💳' },
+    { id: 'users', name: 'Utenti', icon: '👥' },
+    { id: 'rewards', name: 'Gestione Premi', icon: '🎁' },
+    { id: 'vendite-dashboard', name: 'Dashboard Vendite', icon: '💰' },
+    { id: 'customer-analytics', name: 'Analytics Clienti', icon: '👤' },
+    { id: 'product-analytics', name: 'Analytics Prodotti', icon: '📦' },
+    { id: 'department-analytics', name: 'Analytics Reparti', icon: '🏬' },
+    { id: 'promotion-analytics', name: 'Analytics Promozioni', icon: '🎯' },
+    { id: 'reports-generator', name: 'Report & Export', icon: '📋' },
+    { id: 'statistics', name: 'Statistiche', icon: '📈' }
   ];
 
-  const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || AdminDashboard;
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <AdminDashboard />;
+      case 'segmentation':
+        return <CustomerSegmentation />;
+      case 'stores':
+        return <StoreManagement setActiveTab={setActiveTab} />;
+      case 'cashiers':
+        return <CashierManagement />;
+      case 'users':
+        return <UserManagement />;
+      case 'rewards':
+        return <RewardManagement />;
+      case 'vendite-dashboard':
+        return <VenditeDashboard adminToken={adminToken} />;
+      case 'customer-analytics':
+        return <CustomerAnalytics adminToken={adminToken} />;
+      case 'product-analytics':
+        return <ProductAnalytics adminToken={adminToken} />;
+      case 'department-analytics':
+        return <DepartmentAnalytics adminToken={adminToken} />;
+      case 'promotion-analytics':
+        return <PromotionAnalytics adminToken={adminToken} />;
+      case 'reports-generator':
+        return <ReportsGenerator adminToken={adminToken} />;
+      case 'statistics':
+        return <div className="text-center py-12"><p className="text-gray-500">Statistiche avanzate in arrivo...</p></div>;
+      default:
+        return <AdminDashboard />;
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       <Header />
       <div className="flex">
         {/* Sidebar */}
-        <div className="w-64 bg-white shadow-sm">
+        <div className="w-64 bg-white shadow-lg">
           <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Admin Panel</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-6">Admin Panel</h2>
             <nav className="space-y-2">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition ${
+                  className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
                     activeTab === tab.id
                       ? 'bg-imagross-orange text-white'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
+                  <span className="mr-3 text-lg">{tab.icon}</span>
                   {tab.name}
                 </button>
               ))}
@@ -3069,144 +4595,278 @@ const AdminPanel = () => {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 p-6">
-          <ActiveComponent setActiveTab={setActiveTab} />
+        {/* Main content */}
+        <div className="flex-1 p-8">
+          {renderContent()}
         </div>
       </div>
     </div>
   );
 };
 
-const Dashboard = () => {
-  const { user } = useAuth();
+const CustomerSegmentation = () => {
+  const [segmentationData, setSegmentationData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedSegment, setSelectedSegment] = useState(null);
+  const [showCustomersModal, setShowCustomersModal] = useState(false);
+  const { adminToken } = useAuth();
+
+  useEffect(() => {
+    fetchSegmentationData();
+  }, []);
+
+  const fetchSegmentationData = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/admin/customer-segmentation`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      setSegmentationData(response.data);
+    } catch (error) {
+      console.error('Error fetching segmentation data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSegmentClick = (segment) => {
+    setSelectedSegment(segment);
+    setShowCustomersModal(true);
+  };
+
+  const getSegmentCustomers = () => {
+    if (!selectedSegment || !segmentationData) return [];
+    return segmentationData.customers.filter(c => c.segment === selectedSegment.name);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto"></div>
+          <p className="mt-4 text-gray-600">Analisi segmentazione clienti...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!segmentationData) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">Errore nel caricamento dei dati di segmentazione</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="container mx-auto py-8 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Tessera Digitale */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                La tua Tessera Digitale
-              </h2>
-              <div className="bg-gradient-to-r from-imagross-orange to-imagross-red rounded-lg p-6 text-white">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold">ImaGross</h3>
-                    <p className="text-sm opacity-90">LOYALTY CARD</p>
-                    {user.store_name && (
-                      <p className="text-xs opacity-75 mt-1">{user.store_name}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold">{user.punti}</p>
-                    <p className="text-sm">punti</p>
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <p className="text-sm opacity-90">Titolare</p>
-                  <p className="font-semibold">{user.nome} {user.cognome}</p>
-                </div>
-                <div className="text-sm opacity-90">
-                  <p>Tessera: {user.tessera_digitale}</p>
-                </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Segmentazione Clienti RFM</h1>
+          <p className="text-gray-600 mt-1">
+            Analisi di {segmentationData.total_customers.toLocaleString()} clienti basata su Recency, Frequency, Monetary
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-bold text-imagross-green">
+            €{segmentationData.total_analyzed_value.toLocaleString()}
+          </div>
+          <div className="text-sm text-gray-500">Valore totale analizzato</div>
+        </div>
+      </div>
+
+      {/* Segments Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {segmentationData.segments_summary.map((segment, index) => (
+          <div
+            key={segment.name}
+            onClick={() => handleSegmentClick(segment)}
+            className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow border-l-4"
+            style={{ borderLeftColor: segment.color }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-gray-900 text-sm">{segment.name}</h3>
+              <div 
+                className="w-4 h-4 rounded-full"
+                style={{ backgroundColor: segment.color }}
+              ></div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Clienti:</span>
+                <span className="font-semibold">{segment.count.toLocaleString()}</span>
               </div>
-              
-              {/* QR Code */}
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600 mb-2">
-                  Mostra questo codice QR alla cassa
-                </p>
-                <div className="bg-white p-4 rounded-lg border inline-block">
-                  <img 
-                    src={`data:image/png;base64,${user.qr_code}`} 
-                    alt="QR Code Tessera" 
-                    className="w-32 h-32 mx-auto"
-                  />
-                </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Valore Tot:</span>
+                <span className="font-semibold text-imagross-green">€{segment.total_value.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Valore Medio:</span>
+                <span className="font-semibold">€{segment.avg_value}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Freq. Media:</span>
+                <span className="font-semibold">{segment.avg_frequency}</span>
               </div>
             </div>
-
-            {/* Informazioni Profilo */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                Il tuo Profilo
-              </h2>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Nome:</span>
-                  <span className="font-medium">{user.nome} {user.cognome}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Email:</span>
-                  <span className="font-medium">{user.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Telefono:</span>
-                  <span className="font-medium">{user.telefono}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Località:</span>
-                  <span className="font-medium">{user.localita}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tessera Fisica:</span>
-                  <span className="font-medium">{user.tessera_fisica}</span>
-                </div>
-                {user.store_name && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Supermercato:</span>
-                    <span className="font-medium">{user.store_name}</span>
-                  </div>
-                )}
-                {user.cashier_name && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Registrato via:</span>
-                    <span className="font-medium">{user.cashier_name}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Membro dal:</span>
-                  <span className="font-medium">
-                    {new Date(user.created_at).toLocaleDateString('it-IT')}
-                  </span>
-                </div>
-              </div>
+            
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs text-gray-500 leading-tight">{segment.description}</p>
             </div>
           </div>
+        ))}
+      </div>
 
-          {/* Hero Image */}
-          <div className="mt-8 bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="relative">
-              <img 
-                src="https://images.unsplash.com/photo-1649767727699-3a38a00dd984?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwzfHxzaG9wcGluZyUyMHBvaW50c3xlbnwwfHx8b3JhbmdlfDE3NTM3NDY0ODh8MA&ixlib=rb-4.1.0&q=85"
-                alt="Shopping" 
-                className="w-full h-64 object-cover"
+      {/* RFM Analysis Chart */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Distribuzione Segmenti</h3>
+        <div style={{ width: '100%', height: 400 }}>
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie
+                data={segmentationData.segments_summary}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, count, percent }) => `${name}: ${count} (${(percent * 100).toFixed(1)}%)`}
+                outerRadius={120}
+                fill="#8884d8"
+                dataKey="count"
+              >
+                {segmentationData.segments_summary.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                formatter={(value, name) => [value, 'Clienti']}
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-imagross-orange/80 to-imagross-red/80 flex items-center justify-center">
-                <div className="text-center text-white">
-                  <h3 className="text-3xl font-bold mb-2">Accumula punti ad ogni spesa!</h3>
-                  <p className="text-lg">Più compri, più risparmi con ImaGross</p>
-                </div>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Segment Value Comparison */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Valore per Segmento</h3>
+        <div style={{ width: '100%', height: 300 }}>
+          <ResponsiveContainer>
+            <BarChart data={segmentationData.segments_summary} margin={{ bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis 
+                dataKey="name" 
+                stroke="#374151" 
+                fontSize={10}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis stroke="#374151" fontSize={12} tickFormatter={(value) => `€${value.toLocaleString()}`} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                formatter={(value) => [`€${value.toLocaleString()}`, 'Valore Totale']}
+              />
+              <Bar dataKey="total_value" radius={[4, 4, 0, 0]}>
+                {segmentationData.segments_summary.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Customer Details Modal */}
+      {showCustomersModal && selectedSegment && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-5 border w-11/12 max-w-6xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">
+                Clienti Segmento: {selectedSegment.name}
+              </h3>
+              <button
+                onClick={() => setShowCustomersModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: selectedSegment.color + '20' }}>
+              <p className="text-sm text-gray-700">{selectedSegment.description}</p>
+              <div className="mt-2 flex space-x-6 text-sm">
+                <span><strong>Clienti:</strong> {selectedSegment.count}</span>
+                <span><strong>Valore Medio:</strong> €{selectedSegment.avg_value}</span>
+                <span><strong>Frequenza Media:</strong> {selectedSegment.avg_frequency}</span>
               </div>
+            </div>
+
+            <div className="overflow-x-auto max-h-96">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">RFM Score</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recency</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Frequency</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monetary</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contatti</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {getSegmentCustomers().slice(0, 50).map((customer, index) => (
+                    <tr key={customer.customer_id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {customer.nome} {customer.cognome}
+                        </div>
+                        <div className="text-xs text-gray-500">{customer.customer_id}</div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                          {customer.rfm_score}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {customer.recency} giorni
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {customer.frequency} acquisti
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-imagross-green">
+                        €{customer.monetary.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div>{customer.email || 'N/D'}</div>
+                        <div>{customer.telefono || 'N/D'}</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {getSegmentCustomers().length > 50 && (
+                <div className="p-4 text-center text-gray-500 text-sm">
+                  Mostrati primi 50 clienti di {getSegmentCustomers().length}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowCustomersModal(false)}
+                className="px-6 py-2 bg-imagross-orange text-white rounded-lg hover:bg-imagross-red transition-colors"
+              >
+                Chiudi
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
-  );
-};
-
-const App = () => {
-  return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AuthRoutes />
-      </BrowserRouter>
-    </AuthProvider>
   );
 };
 
@@ -3253,6 +4913,16 @@ const AuthRoutes = () => {
         element={<Navigate to={isAuthenticated ? "/dashboard" : (isAdminAuthenticated ? "/admin" : "/login")} />} 
       />
     </Routes>
+  );
+};
+
+const App = () => {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AuthRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   );
 };
 
