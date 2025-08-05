@@ -2307,6 +2307,7 @@ const AdminDashboard = () => {
                   </svg>
                 </div>
               </div>
+            </div>
           </div>
           
           {/* Additional Metrics */}
