@@ -516,6 +516,9 @@ const TesseraCheckPage = () => {
                     placeholder="Crea una password per accedere online"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Per accedere potrai usare: Email, Numero Tessera o Telefono + questa password
+                  </p>
                 </div>
 
                 <div className="flex items-center">
