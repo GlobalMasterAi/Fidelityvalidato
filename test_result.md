@@ -721,14 +721,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Advanced Sales Analytics - Dashboard API"
-    - "Advanced Sales Analytics - Customer Analytics API"
     - "Enhanced Fidelity Validation with Cognome + Tessera"
     - "Enhanced Multi-Format Login System"
-    - "Health and Readiness Endpoints for Kubernetes Deployment"
   stuck_tasks:
-    - "Advanced Sales Analytics - Dashboard API"
-    - "Advanced Sales Analytics - Customer Analytics API"
     - "Enhanced Fidelity Validation with Cognome + Tessera"
     - "Enhanced Multi-Format Login System"
   test_all: false
