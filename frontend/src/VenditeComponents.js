@@ -17,12 +17,19 @@ const VenditeDashboard = ({ adminToken }) => {
 
   const fetchDashboardData = async () => {
     try {
+      console.log('AdminToken:', adminToken); // Debug
+      if (!adminToken) {
+        console.error('No admin token available');
+        return;
+      }
+      
       const response = await axios.get(`${API}/admin/vendite/dashboard`, {
         headers: { Authorization: `Bearer ${adminToken}` }
       });
       setDashboardData(response.data.dashboard);
     } catch (error) {
       console.error('Error fetching dashboard:', error);
+      console.error('Error details:', error.response?.data);
     } finally {
       setLoading(false);
     }
