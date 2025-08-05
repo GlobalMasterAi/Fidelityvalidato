@@ -47,6 +47,15 @@ const VenditeDashboard = ({ adminToken }) => {
     return (
       <div className="text-center p-8">
         <p className="text-gray-500">Errore nel caricamento della dashboard vendite</p>
+        <p className="text-sm text-gray-400 mt-2">
+          Token: {adminToken ? 'Presente' : 'Mancante'} | API: {API}
+        </p>
+        <button 
+          onClick={fetchDashboardData}
+          className="mt-4 px-4 py-2 bg-imagross-orange text-white rounded-md hover:bg-imagross-red"
+        >
+          Riprova
+        </button>
       </div>
     );
   }
