@@ -20,6 +20,8 @@ import {
 } from 'recharts';
 import { RewardsList, RedemptionsList, RewardAnalytics } from './RewardComponents';
 import { CreateRewardModal, EditRewardModal, ProcessRedemptionModal } from './RewardModals';
+import { VenditeDashboard, CustomerAnalytics } from './VenditeComponents';
+import { ProductAnalytics, DepartmentAnalytics, PromotionAnalytics, ReportsGenerator } from './VenditeReports';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
