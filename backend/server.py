@@ -4231,6 +4231,19 @@ async def health_check():
         "deployment": "ready"
     }
 
+# Health check with /api prefix for Kubernetes ingress
+@api_router.get("/health")
+async def api_health_check():
+    """Liveness probe via /api route for Kubernetes ingress"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "app": "imagross",
+        "process": "alive",
+        "deployment": "ready",
+        "route": "api_health"
+    }
+
 @app.get("/readiness")
 async def readiness_check():
     """Readiness probe - returns 200 when app can serve basic traffic"""
@@ -4241,11 +4254,15 @@ async def readiness_check():
         # Check if at least admin is loaded (for login)
         admin_ready = DATA_LOADING_STATUS.get("admin") == "completed"
         
+        # Don't wait for large datasets in production deployment
+        deployment_ready = admin_ready and DATA_LOADING_STATUS.get("fidelity") == "completed"
+        
         return {
             "status": "ready",
             "timestamp": datetime.utcnow().isoformat(),
             "basic_ready": basic_ready,
             "admin_ready": admin_ready,
+            "deployment_ready": deployment_ready,
             "data_loading": DATA_LOADING_STATUS
         }
         
@@ -4257,6 +4274,41 @@ async def readiness_check():
             "basic_ready": True,
             "note": "minimal readiness mode",
             "error": str(e)
+        }
+
+# Readiness check with /api prefix for Kubernetes ingress
+@api_router.get("/readiness")
+async def api_readiness_check():
+    """Readiness probe via /api route for Kubernetes ingress"""
+    try:
+        # Very minimal readiness check - just ensure we can respond
+        basic_ready = True  # App is always ready to serve basic requests
+        
+        # Check if at least admin is loaded (for login)
+        admin_ready = DATA_LOADING_STATUS.get("admin") == "completed"
+        
+        # Don't wait for large datasets in production deployment
+        deployment_ready = admin_ready and DATA_LOADING_STATUS.get("fidelity") == "completed"
+        
+        return {
+            "status": "ready",
+            "timestamp": datetime.utcnow().isoformat(),
+            "basic_ready": basic_ready,
+            "admin_ready": admin_ready,
+            "deployment_ready": deployment_ready,
+            "data_loading": DATA_LOADING_STATUS,
+            "route": "api_readiness"
+        }
+        
+    except Exception as e:
+        # Even on error, return 200 for readiness if app is responding
+        return {
+            "status": "ready",
+            "timestamp": datetime.utcnow().isoformat(),
+            "basic_ready": True,
+            "note": "minimal readiness mode",
+            "error": str(e),
+            "route": "api_readiness"
         }
 
 app.add_middleware(
