@@ -4592,6 +4592,9 @@ async def startup_event():
     """INSTANT startup for Kubernetes deployment - ZERO blocking"""
     print("🚀 ImaGross Backend - INSTANT READY MODE")
     
+    # FIRST: Initialize MongoDB connection (but don't wait for it)
+    asyncio.create_task(initialize_mongo_connection())
+    
     # NO BLOCKING OPERATIONS AT ALL
     try:
         # Don't even wait for MongoDB ping - do it in background
@@ -4609,7 +4612,17 @@ async def startup_event():
 async def background_mongo_check():
     """Check MongoDB connection in background"""
     try:
-        await asyncio.sleep(1)  # Small delay to let app start
+        # Wait for MongoDB to be initialized
+        max_retries = 10
+        for i in range(max_retries):
+            if client is not None:
+                break
+            await asyncio.sleep(1)
+        
+        if client is None:
+            print("⚠️ MongoDB client not initialized after 10 seconds")
+            return
+            
         await asyncio.wait_for(client.admin.command('ping'), timeout=5.0)
         print("✅ Background MongoDB ping successful")
     except Exception as e:
@@ -4618,9 +4631,10 @@ async def background_mongo_check():
         for i in range(3):
             try:
                 await asyncio.sleep(5)
-                await client.admin.command('ping')
-                print(f"✅ MongoDB connection restored (retry {i+1})")
-                break
+                if client is not None:
+                    await client.admin.command('ping')
+                    print(f"✅ MongoDB connection restored (retry {i+1})")
+                    break
             except Exception as retry_error:
                 print(f"⚠️ MongoDB retry {i+1} failed: {retry_error}")
 
