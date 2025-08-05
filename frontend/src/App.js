@@ -4379,6 +4379,18 @@ const AdminPanel = () => {
         return <UserManagement />;
       case 'rewards':
         return <RewardManagement />;
+      case 'vendite-dashboard':
+        return <VenditeDashboard adminToken={admin?.token} />;
+      case 'customer-analytics':
+        return <CustomerAnalytics adminToken={admin?.token} />;
+      case 'product-analytics':
+        return <ProductAnalytics adminToken={admin?.token} />;
+      case 'department-analytics':
+        return <DepartmentAnalytics adminToken={admin?.token} />;
+      case 'promotion-analytics':
+        return <PromotionAnalytics adminToken={admin?.token} />;
+      case 'reports-generator':
+        return <ReportsGenerator adminToken={admin?.token} />;
       case 'statistics':
         return <div className="text-center py-12"><p className="text-gray-500">Statistiche avanzate in arrivo...</p></div>;
       default:
