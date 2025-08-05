@@ -4463,49 +4463,73 @@ async def load_vendite_minimal():
         DATA_LOADING_STATUS["vendite"] = "minimal_error"
 
 async def background_data_loading():
-    """Load data in background with minimal blocking"""
+    """Load data in background with ZERO blocking for deployment"""
     try:
-        print("🔄 Starting ultra-fast background data loading...")
+        print("🔄 Starting DEPLOYMENT-SAFE background data loading...")
         
-        # Start all loading tasks in parallel (completely non-blocking)
+        # Start all loading tasks completely asynchronously - NO AWAITING
         import asyncio
         
-        # Start tasks but don't await them all - just fire and forget
-        fidelity_task = asyncio.create_task(load_data_chunk("fidelity", load_fidelity_data))
-        scontrini_task = asyncio.create_task(load_data_chunk("scontrini", load_scontrini_data))
-        admin_task = asyncio.create_task(load_data_chunk("admin", init_super_admin))
+        # Fire and forget - don't await anything during deployment
+        asyncio.create_task(load_data_chunk("admin", init_super_admin))
+        asyncio.create_task(load_data_chunk("fidelity", load_fidelity_data))
+        asyncio.create_task(load_data_chunk("scontrini", load_scontrini_data))
         
-        # Only wait for admin (fastest) to ensure basic auth works
-        await admin_task
+        # Delay vendite loading to avoid resource pressure during startup
+        asyncio.create_task(delayed_vendite_loading())
         
-        # Start vendite loading (largest) completely in background
-        vendite_task = asyncio.create_task(load_data_chunk("vendite", load_vendite_data))
-        
-        print("✅ Critical components loaded, app ready for traffic!")
-        
-        # Let other tasks continue in background
-        print("🔄 Large datasets loading in background...")
+        print("✅ All data loading tasks started in background!")
+        print("🚀 App is immediately ready for traffic!")
         
     except Exception as e:
-        print(f"❌ Error during background data loading: {e}")
+        print(f"❌ Error during background data loading setup: {e}")
+
+async def delayed_vendite_loading():
+    """Load vendite data after a delay to avoid startup resource pressure"""
+    try:
+        # Wait 30 seconds after startup before loading heavy data
+        await asyncio.sleep(30)
+        print("🔄 Starting delayed vendite loading...")
+        await load_data_chunk("vendite", load_vendite_data)
+    except Exception as e:
+        print(f"❌ Error during delayed vendite loading: {e}")
 
 @app.on_event("startup")
 async def startup_event():
-    """ULTRA-FAST startup for Kubernetes deployment"""
-    print("🚀 ImaGross Backend - ULTRA-FAST MODE")
+    """INSTANT startup for Kubernetes deployment - ZERO blocking"""
+    print("🚀 ImaGross Backend - INSTANT READY MODE")
     
-    # Immediate response mode - no blocking operations
+    # NO BLOCKING OPERATIONS AT ALL
     try:
-        # Just test if we can connect to MongoDB (quick test)
-        await asyncio.wait_for(client.admin.command('ping'), timeout=1.0)
-        print("✅ MongoDB quick ping successful")
+        # Don't even wait for MongoDB ping - do it in background
+        asyncio.create_task(background_mongo_check())
+        
+        # Start all data loading in background (completely non-blocking)
+        asyncio.create_task(background_data_loading())
+        
+        print("🎉 ImaGross Backend INSTANTLY ready for traffic!")
+        print("📊 All data loading happens in background without blocking startup")
+        
     except Exception as e:
-        print(f"⚠️ MongoDB ping failed (will retry): {e}")
-    
-    # Start all data loading in background (fire and forget)
-    asyncio.create_task(background_data_loading())
-    
-    print("🎉 ImaGross Backend ready for traffic (data loading in background)!")
+        print(f"⚠️ Startup error (non-blocking): {e}")
+
+async def background_mongo_check():
+    """Check MongoDB connection in background"""
+    try:
+        await asyncio.sleep(1)  # Small delay to let app start
+        await asyncio.wait_for(client.admin.command('ping'), timeout=5.0)
+        print("✅ Background MongoDB ping successful")
+    except Exception as e:
+        print(f"⚠️ Background MongoDB ping failed: {e} (will retry)")
+        # Retry mechanism
+        for i in range(3):
+            try:
+                await asyncio.sleep(5)
+                await client.admin.command('ping')
+                print(f"✅ MongoDB connection restored (retry {i+1})")
+                break
+            except Exception as retry_error:
+                print(f"⚠️ MongoDB retry {i+1} failed: {retry_error}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
