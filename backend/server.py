@@ -1998,7 +1998,20 @@ async def register(user_data: UserCreate):
 
 @api_router.post("/login", response_model=LoginResponse)
 async def login(login_data: UserLogin):
-    user = await db.users.find_one({"email": login_data.email})
+    # Try to find user by email, tessera_fisica, or telefono
+    username = login_data.username.strip()
+    
+    # First try email (most common case)
+    user = await db.users.find_one({"email": username})
+    
+    # If not found by email, try tessera_fisica
+    if not user:
+        user = await db.users.find_one({"tessera_fisica": username})
+    
+    # If still not found, try telefono
+    if not user:
+        user = await db.users.find_one({"telefono": username})
+    
     if not user or not verify_password(login_data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Credenziali non valide")
     
