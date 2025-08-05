@@ -697,7 +697,7 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
     
-    const success = await login(email, password);
+    const success = await login(username, password); // Changed from email to username
     if (!success) {
       setError('Credenziali non valide');
     }
