@@ -4532,12 +4532,26 @@ async def emergency_admin_setup():
     """Emergency admin setup for deployment"""
     try:
         print("🚨 Emergency admin setup for deployment...")
+        
+        # Wait for database to be ready
+        max_retries = 10
+        for i in range(max_retries):
+            if db is not None:
+                break
+            await asyncio.sleep(1)
+        
+        if db is None:
+            print("⚠️ Database not ready for emergency admin setup")
+            return
+            
         # Create super admin directly in database with minimal setup
         admin_data = {
             "id": str(uuid.uuid4()),
             "username": "superadmin",
-            "password_hash": "$2b$12$LQv3c1yqBWVHdkuOKPVgv.zX8gJCYhLgXPY5vNB5i6iB5yVYvNzk6",  # Hash of "ImaGross2024!"
+            "password_hash": hash_password("ImaGross2024!"),  # Use proper hash function
             "role": "super_admin",
+            "email": "superadmin@imagross.it",
+            "full_name": "Super Administrator",
             "created_at": datetime.utcnow()
         }
         await db.admins.replace_one(
@@ -4549,6 +4563,7 @@ async def emergency_admin_setup():
         print("✅ Emergency admin setup completed")
     except Exception as e:
         print(f"❌ Emergency admin setup failed: {e}")
+        # Don't raise - let the app continue
 
 async def create_minimal_vendite_data():
     """Create minimal vendite data for API functionality during deployment"""
