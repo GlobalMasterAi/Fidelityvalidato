@@ -4216,9 +4216,6 @@ async def get_user_redemptions(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Errore nel recupero riscatti: {str(e)}")
 
-# Include the router in the main app
-app.include_router(api_router)
-
 # Startup status endpoint for debugging
 @app.get("/startup-status")
 async def startup_status():
