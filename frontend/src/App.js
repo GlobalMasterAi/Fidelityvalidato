@@ -4347,7 +4347,7 @@ const RewardOverview = ({ analytics, rewards, redemptions, onViewAllRewards, onV
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { admin } = useAuth();
+  const { admin, adminToken } = useAuth();
 
   const tabs = [
     { id: 'dashboard', name: 'Dashboard', icon: '📊' },
