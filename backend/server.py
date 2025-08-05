@@ -3259,6 +3259,7 @@ async def get_customer_vendite_analytics(
         
         return {
             "success": True,
+            "customer_id": codice_cliente,
             "analytics": analytics
         }
         
