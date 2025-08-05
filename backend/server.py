@@ -564,6 +564,9 @@ async def get_super_admin(credentials: HTTPAuthorizationCredentials = Depends(se
 # Load scontrini data
 SCONTRINI_DATA = []
 
+# Load detailed sales data (Vendite)
+VENDITE_DATA = []
+
 async def load_scontrini_data():
     """Load scontrini data from JSON file"""
     global SCONTRINI_DATA
@@ -589,6 +592,34 @@ async def load_scontrini_data():
     except Exception as e:
         print(f"Error loading scontrini data: {e}")
         SCONTRINI_DATA = []
+
+async def load_vendite_data():
+    """Load detailed sales data from Vendite JSON file"""
+    global VENDITE_DATA
+    try:
+        print("Loading detailed sales data from Vendite_20250101_to_20250630.json...")
+        with open('/app/Vendite_20250101_to_20250630.json', 'r', encoding='utf-8') as f:
+            VENDITE_DATA = json.load(f)
+            
+        print(f"✅ Loaded {len(VENDITE_DATA)} detailed sales records")
+        
+        # Calculate statistics
+        unique_customers = len(set(record.get('CODICE_CLIENTE', '') for record in VENDITE_DATA))
+        unique_products = len(set(record.get('BARCODE', '') for record in VENDITE_DATA if record.get('BARCODE')))
+        unique_departments = len(set(record.get('REPARTO', '') for record in VENDITE_DATA))
+        total_sales = sum(float(record.get('TOT_IMPORTO', 0)) for record in VENDITE_DATA)
+        total_quantity = sum(float(record.get('TOT_QNT', 0)) for record in VENDITE_DATA)
+        
+        print(f"📊 Vendite Statistics:")
+        print(f"  - {unique_customers:,} unique customers")  
+        print(f"  - {unique_products:,} unique products")
+        print(f"  - {unique_departments} departments")
+        print(f"  - €{total_sales:,.2f} total sales")
+        print(f"  - {total_quantity:,.0f} total quantity sold")
+        
+    except Exception as e:
+        print(f"Error loading vendite data: {e}")
+        VENDITE_DATA = []
 
 # ============================================================================
 # REWARDS SYSTEM HELPER FUNCTIONS
