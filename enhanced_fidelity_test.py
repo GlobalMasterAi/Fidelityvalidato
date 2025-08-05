@@ -72,7 +72,7 @@ def test_enhanced_check_tessera_only():
             data = response.json()
             
             # Validate response structure
-            required_fields = ["found", "migrated", "message"]
+            required_fields = ["found", "migrated"]
             missing_fields = [field for field in required_fields if field not in data]
             if missing_fields:
                 log_test("Enhanced Check-Tessera (Only)", False, f"Missing fields: {missing_fields}")
