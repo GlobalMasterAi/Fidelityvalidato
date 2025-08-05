@@ -233,6 +233,7 @@ class UserCreate(BaseModel):
 
 class TesseraCheck(BaseModel):
     tessera_fisica: str
+    cognome: Optional[str] = None  # For enhanced validation
 
 class Transaction(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
