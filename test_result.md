@@ -435,9 +435,9 @@ backend:
 
   - task: "Advanced Sales Analytics - Customer Analytics API"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
@@ -447,6 +447,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: Customer Analytics API funzionante. Testato con cliente reale (2013000122724) - segmentazione Bronze, €6.32 spesi, 7 transazioni. Struttura analytics completa: total_spent, total_transactions, total_items, total_bollini, avg_transaction, favorite_department, favorite_products, monthly_trends, customer_segment. Gestione 404 per clienti inesistenti corretta."
+      - working: false
+        agent: "testing"
+        comment: "❌ DEPLOYMENT TESTING FAILED: API response structure missing required 'customer_id' field. Response contains 'analytics' and 'success' fields but lacks 'customer_id' field expected by frontend. This will cause customer identification issues in production deployment."
 
   - task: "Advanced Sales Analytics - Products Analytics API"
     implemented: true
