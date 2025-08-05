@@ -3393,11 +3393,19 @@ async def get_vendite_dashboard(admin = Depends(get_current_admin)):
                     "total_revenue": total_revenue,
                     "avg_transaction": total_revenue / total_sales if total_sales > 0 else 0
                 },
-                "monthly_trends": monthly_trends,
-                "top_customers": top_customers,
-                "top_departments": departments,
-                "top_products": products,
-                "top_promotions": promotions
+                "charts": {
+                    "monthly_trends": monthly_trends,
+                    "top_customers": top_customers,
+                    "top_departments": departments,
+                    "top_products": products,
+                    "top_promotions": promotions
+                },
+                "cards": {
+                    "total_sales": total_sales,
+                    "unique_customers": unique_customers,
+                    "total_revenue": total_revenue,
+                    "avg_transaction": total_revenue / total_sales if total_sales > 0 else 0
+                }
             }
         }
         
