@@ -232,7 +232,7 @@ const TesseraCheckPage = () => {
     setLoading(true);
 
     try {
-      const result = await checkTessera(tesseraFisica);
+      const result = await checkTessera(tesseraFisica, cognomeVerifica);
       
       if (result.found) {
         if (result.migrated) {
@@ -248,11 +248,15 @@ const TesseraCheckPage = () => {
           setStep('import');
         }
       } else {
-        setStep('register');
-        setFormData({
-          ...formData,
-          tessera_fisica: tesseraFisica
-        });
+        setError(result.message || 'Tessera non trovata o dati non corrispondenti');
+        // Don't change step if validation failed due to cognome mismatch
+        if (!result.message || !result.message.includes('combaciano')) {
+          setStep('register');
+          setFormData({
+            ...formData,
+            tessera_fisica: tesseraFisica
+          });
+        }
       }
     } catch (error) {
       setError('Errore durante la verifica della tessera');
