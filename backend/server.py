@@ -4169,6 +4169,66 @@ async def get_user_redemptions(
 # Include the router in the main app
 app.include_router(api_router)
 
+# Health check endpoint for deployment
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes deployment"""
+    try:
+        # Test MongoDB connection
+        await client.admin.command('ping')
+        
+        # Check if basic data is loaded
+        fidelity_loaded = len(FIDELITY_DATA) > 0
+        scontrini_loaded = len(SCONTRINI_DATA) > 0
+        vendite_loaded = len(VENDITE_DATA) > 0
+        
+        # Check if super admin exists
+        admin_exists = await db.admins.find_one({"role": "super_admin"}) is not None
+        
+        health_status = {
+            "status": "healthy" if all([fidelity_loaded, scontrini_loaded, vendite_loaded, admin_exists]) else "degraded",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": "connected",
+            "data_loaded": {
+                "fidelity": fidelity_loaded,
+                "scontrini": scontrini_loaded,
+                "vendite": vendite_loaded,
+                "total_fidelity": len(FIDELITY_DATA),
+                "total_scontrini": len(SCONTRINI_DATA),
+                "total_vendite": len(VENDITE_DATA)
+            },
+            "admin_configured": admin_exists
+        }
+        
+        return health_status
+        
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": "disconnected",
+            "error": str(e)
+        }
+
+@app.get("/readiness")
+async def readiness_check():
+    """Readiness check for Kubernetes deployment"""
+    try:
+        # Check if all critical data is loaded
+        ready = (
+            len(FIDELITY_DATA) > 0 and
+            len(SCONTRINI_DATA) > 0 and
+            len(VENDITE_DATA) > 0
+        )
+        
+        if ready:
+            return {"status": "ready", "timestamp": datetime.utcnow().isoformat()}
+        else:
+            return {"status": "not_ready", "reason": "data_loading", "timestamp": datetime.utcnow().isoformat()}
+            
+    except Exception as e:
+        return {"status": "not_ready", "error": str(e), "timestamp": datetime.utcnow().isoformat()}
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
