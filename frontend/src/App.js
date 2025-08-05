@@ -710,7 +710,7 @@ const LoginPage = () => {
     const result = await register(formData);
     if (result.success) {
       setIsLogin(true);
-      setEmail(formData.email);
+      setUsername(formData.email); // Set username with email for login convenience
       setError('');
       alert('Registrazione completata! Ora puoi accedere.');
     } else {
