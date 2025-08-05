@@ -2749,6 +2749,61 @@ async def import_excel_data(
         raise HTTPException(status_code=400, detail=f"Errore import: {str(e)}")
 
 # ============================================================================
+# ADVANCED VENDITE ANALYTICS MODELS
+# ============================================================================
+
+class CustomerSalesAnalytics(BaseModel):
+    codice_cliente: str
+    total_spent: float
+    total_transactions: int
+    total_items: float
+    total_bollini: int
+    avg_transaction: float
+    favorite_department: str
+    favorite_products: List[dict]
+    monthly_trends: List[dict]
+    last_purchase_date: str
+    customer_segment: str
+
+class ProductAnalytics(BaseModel):
+    barcode: str
+    reparto: str
+    total_sold: float
+    total_quantity: float
+    total_revenue: float
+    unique_customers: int
+    avg_price: float
+    popularity_rank: int
+    monthly_trends: List[dict]
+
+class DepartmentAnalytics(BaseModel):
+    reparto_code: str
+    reparto_name: str
+    total_revenue: float
+    total_quantity: float
+    unique_products: int
+    unique_customers: int
+    avg_transaction: float
+    top_products: List[dict]
+
+class PromotionAnalytics(BaseModel):
+    promotion_id: str
+    promotion_type: str
+    total_usage: int
+    total_discount: float
+    unique_customers: int
+    performance_score: float
+    roi: float
+
+class SalesReport(BaseModel):
+    report_type: str
+    date_from: str
+    date_to: str
+    filters: dict
+    data: List[dict]
+    summary: dict
+
+# ============================================================================
 # ADVANCED REWARDS SYSTEM API ENDPOINTS
 # ============================================================================
 
