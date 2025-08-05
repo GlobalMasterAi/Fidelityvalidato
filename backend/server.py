@@ -265,7 +265,7 @@ class AdminUserCreate(BaseModel):
     role: UserRole = UserRole.ADMIN
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    username: str  # Can be email, tessera_fisica, or telefono
     password: str
 
 class AdminLogin(BaseModel):
