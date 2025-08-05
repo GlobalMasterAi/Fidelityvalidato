@@ -3156,6 +3156,228 @@ def generate_sales_report(report_type: str, filters: dict = None) -> dict:
             'error': str(e)
         }
 # ============================================================================
+# ADVANCED VENDITE ANALYTICS API ENDPOINTS
+# ============================================================================
+
+@api_router.get("/admin/vendite/customer/{codice_cliente}")
+async def get_customer_vendite_analytics(
+    codice_cliente: str,
+    admin = Depends(get_current_admin)
+):
+    """Get comprehensive sales analytics for a specific customer"""
+    try:
+        analytics = get_customer_sales_analytics(codice_cliente)
+        
+        if not analytics:
+            raise HTTPException(status_code=404, detail="Customer not found in sales data")
+        
+        return {
+            "success": True,
+            "analytics": analytics
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting customer analytics: {str(e)}")
+
+@api_router.get("/admin/vendite/products")
+async def get_products_analytics(
+    barcode: Optional[str] = None,
+    limit: int = 100,
+    admin = Depends(get_current_admin)
+):
+    """Get analytics for products"""
+    try:
+        products = get_product_analytics(barcode=barcode, limit=limit)
+        
+        return {
+            "success": True,
+            "products": products,
+            "total": len(products)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting product analytics: {str(e)}")
+
+@api_router.get("/admin/vendite/departments")
+async def get_departments_analytics(admin = Depends(get_current_admin)):
+    """Get analytics for all departments"""
+    try:
+        departments = get_department_analytics()
+        
+        return {
+            "success": True,
+            "departments": departments,
+            "total": len(departments)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting department analytics: {str(e)}")
+
+@api_router.get("/admin/vendite/promotions")
+async def get_promotions_analytics(admin = Depends(get_current_admin)):
+    """Get analytics for all promotions"""
+    try:
+        promotions = get_promotion_analytics()
+        
+        return {
+            "success": True,
+            "promotions": promotions,
+            "total": len(promotions)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting promotion analytics: {str(e)}")
+
+@api_router.post("/admin/vendite/reports")
+async def generate_vendite_report(
+    report_request: dict,
+    admin = Depends(get_current_admin)
+):
+    """Generate various types of sales reports"""
+    try:
+        report_type = report_request.get('report_type', 'monthly_summary')
+        filters = report_request.get('filters', {})
+        
+        report = generate_sales_report(report_type, filters)
+        
+        return {
+            "success": True,
+            "report": report
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}")
+
+@api_router.get("/admin/vendite/dashboard")
+async def get_vendite_dashboard(admin = Depends(get_current_admin)):
+    """Get comprehensive dashboard data for vendite analytics"""
+    try:
+        # Overview statistics
+        total_sales = len(VENDITE_DATA)
+        unique_customers = len(set(sale.get('CODICE_CLIENTE', '') for sale in VENDITE_DATA))
+        total_revenue = sum(float(sale.get('TOT_IMPORTO', 0)) for sale in VENDITE_DATA)
+        
+        # Monthly trends
+        monthly_revenue = defaultdict(float)
+        monthly_transactions = defaultdict(int)
+        for sale in VENDITE_DATA:
+            month = sale.get('MESE', '')
+            monthly_revenue[month] += float(sale.get('TOT_IMPORTO', 0))
+            monthly_transactions[month] += 1
+            
+        monthly_trends = [
+            {
+                'month': month,
+                'revenue': revenue,
+                'transactions': monthly_transactions[month]
+            }
+            for month, revenue in sorted(monthly_revenue.items())
+        ]
+        
+        # Top customers (last 30 days - using most recent month)
+        latest_month = max(monthly_revenue.keys()) if monthly_revenue else ''
+        latest_sales = [sale for sale in VENDITE_DATA if sale.get('MESE') == latest_month]
+        
+        customer_spending = defaultdict(float)
+        for sale in latest_sales:
+            customer_spending[sale.get('CODICE_CLIENTE', '')] += float(sale.get('TOT_IMPORTO', 0))
+            
+        top_customers = [
+            {'codice_cliente': k, 'spent': v}
+            for k, v in sorted(customer_spending.items(), key=lambda x: x[1], reverse=True)[:10]
+        ]
+        
+        # Department summary
+        departments = get_department_analytics()[:5]  # Top 5 departments
+        
+        # Product insights
+        products = get_product_analytics(limit=10)  # Top 10 products
+        
+        # Promotion performance
+        promotions = get_promotion_analytics()[:5]  # Top 5 promotions
+        
+        return {
+            "success": True,
+            "dashboard": {
+                "overview": {
+                    "total_sales": total_sales,
+                    "unique_customers": unique_customers,
+                    "total_revenue": total_revenue,
+                    "avg_transaction": total_revenue / total_sales if total_sales > 0 else 0
+                },
+                "monthly_trends": monthly_trends,
+                "top_customers": top_customers,
+                "top_departments": departments,
+                "top_products": products,
+                "top_promotions": promotions
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting dashboard data: {str(e)}")
+
+@api_router.get("/admin/vendite/export/{report_type}")
+async def export_vendite_data(
+    report_type: str,
+    format: str = "json",
+    admin = Depends(get_current_admin)
+):
+    """Export sales data in various formats"""
+    try:
+        if report_type == "all_sales":
+            data = VENDITE_DATA[:1000]  # Limit to first 1000 for performance
+        elif report_type == "customer_summary":
+            # Generate customer summary
+            customer_data = defaultdict(lambda: {'total_spent': 0, 'transactions': 0})
+            for sale in VENDITE_DATA:
+                customer = sale.get('CODICE_CLIENTE', '')
+                customer_data[customer]['total_spent'] += float(sale.get('TOT_IMPORTO', 0))
+                customer_data[customer]['transactions'] += 1
+                
+            data = [
+                {
+                    'codice_cliente': k,
+                    'total_spent': v['total_spent'],
+                    'total_transactions': v['transactions']
+                }
+                for k, v in customer_data.items()
+            ]
+        elif report_type == "department_summary":
+            data = get_department_analytics()
+        else:
+            raise HTTPException(status_code=400, detail="Invalid report type")
+        
+        if format.lower() == "csv":
+            # Convert to CSV format (simplified)
+            import io
+            import csv
+            
+            output = io.StringIO()
+            if data:
+                writer = csv.DictWriter(output, fieldnames=data[0].keys())
+                writer.writeheader()
+                writer.writerows(data)
+                csv_content = output.getvalue()
+                
+            return {
+                "success": True,
+                "format": "csv",
+                "data": csv_content
+            }
+        else:
+            return {
+                "success": True,
+                "format": "json", 
+                "data": data
+            }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error exporting data: {str(e)}")
+
+# ============================================================================
+# ADVANCED REWARDS SYSTEM API ENDPOINTS
 
 @api_router.get("/admin/rewards")
 async def get_all_rewards(
