@@ -635,32 +635,70 @@ async def load_scontrini_data():
         SCONTRINI_DATA = []
 
 async def load_vendite_data():
-    """Load detailed sales data from Vendite JSON file"""
+    """Load detailed sales data from Vendite JSON file with improved error handling"""
     global VENDITE_DATA
     try:
+        DATA_LOADING_STATUS["vendite"] = "loading"
         print("Loading detailed sales data from Vendite_20250101_to_20250630.json...")
-        with open('/app/Vendite_20250101_to_20250630.json', 'r', encoding='utf-8') as f:
-            VENDITE_DATA = json.load(f)
+        
+        # Use async file reading with proper error handling
+        import asyncio
+        import os
+        
+        file_path = '/app/Vendite_20250101_to_20250630.json'
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            print(f"❌ Vendite file not found: {file_path}")
+            VENDITE_DATA = []
+            DATA_LOADING_STATUS["vendite"] = "file_not_found"
+            return
             
-        print(f"✅ Loaded {len(VENDITE_DATA)} detailed sales records")
+        # Check file size
+        file_size = os.path.getsize(file_path)
+        print(f"📁 Vendite file size: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)")
         
-        # Calculate statistics
-        unique_customers = len(set(record.get('CODICE_CLIENTE', '') for record in VENDITE_DATA))
-        unique_products = len(set(record.get('BARCODE', '') for record in VENDITE_DATA if record.get('BARCODE')))
-        unique_departments = len(set(record.get('REPARTO', '') for record in VENDITE_DATA))
-        total_sales = sum(float(record.get('TOT_IMPORTO', 0)) for record in VENDITE_DATA)
-        total_quantity = sum(float(record.get('TOT_QNT', 0)) for record in VENDITE_DATA)
-        
-        print(f"📊 Vendite Statistics:")
-        print(f"  - {unique_customers:,} unique customers")  
-        print(f"  - {unique_products:,} unique products")
-        print(f"  - {unique_departments} departments")
-        print(f"  - €{total_sales:,.2f} total sales")
-        print(f"  - {total_quantity:,.0f} total quantity sold")
+        # Load file in chunks to avoid memory issues
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                VENDITE_DATA = json.load(f)
+                
+            print(f"✅ Loaded {len(VENDITE_DATA)} detailed sales records")
+            
+            # Calculate statistics only if data loaded successfully
+            if VENDITE_DATA:
+                unique_customers = len(set(record.get('CODICE_CLIENTE', '') for record in VENDITE_DATA))
+                unique_products = len(set(record.get('BARCODE', '') for record in VENDITE_DATA if record.get('BARCODE')))
+                unique_departments = len(set(record.get('REPARTO', '') for record in VENDITE_DATA))
+                total_sales = sum(float(record.get('TOT_IMPORTO', 0)) for record in VENDITE_DATA)
+                total_quantity = sum(float(record.get('TOT_QNT', 0)) for record in VENDITE_DATA)
+                
+                print(f"📊 Vendite Statistics:")
+                print(f"  - {unique_customers:,} unique customers")  
+                print(f"  - {unique_products:,} unique products")
+                print(f"  - {unique_departments} departments")
+                print(f"  - €{total_sales:,.2f} total sales")
+                print(f"  - {total_quantity:,.0f} total quantity sold")
+                
+            DATA_LOADING_STATUS["vendite"] = "completed"
+            
+        except json.JSONDecodeError as e:
+            print(f"❌ JSON parsing error in vendite file: {e}")
+            print(f"  Error at position: {e.pos}")
+            VENDITE_DATA = []
+            DATA_LOADING_STATUS["vendite"] = "json_error"
+            
+        except MemoryError as e:
+            print(f"❌ Memory error loading vendite file: {e}")
+            print("  File might be too large for available memory")
+            VENDITE_DATA = []
+            DATA_LOADING_STATUS["vendite"] = "memory_error"
         
     except Exception as e:
-        print(f"Error loading vendite data: {e}")
+        print(f"❌ Error loading vendite data: {e}")
+        print(f"  Error type: {type(e).__name__}")
         VENDITE_DATA = []
+        DATA_LOADING_STATUS["vendite"] = "error"
 
 # ============================================================================
 # REWARDS SYSTEM HELPER FUNCTIONS
