@@ -24,9 +24,14 @@ from collections import defaultdict, Counter
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# MongoDB connection variables - initialized during startup
+client = None
+db = None
+
 # Enhanced MongoDB connection for Atlas production deployment
-def get_mongo_connection():
-    """Get MongoDB connection with Atlas-optimized settings for fast startup"""
+async def initialize_mongo_connection():
+    """Initialize MongoDB connection with Atlas-optimized settings for fast startup"""
+    global client, db
     try:
         # Get MongoDB URL from environment
         mongo_url = os.environ.get('MONGO_URL')
@@ -57,17 +62,15 @@ def get_mongo_connection():
         )
         
         # Get database instance
-        database = client[db_name]
+        db = client[db_name]
         
         print(f"✅ MongoDB connection configured for fast startup")
-        return client, database
+        return True
         
     except Exception as e:
         print(f"❌ MongoDB connection error: {e}")
-        raise
-
-# Initialize MongoDB connection
-client, db = get_mongo_connection()
+        # Don't raise - let the app start anyway
+        return False
 
 # Create the main app without a prefix
 app = FastAPI()
