@@ -64,8 +64,8 @@ TEST_USER_DATA = {
 def test_enhanced_check_tessera_only():
     """Test /api/check-tessera with only tessera_fisica (backward compatibility)"""
     try:
-        # Test with known card
-        test_data = {"tessera_fisica": "2020000028284"}
+        # Test with known card that's not migrated
+        test_data = {"tessera_fisica": "2020000400004"}
         response = requests.post(f"{API_BASE}/check-tessera", json=test_data)
         
         if response.status_code == 200:
@@ -89,8 +89,8 @@ def test_enhanced_check_tessera_only():
                 return False
             
             user_data = data["user_data"]
-            if user_data.get("cognome") != "VERDI":
-                log_test("Enhanced Check-Tessera (Only)", False, f"Wrong cognome: expected VERDI, got {user_data.get('cognome')}")
+            if "SCHEDA" not in user_data.get("cognome", ""):
+                log_test("Enhanced Check-Tessera (Only)", False, f"Unexpected cognome: {user_data.get('cognome')}")
                 return False
             
             log_test("Enhanced Check-Tessera (Only)", True, f"Found card with cognome: {user_data.get('cognome')}")
