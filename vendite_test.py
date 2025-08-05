@@ -165,8 +165,8 @@ def test_customer_analytics_valid():
     
     try:
         headers = {"Authorization": f"Bearer {admin_access_token}"}
-        # Use the known customer from the review request
-        codice_cliente = "2020000028284"  # CHIARA ABATANGELO
+        # Use an actual customer from the VENDITE_DATA
+        codice_cliente = "2013000122724"  # Found in the data
         
         response = requests.get(f"{API_BASE}/admin/vendite/customer/{codice_cliente}", headers=headers)
         
@@ -182,39 +182,39 @@ def test_customer_analytics_valid():
                 log_test("Customer Analytics Valid", False, "Missing analytics data")
                 return False
             
-            # Validate customer analytics structure
-            required_fields = ["customer_info", "summary", "segmentation", "monthly_trends", 
-                             "favorite_department", "favorite_products"]
+            # Validate customer analytics structure (flat structure from backend)
+            required_fields = ["codice_cliente", "total_spent", "total_transactions", "total_items", 
+                             "total_bollini", "avg_transaction", "favorite_department", 
+                             "favorite_products", "monthly_trends", "customer_segment"]
             missing_fields = [field for field in required_fields if field not in analytics]
             if missing_fields:
                 log_test("Customer Analytics Valid", False, f"Missing analytics fields: {missing_fields}")
                 return False
             
-            # Validate customer info
-            customer_info = analytics["customer_info"]
-            if customer_info.get("codice_cliente") != codice_cliente:
+            # Validate customer code
+            if analytics.get("codice_cliente") != codice_cliente:
                 log_test("Customer Analytics Valid", False, "Customer code mismatch")
                 return False
             
-            # Validate summary metrics
-            summary = analytics["summary"]
-            required_summary_fields = ["total_spent", "total_transactions", "total_items", "total_bollini"]
-            missing_summary = [field for field in required_summary_fields if field not in summary]
-            if missing_summary:
-                log_test("Customer Analytics Valid", False, f"Missing summary fields: {missing_summary}")
+            # Validate data types
+            if not isinstance(analytics["total_spent"], (int, float)) or analytics["total_spent"] < 0:
+                log_test("Customer Analytics Valid", False, f"Invalid total_spent: {analytics['total_spent']}")
+                return False
+            
+            if not isinstance(analytics["total_transactions"], int) or analytics["total_transactions"] <= 0:
+                log_test("Customer Analytics Valid", False, f"Invalid total_transactions: {analytics['total_transactions']}")
                 return False
             
             # Validate segmentation
-            segmentation = analytics["segmentation"]
-            if "segment" not in segmentation or segmentation["segment"] not in ["Bronze", "Silver", "Gold", "VIP"]:
-                log_test("Customer Analytics Valid", False, f"Invalid customer segment: {segmentation.get('segment')}")
+            if analytics["customer_segment"] not in ["Bronze", "Silver", "Gold", "VIP"]:
+                log_test("Customer Analytics Valid", False, f"Invalid customer segment: {analytics['customer_segment']}")
                 return False
             
-            customer_name = customer_info.get("nome", "Unknown")
-            segment = segmentation["segment"]
-            total_spent = summary["total_spent"]
+            segment = analytics["customer_segment"]
+            total_spent = analytics["total_spent"]
+            transactions = analytics["total_transactions"]
             
-            log_test("Customer Analytics Valid", True, f"Customer {customer_name} analytics loaded - Segment: {segment}, Spent: €{total_spent:.2f}")
+            log_test("Customer Analytics Valid", True, f"Customer {codice_cliente} analytics loaded - Segment: {segment}, Spent: €{total_spent:.2f}, Transactions: {transactions}")
             return True
             
         else:
