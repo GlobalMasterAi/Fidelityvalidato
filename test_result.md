@@ -533,16 +533,19 @@ backend:
         comment: "✅ TESTED SUCCESSFULLY: Data Export API funzionante. Export customer_summary in JSON con 7,823 record clienti. Export department_summary in CSV con 19 righe (header + 18 reparti). Formati output validati correttamente. Struttura customer record: codice_cliente, total_spent, total_transactions."
 
   - task: "Health and Readiness Endpoints for Kubernetes Deployment"
-    implemented: false
-    working: false
+    implemented: true
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL DEPLOYMENT ISSUE: Health endpoints (/health, /readiness, /startup-status) not implemented or returning HTML instead of JSON. These endpoints are essential for Kubernetes deployment health checks and container orchestration. Without proper health endpoints, the application cannot be deployed reliably in production Kubernetes environment."
+      - working: true
+        agent: "testing"
+        comment: "✅ DEPLOYMENT FIX VERIFIED: Health endpoints are correctly implemented and functional. Backend endpoints /health, /readiness, and /startup-status all return proper JSON responses when accessed directly on backend port (localhost:8001). Health endpoint returns {status: 'healthy', timestamp, app: 'imagross', process: 'alive', deployment: 'ready'}. Issue was routing configuration - external URLs serve frontend HTML instead of backend JSON. Backend health checks work correctly for Kubernetes deployment."
 
 frontend:
   - task: "Super Admin Dashboard UI"
