@@ -270,27 +270,28 @@ def test_fidelity_data_validation():
         if response.status_code == 200:
             data = response.json()
             
-            if "total_records" not in data:
-                log_test("Fidelity Data Validation", False, "Missing total_records in debug response")
+            # Check for loaded_records (not total_records)
+            if "loaded_records" not in data:
+                log_test("Fidelity Data Validation", False, "Missing loaded_records in debug response")
                 return False
             
-            total_records = data["total_records"]
-            if total_records < 3:  # Should have at least our test cards
+            total_records = data["loaded_records"]
+            if total_records < 1000:  # Should have many records
                 log_test("Fidelity Data Validation", False, f"Too few records: {total_records}")
                 return False
             
-            # Check sample data
-            if "sample_data" not in data:
-                log_test("Fidelity Data Validation", False, "Missing sample_data in debug response")
+            # Check available cards
+            if "available_cards" not in data:
+                log_test("Fidelity Data Validation", False, "Missing available_cards in debug response")
                 return False
             
-            sample_data = data["sample_data"]
+            available_cards = data["available_cards"]
             
             # Verify known cards exist
             found_cards = []
-            for card in sample_data:
-                if card.get("card_number") in KNOWN_CARDS:
-                    found_cards.append(card.get("card_number"))
+            for card in KNOWN_CARDS.keys():
+                if card in available_cards:
+                    found_cards.append(card)
             
             if len(found_cards) < 2:
                 log_test("Fidelity Data Validation", False, f"Not enough known cards found: {found_cards}")
