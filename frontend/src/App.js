@@ -369,9 +369,28 @@ const TesseraCheckPage = () => {
                     Se non hai una tessera fisica, verrà generata automaticamente
                   </p>
                 </div>
+
+                {tesseraFisica && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cognome (obbligatorio per importazione tessera) *
+                    </label>
+                    <input
+                      type="text"
+                      value={cognomeVerifica}
+                      onChange={(e) => setCognomeVerifica(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-imagross-orange"
+                      placeholder="Inserisci il tuo cognome"
+                      required={tesseraFisica.length > 0}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Il cognome deve corrispondere a quello presente nella tessera
+                    </p>
+                  </div>
+                )}
                 
                 <div className="flex flex-col space-y-4">
-                  {tesseraFisica && (
+                  {tesseraFisica && cognomeVerifica && (
                     <button
                       type="submit"
                       className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
@@ -383,11 +402,14 @@ const TesseraCheckPage = () => {
                     type="button"
                     onClick={() => {
                       setTesseraFisica('');
+                      setCognomeVerifica('');
                       setStep('register');
                     }}
                     className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition duration-200 font-medium"
                   >
                     ✨ Nuova Registrazione (senza tessera esistente)
+                  </button>
+                </div>
                   </button>
                 </div>
               </form>
