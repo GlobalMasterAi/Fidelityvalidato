@@ -4169,65 +4169,95 @@ async def get_user_redemptions(
 # Include the router in the main app
 app.include_router(api_router)
 
-# Health check endpoint for deployment
+# Health check endpoint for deployment - ALWAYS returns 200 if app is running
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for Kubernetes deployment"""
+    """Liveness probe - returns 200 if app is running, regardless of data loading status"""
     try:
-        # Test MongoDB connection
-        await client.admin.command('ping')
+        # Basic app responsiveness check
+        app_status = "healthy"
         
-        # Check if basic data is loaded
-        fidelity_loaded = len(FIDELITY_DATA) > 0
-        scontrini_loaded = len(SCONTRINI_DATA) > 0
-        vendite_loaded = len(VENDITE_DATA) > 0
+        # Quick MongoDB ping (with timeout)
+        try:
+            await asyncio.wait_for(client.admin.command('ping'), timeout=2.0)
+            db_status = "connected"
+        except:
+            db_status = "connecting"  # Don't fail if DB is slow
         
-        # Check if super admin exists
-        admin_exists = await db.admins.find_one({"role": "super_admin"}) is not None
-        
-        health_status = {
-            "status": "healthy" if all([fidelity_loaded, scontrini_loaded, vendite_loaded, admin_exists]) else "degraded",
+        # Return 200 even if data is still loading
+        return {
+            "status": app_status,
             "timestamp": datetime.utcnow().isoformat(),
-            "database": "connected",
-            "data_loaded": {
-                "fidelity": fidelity_loaded,
-                "scontrini": scontrini_loaded,
-                "vendite": vendite_loaded,
-                "total_fidelity": len(FIDELITY_DATA),
-                "total_scontrini": len(SCONTRINI_DATA),
-                "total_vendite": len(VENDITE_DATA)
-            },
-            "admin_configured": admin_exists
+            "database": db_status,
+            "app_ready": True  # Always true for liveness
         }
         
-        return health_status
-        
     except Exception as e:
+        # Even on error, return 200 to prevent container restart
         return {
-            "status": "unhealthy",
+            "status": "starting",
             "timestamp": datetime.utcnow().isoformat(),
-            "database": "disconnected",
-            "error": str(e)
+            "database": "unknown",
+            "app_ready": True,
+            "note": "Container is alive but initializing"
         }
 
 @app.get("/readiness")
 async def readiness_check():
-    """Readiness check for Kubernetes deployment"""
+    """Readiness probe - returns 200 only when fully ready to serve traffic"""
     try:
         # Check if all critical data is loaded
-        ready = (
-            len(FIDELITY_DATA) > 0 and
-            len(SCONTRINI_DATA) > 0 and
-            len(VENDITE_DATA) > 0
+        data_ready = (
+            len(FIDELITY_DATA) > 1000 and  # At least some data loaded
+            len(SCONTRINI_DATA) > 100 and
+            len(VENDITE_DATA) > 1000
         )
         
-        if ready:
-            return {"status": "ready", "timestamp": datetime.utcnow().isoformat()}
+        # Check database connection
+        try:
+            await asyncio.wait_for(client.admin.command('ping'), timeout=3.0)
+            db_ready = True
+        except:
+            db_ready = False
+        
+        # Check if super admin exists
+        admin_ready = await db.admins.find_one({"role": "super_admin"}) is not None
+        
+        if data_ready and db_ready and admin_ready:
+            return {
+                "status": "ready",
+                "timestamp": datetime.utcnow().isoformat(),
+                "data_loaded": {
+                    "fidelity": len(FIDELITY_DATA),
+                    "scontrini": len(SCONTRINI_DATA),
+                    "vendite": len(VENDITE_DATA)
+                },
+                "fully_operational": True
+            }
         else:
-            return {"status": "not_ready", "reason": "data_loading", "timestamp": datetime.utcnow().isoformat()}
+            # Return 503 for readiness if not ready (this is correct behavior)
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "status": "not_ready",
+                    "data_ready": data_ready,
+                    "db_ready": db_ready,
+                    "admin_ready": admin_ready,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            )
             
     except Exception as e:
-        return {"status": "not_ready", "error": str(e), "timestamp": datetime.utcnow().isoformat()}
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "not_ready",
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        )
 
 app.add_middleware(
     CORSMiddleware,
