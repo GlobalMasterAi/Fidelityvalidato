@@ -150,8 +150,8 @@ def test_enhanced_check_tessera_with_wrong_cognome():
     try:
         # Test with known card but wrong cognome
         test_data = {
-            "tessera_fisica": "2020000028284",
-            "cognome": "ROSSI"  # Wrong cognome (should be VERDI)
+            "tessera_fisica": "2020000400004",
+            "cognome": "WRONG_COGNOME"  # Wrong cognome
         }
         response = requests.post(f"{API_BASE}/check-tessera", json=test_data)
         
