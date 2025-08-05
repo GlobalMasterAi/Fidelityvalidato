@@ -670,9 +670,9 @@ frontend:
 
   - task: "Enhanced Multi-Format Login System"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
@@ -682,6 +682,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: Multi-format login system working perfectly (6/6 login tests passed - 100% success rate). ✅ Email Login: Traditional email-based login working correctly with proper JWT token generation ✅ Tessera Login: Users can login using tessera_fisica as username, returns same user data and valid token ✅ Telefono Login: Users can login using telefono as username, authentication successful with proper user data ✅ Invalid Credentials: Wrong passwords correctly rejected with 'Credenziali non valide' message ✅ Non-existent Users: Non-existent usernames properly rejected with appropriate error handling ✅ Security: All three login methods return same JWT token for same user, maintaining session consistency. Enhanced login flexibility implemented as requested."
+      - working: false
+        agent: "testing"
+        comment: "❌ DEPLOYMENT TESTING FAILED: Telefono login not working. Email and tessera_fisica login work correctly, but telefono login returns 401 'Credenziali non valide' even with correct credentials. This breaks the multi-format login promise and will prevent users from logging in with phone numbers in production."
 
 metadata:
   created_by: "main_agent"
