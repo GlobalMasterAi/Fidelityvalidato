@@ -4330,11 +4330,22 @@ async def api_startup_status():
             "route": "api_startup_status"
         }
 
-# Ultra-simple root health check for deployment
+# Ultra-simple root health check for deployment - ABSOLUTE ZERO DEPENDENCIES
 @app.get("/")
 async def root_health():
     """Ultra-simple root endpoint that ALWAYS returns 200 - for deployment health checks"""
     return {"status": "ok", "app": "imagross", "timestamp": datetime.utcnow().isoformat()}
+
+# DEPLOYMENT-FOCUSED endpoints - NO dependencies on database or data
+@app.get("/live")
+async def liveness_probe():
+    """Kubernetes liveness probe - ultra simple"""
+    return {"live": True}
+
+@app.get("/ready") 
+async def readiness_probe():
+    """Kubernetes readiness probe - ultra simple"""
+    return {"ready": True}
 
 # Simple ping endpoint
 @app.get("/ping")
