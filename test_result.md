@@ -412,6 +412,111 @@ backend:
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: Personal analytics API working with complete data structure. JWT authentication working. Loyalty level calculation (Bronze/Silver/Gold/Platinum) working. Summary metrics (total_spent, total_transactions, total_bollini, avg_transaction, shopping_frequency) working. Monthly trend analysis working. Shopping patterns analysis working. Achievements and challenges system working. SCONTRINI data integration working. Unauthorized access properly rejected."
 
+  - task: "Advanced Sales Analytics - Dashboard API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato endpoint /api/admin/vendite/dashboard per overview statistics, monthly trends, top customers, departments, products e promotions con 1,067,280 vendite dettagliate"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Vendite Dashboard API completamente funzionante. Overview statistics corrette: 1,067,280 sales, 7,823 customers, €3,584,524.55 revenue. Monthly trends, top customers, departments (18), products e promotions tutti restituiti correttamente. Struttura dati validata e metriche accurate."
+
+  - task: "Advanced Sales Analytics - Customer Analytics API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato endpoint /api/admin/vendite/customer/{codice_cliente} per analytics complete cliente con segmentazione, spending patterns, favorite products/departments"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Customer Analytics API funzionante. Testato con cliente reale (2013000122724) - segmentazione Bronze, €6.32 spesi, 7 transazioni. Struttura analytics completa: total_spent, total_transactions, total_items, total_bollini, avg_transaction, favorite_department, favorite_products, monthly_trends, customer_segment. Gestione 404 per clienti inesistenti corretta."
+
+  - task: "Advanced Sales Analytics - Products Analytics API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato endpoint /api/admin/vendite/products per analytics prodotti con metriche revenue, quantity, unique customers, popularity ranking, monthly trends"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Products Analytics API funzionante. Recuperati 50 prodotti con limit parameter. Struttura completa: barcode, reparto, total_revenue, total_quantity, unique_customers, avg_price, popularity_rank, monthly_trends. Filtro per barcode specifico funzionante (testato con barcode 201220)."
+
+  - task: "Advanced Sales Analytics - Departments Analytics API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato endpoint /api/admin/vendite/departments per analytics tutti i 18 reparti con performance metrics, top products per reparto"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Departments Analytics API funzionante. Recuperati tutti i 18 reparti con struttura completa: reparto_code, reparto_name, total_revenue, total_quantity, unique_products, unique_customers, top_products. Mapping nomi reparti corretto (01: Alimentari, ecc.)."
+
+  - task: "Advanced Sales Analytics - Promotions Analytics API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato endpoint /api/admin/vendite/promotions per performance analytics di tutte le promozioni con usage count, discount totale, ROI calculation"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Promotions Analytics API funzionante. Recuperate 795 promozioni attive con struttura completa: promotion_id, promotion_type, promotion_number, total_usage, total_discount, unique_customers, performance_score, roi. Calcolo performance score e ROI corretto."
+
+  - task: "Advanced Sales Analytics - Reports Generator API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato endpoint POST /api/admin/vendite/reports per generazione report (monthly_summary, top_customers, department_performance) con filtri avanzati"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Reports Generator API funzionante. Monthly summary report generato con 6 mesi di dati. Filtri per date range funzionanti (month_from/month_to). Struttura report completa: report_type, filters, data, summary con metriche total_revenue, total_transactions, unique_customers, avg_transaction."
+
+  - task: "Advanced Sales Analytics - Data Export API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implementato endpoint GET /api/admin/vendite/export/{report_type} per export dati in formato JSON e CSV (customer_summary, department_summary)"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: Data Export API funzionante. Export customer_summary in JSON con 7,823 record clienti. Export department_summary in CSV con 19 righe (header + 18 reparti). Formati output validati correttamente. Struttura customer record: codice_cliente, total_spent, total_transactions."
+
 frontend:
   - task: "Super Admin Dashboard UI"
     implemented: true
