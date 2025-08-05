@@ -2408,13 +2408,32 @@ async def get_dashboard_stats(current_admin = Depends(get_current_admin)):
     points_result = await db.users.aggregate(pipeline).to_list(1)
     total_points = points_result[0]["total_points"] if points_result else 0
     
+    # Add detailed sales statistics from VENDITE_DATA
+    vendite_stats = {
+        "total_sales_records": len(VENDITE_DATA),
+        "total_revenue": sum(float(sale.get('TOT_IMPORTO', 0)) for sale in VENDITE_DATA),
+        "unique_customers_vendite": len(set(sale.get('CODICE_CLIENTE', '') for sale in VENDITE_DATA)),
+        "unique_products": len(set(sale.get('BARCODE', '') for sale in VENDITE_DATA if sale.get('BARCODE'))),
+        "total_quantity_sold": sum(float(sale.get('TOT_QNT', 0)) for sale in VENDITE_DATA)
+    }
+    
+    # Add scontrini statistics for comparison
+    scontrini_stats = {
+        "total_scontrini": len(SCONTRINI_DATA),
+        "scontrini_revenue": sum(float(record.get('IMPORTO_SCONTRINO', 0)) for record in SCONTRINI_DATA),
+        "scontrini_bollini": sum(float(record.get('N_BOLLINI', 0)) for record in SCONTRINI_DATA),
+        "unique_customers_scontrini": len(set(record.get('CODICE_CLIENTE', '') for record in SCONTRINI_DATA))
+    }
+    
     return {
         "total_users": total_users,
         "total_stores": total_stores,
         "total_cashiers": total_cashiers,
         "total_transactions": total_transactions,
         "recent_registrations": recent_registrations,
-        "total_points_distributed": total_points
+        "total_points_distributed": total_points,
+        "vendite_stats": vendite_stats,
+        "scontrini_stats": scontrini_stats
     }
 
 @api_router.get("/admin/analytics")
