@@ -1784,6 +1784,32 @@ def get_fidelity_user_data(card_number: str) -> dict:
             "negozio": raw_data.get("negozio", "").strip()
         }
     return None
+async def test_mongodb_connection():
+    """Test MongoDB connection and basic operations"""
+    try:
+        # Test connection
+        await client.admin.command('ping')
+        print("✅ MongoDB connection test passed")
+        
+        # Test database access
+        collections = await db.list_collection_names()
+        print(f"✅ Database access test passed. Collections: {len(collections)}")
+        
+        # Test basic write operation
+        test_doc = {"_id": "connection_test", "timestamp": datetime.utcnow()}
+        await db.connection_test.replace_one(
+            {"_id": "connection_test"}, 
+            test_doc, 
+            upsert=True
+        )
+        print("✅ Database write test passed")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ MongoDB connection test failed: {e}")
+        return False
+
 async def init_super_admin():
     existing_admin = await db.admins.find_one({"role": "super_admin"})
     if not existing_admin:
