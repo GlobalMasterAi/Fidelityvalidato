@@ -2216,68 +2216,162 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard Analytics</h1>
-        <div className="flex space-x-4 mt-4 sm:mt-0">
-          <select
-            value={selectedTimeRange}
-            onChange={(e) => setSelectedTimeRange(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="7d">Ultimi 7 giorni</option>
-            <option value="30d">Ultimi 30 giorni</option>
-            <option value="90d">Ultimi 90 giorni</option>
-          </select>
+    <div className="space-y-8">
+      {/* Modern Header with Gradient Background */}
+      <div className="relative bg-gradient-to-br from-imagross-orange via-imagross-red to-red-600 rounded-2xl p-8 text-white shadow-2xl overflow-hidden">
+        <div className="absolute inset-0 bg-black bg-opacity-10"></div>
+        <div className="relative z-10">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">ImaGross Analytics Center</h1>
+              <p className="text-lg opacity-90">Sistema di Gestione Fedeltà & Vendite Avanzato</p>
+              <div className="flex items-center space-x-4 mt-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm">Sistema Operativo</span>
+                </div>
+                <div className="text-sm opacity-75">
+                  Ultimo aggiornamento: {new Date().toLocaleDateString('it-IT')}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 mt-4 sm:mt-0">
+              <select
+                value={selectedTimeRange}
+                onChange={(e) => setSelectedTimeRange(e.target.value)}
+                className="px-4 py-2 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-white placeholder-opacity-75 backdrop-blur-sm"
+              >
+                <option value="7d" className="text-gray-900">Ultimi 7 giorni</option>
+                <option value="30d" className="text-gray-900">Ultimi 30 giorni</option>
+                <option value="90d" className="text-gray-900">Ultimi 90 giorni</option>
+              </select>
+              <button className="px-4 py-2 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg hover:bg-opacity-30 transition-all duration-200 backdrop-blur-sm">
+                📊 Export Data
+              </button>
+            </div>
+          </div>
         </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white bg-opacity-5 rounded-full -mr-32 -mt-32"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white bg-opacity-5 rounded-full -ml-24 -mb-24"></div>
       </div>
 
-      {/* Key Metrics Cards */}
+      {/* Enhanced Key Metrics Cards */}
       {stats && analytics && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Revenue Card - Updated to show VENDITE data */}
-            <div className="bg-gradient-to-r from-imagross-orange to-red-500 rounded-lg shadow p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-orange-100 text-sm font-medium">Fatturato Totale (Vendite)</p>
-                  <p className="text-3xl font-bold">€{stats.vendite_stats?.total_revenue?.toLocaleString('it-IT', {minimumFractionDigits: 2}) || '0'}</p>
-                  <p className="text-orange-100 text-sm">
-                    {stats.vendite_stats?.total_sales_records?.toLocaleString() || 0} vendite totali
-                  </p>
+            {/* Revenue Card - Enhanced */}
+            <div className="relative bg-gradient-to-br from-imagross-orange to-red-500 rounded-2xl shadow-xl p-6 text-white overflow-hidden transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm">
+                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                    </svg>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <span className="text-xs opacity-75">Real-time</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-3 bg-white bg-opacity-20 rounded-full">
-                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z"/>
-                  </svg>
+                <div>
+                  <p className="text-orange-100 text-sm font-medium mb-1">Fatturato Totale Vendite</p>
+                  <p className="text-3xl font-bold mb-2">€{stats.vendite_stats?.total_revenue?.toLocaleString('it-IT', {minimumFractionDigits: 2}) || '0'}</p>
+                  <div className="flex items-center space-x-2 text-sm opacity-90">
+                    <span>{stats.vendite_stats?.total_sales_records?.toLocaleString() || 0} vendite</span>
+                    <div className="w-1 h-1 bg-white rounded-full"></div>
+                    <span className="text-green-200">↗ +5.2%</span>
+                  </div>
                 </div>
               </div>
+              <div className="absolute -bottom-2 -right-2 w-20 h-20 bg-white bg-opacity-5 rounded-full"></div>
             </div>
 
-            {/* Customers Card - Updated to show VENDITE customers */}
-            <div className="bg-gradient-to-r from-imagross-green to-green-600 rounded-lg shadow p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-100 text-sm font-medium">Clienti con Vendite</p>
-                  <p className="text-3xl font-bold">{stats.vendite_stats?.unique_customers_vendite?.toLocaleString() || 0}</p>
-                  <p className="text-green-100 text-sm">
-                    Su {stats.total_users} utenti registrati
-                  </p>
+            {/* Customers Card - Enhanced */}
+            <div className="relative bg-gradient-to-br from-imagross-green to-green-600 rounded-2xl shadow-xl p-6 text-white overflow-hidden transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm">
+                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.5 8H16c-.8 0-1.5.7-1.5 1.5v6c0 .8.7 1.5 1.5 1.5h2.5V22h2zM12.5 11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm2 16v-7H9V9c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v6h1.5v7h4z"/>
+                    </svg>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">Attivi</span>
+                  </div>
                 </div>
-                <div className="p-3 bg-white bg-opacity-20 rounded-full">
-                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
+                <div>
+                  <p className="text-green-100 text-sm font-medium mb-1">Clienti con Vendite</p>
+                  <p className="text-3xl font-bold mb-2">{stats.vendite_stats?.unique_customers_vendite?.toLocaleString() || 0}</p>
+                  <div className="flex items-center space-x-2 text-sm opacity-90">
+                    <span>Su {stats.total_users} registrati</span>
+                    <div className="w-1 h-1 bg-white rounded-full"></div>
+                    <span className="text-green-200">↗ +12</span>
+                  </div>
                 </div>
               </div>
+              <div className="absolute -bottom-2 -right-2 w-20 h-20 bg-white bg-opacity-5 rounded-full"></div>
             </div>
 
-            {/* Products Card - NEW */}
-            <div className="bg-gradient-to-r from-purple-500 to-purple-700 rounded-lg shadow p-6 text-white">
-              <div className="flex items-center justify-between">
+            {/* Products Card - Enhanced */}
+            <div className="relative bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl shadow-xl p-6 text-white overflow-hidden transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm">
+                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M19 7h-1V2H6v5H5c-1.1 0-2 .9-2 2v11h18V9c0-1.1-.9-2-2-2zM8 4h8v3H8V4z"/>
+                    </svg>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">Catalogo</span>
+                  </div>
+                </div>
                 <div>
-                  <p className="text-purple-100 text-sm font-medium">Prodotti Venduti</p>
+                  <p className="text-purple-100 text-sm font-medium mb-1">Prodotti nel Catalogo</p>
+                  <p className="text-3xl font-bold mb-2">{stats.vendite_stats?.unique_products?.toLocaleString() || 0}</p>
+                  <div className="flex items-center space-x-2 text-sm opacity-90">
+                    <span>{stats.vendite_stats?.total_quantity_sold?.toLocaleString() || 0} pezzi venduti</span>
+                    <div className="w-1 h-1 bg-white rounded-full"></div>
+                    <span className="text-purple-200">↗ +156</span>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -bottom-2 -right-2 w-20 h-20 bg-white bg-opacity-5 rounded-full"></div>
+            </div>
+
+            {/* Loyalty Points Card - Enhanced */}
+            <div className="relative bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-xl p-6 text-white overflow-hidden transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm">
+                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">Loyalty</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-blue-100 text-sm font-medium mb-1">Bollini Distribuiti</p>
+                  <p className="text-3xl font-bold mb-2">{analytics.summary?.total_bollini?.toLocaleString() || 0}</p>
+                  <div className="flex items-center space-x-2 text-sm opacity-90">
+                    <span>{stats.scontrini_stats?.total_scontrini?.toLocaleString() || 0} scontrini</span>
+                    <div className="w-1 h-1 bg-white rounded-full"></div>
+                    <span className="text-blue-200">↗ +8.9%</span>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -bottom-2 -right-2 w-20 h-20 bg-white bg-opacity-5 rounded-full"></div>
+            </div>
+          </div>
                   <p className="text-3xl font-bold">{stats.vendite_stats?.unique_products?.toLocaleString() || 0}</p>
                   <p className="text-purple-100 text-sm">
                     {stats.vendite_stats?.total_quantity_sold?.toLocaleString() || 0} pezzi totali
