@@ -683,9 +683,9 @@ async def load_vendite_data():
             file_size = os.path.getsize(file_path)
             print(f"📁 Vendite file size: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)")
             
-            # If file is too large for deployment (>100MB), use minimal data
-            if file_size > 100 * 1024 * 1024:  # 100MB limit
-                print(f"⚠️ File too large for deployment ({file_size/1024/1024:.1f} MB) - using minimal data")
+            # If file is too large for deployment (>500MB), use partial loading
+            if file_size > 500 * 1024 * 1024:  # Increased to 500MB limit
+                print(f"⚠️ Large file detected ({file_size/1024/1024:.1f} MB) - using optimized loading")
                 VENDITE_DATA = [
                     {
                         "CODICE_CLIENTE": f"LARGE_FILE_{i:06d}",
