@@ -86,11 +86,11 @@ def test_admin_dashboard_card_endpoints():
                 # Check if vendite_stats exists with unique_products and unique_customers
                 if "vendite_stats" in data:
                     vendite_stats = data["vendite_stats"]
-                    if "unique_products" in vendite_stats and "unique_customers" in vendite_stats:
-                        print(f"✅ Vendite stats present: {vendite_stats.get('unique_products', 0)} products, {vendite_stats.get('unique_customers', 0)} customers")
+                    if "unique_products" in vendite_stats and "unique_customers_vendite" in vendite_stats:
+                        print(f"✅ Vendite stats present: {vendite_stats.get('unique_products', 0)} products, {vendite_stats.get('unique_customers_vendite', 0)} customers")
                         results.append(("Admin Stats Dashboard API", True, f"Complete data available"))
                     else:
-                        print(f"❌ vendite_stats missing unique_products or unique_customers: {list(vendite_stats.keys())}")
+                        print(f"❌ vendite_stats missing unique_products or unique_customers_vendite: {list(vendite_stats.keys())}")
                         results.append(("Admin Stats Dashboard API", False, f"vendite_stats incomplete"))
                 else:
                     print(f"❌ Missing vendite_stats field needed for Products card")
