@@ -757,7 +757,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Final Deployment Readiness Validation - All Critical Systems"
+    - "Fix Admin Dashboard Card Display Issues"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
