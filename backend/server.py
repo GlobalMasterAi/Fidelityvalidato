@@ -2081,39 +2081,35 @@ async def debug_data_status():
         }
     }
 
-@api_router.get("/debug/force-reload-data")
-async def force_reload_data():
-    """Force reload all data - for debugging deployment issues"""
-    global FIDELITY_DATA, SCONTRINI_DATA, VENDITE_DATA
-    
+@api_router.get("/debug/database-status")
+async def debug_database_status():
+    """Debug endpoint to check ACTUAL database data counts"""
     try:
-        # Reset data
-        FIDELITY_DATA = []
-        SCONTRINI_DATA = []
-        VENDITE_DATA = []
-        
-        # Reset status
-        DATA_LOADING_STATUS["fidelity"] = "force_reloading"
-        DATA_LOADING_STATUS["scontrini"] = "force_reloading" 
-        DATA_LOADING_STATUS["vendite"] = "force_reloading"
-        
-        # Force reload all data
-        asyncio.create_task(load_fidelity_data())
-        asyncio.create_task(load_scontrini_data())
-        asyncio.create_task(load_vendite_data())
+        if db is None:
+            return {"error": "Database not ready"}
+            
+        # Count actual records in database collections
+        fidelity_count = await db.fidelity_data.count_documents({})
+        scontrini_count = await db.scontrini_data.count_documents({})
+        vendite_count = await db.vendite_data.count_documents({})
         
         return {
-            "message": "Force reload initiated",
-            "status": "reloading_started",
-            "timestamp": datetime.utcnow().isoformat()
+            "database_counts": {
+                "fidelity_in_db": fidelity_count,
+                "scontrini_in_db": scontrini_count,
+                "vendite_in_db": vendite_count
+            },
+            "loading_status": DATA_LOADING_STATUS,
+            "memory_usage": {
+                "fidelity_global": len(FIDELITY_DATA) if FIDELITY_DATA else 0,
+                "scontrini_global": len(SCONTRINI_DATA) if SCONTRINI_DATA else 0,
+                "vendite_global": len(VENDITE_DATA) if VENDITE_DATA else 0
+            },
+            "database_ready": db is not None
         }
         
     except Exception as e:
-        return {
-            "message": "Force reload failed",
-            "error": str(e),
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        return {"error": f"Database query error: {str(e)}"}
 
 @api_router.get("/qr/{qr_code}")
 async def get_qr_info(qr_code: str):
