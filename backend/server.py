@@ -4566,6 +4566,24 @@ async def deployment_test():
         "message": "ImaGross container is operational"
     }
 
+@app.get("/minimal-status")
+async def minimal_status():
+    """Ultra-minimal status that NEVER crashes"""
+    try:
+        return {
+            "status": "alive",
+            "mode": "emergency_safe",
+            "data_counts": {
+                "fidelity": len(FIDELITY_DATA) if FIDELITY_DATA else 0,
+                "scontrini": len(SCONTRINI_DATA) if SCONTRINI_DATA else 0,
+                "vendite": len(VENDITE_DATA) if VENDITE_DATA else 0
+            },
+            "memory_safe": True,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {"status": "alive_but_error", "error": str(e)}
+
 # Simple ping endpoint
 @app.get("/ping")
 async def ping():
