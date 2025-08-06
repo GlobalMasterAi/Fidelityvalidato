@@ -660,11 +660,11 @@ async def load_vendite_data():
         import asyncio
         import os
         
-        file_path = '/app/Vendite_20250101_to_20250630.json'
+        file_path = find_json_file('Vendite_20250101_to_20250630.json')
         
         # Check if file exists
-        if not os.path.exists(file_path):
-            print(f"❌ Vendite file not found: {file_path} - creating minimal data")
+        if not file_path:
+            print(f"❌ Vendite file not found in any location - creating minimal data")
             VENDITE_DATA = [
                 {
                     "CODICE_CLIENTE": "EMERGENCY001",
