@@ -3778,38 +3778,47 @@ async def get_vendite_dashboard(admin = Depends(get_current_admin)):
                 "cards": {"total_sales": 0, "unique_customers": 0, "total_revenue": 0.0, "avg_transaction": 0.0}
             }
         }
-        products = get_product_analytics(limit=10)  # Top 10 products
+
+@api_router.get("/admin/scontrini/stats")
+async def get_scontrini_stats(admin = Depends(get_current_admin)):
+    """Get scontrini statistics for dashboard"""
+    try:
+        if db is None:
+            return {"success": False, "error": "Database not ready"}
+            
+        # Count total scontrini
+        total_scontrini = await db.scontrini_data.count_documents({})
         
-        # Promotion performance
-        promotions = get_promotion_analytics()[:5]  # Top 5 promotions
+        # Calculate total bollini distributed
+        bollini_pipeline = [
+            {
+                "$group": {
+                    "_id": None,
+                    "total_bollini": {"$sum": {"$toInt": "$N_BOLLINI"}}
+                }
+            }
+        ]
+        
+        bollini_result = await db.scontrini_data.aggregate(bollini_pipeline).to_list(1)
+        total_bollini = bollini_result[0]["total_bollini"] if bollini_result else 0
         
         return {
             "success": True,
-            "dashboard": {
-                "overview": {
-                    "total_sales": total_sales,
-                    "unique_customers": unique_customers,
-                    "total_revenue": total_revenue,
-                    "avg_transaction": total_revenue / total_sales if total_sales > 0 else 0
-                },
-                "charts": {
-                    "monthly_trends": monthly_trends,
-                    "top_customers": top_customers,
-                    "top_departments": departments,
-                    "top_products": products,
-                    "top_promotions": promotions
-                },
-                "cards": {
-                    "total_sales": total_sales,
-                    "unique_customers": unique_customers,
-                    "total_revenue": total_revenue,
-                    "avg_transaction": total_revenue / total_sales if total_sales > 0 else 0
-                }
+            "stats": {
+                "total_scontrini": total_scontrini,
+                "total_bollini": total_bollini
             }
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting dashboard data: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Scontrini stats error: {str(e)}",
+            "stats": {
+                "total_scontrini": 0,
+                "total_bollini": 0
+            }
+        }
 
 @api_router.get("/admin/vendite/export/{report_type}")
 async def export_vendite_data(
