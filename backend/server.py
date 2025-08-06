@@ -5046,7 +5046,59 @@ async def load_vendite_to_database():
         print(f"❌ Error loading vendite to database: {e}")
         DATA_LOADING_STATUS["vendite"] = "database_error"
 
-async def delayed_vendite_loading():
+async def load_scontrini_to_database():
+    """Load scontrini data directly to MongoDB collection"""
+    try:
+        print("🧾 Loading scontrini data to database...")
+        
+        while db is None:
+            await asyncio.sleep(1)
+            
+        # Clear existing collection
+        await db.scontrini_data.delete_many({})
+        
+        file_path = find_json_file('SCONTRINI_da_Gen2025.json')
+        if file_path:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            if 'TECLI' in data:
+                raw_data = data['TECLI']
+                
+                # Insert in batches
+                batch_size = 2000
+                inserted = 0
+                for i in range(0, len(raw_data), batch_size):
+                    batch = raw_data[i:i+batch_size]
+                    if batch:
+                        await db.scontrini_data.insert_many(batch, ordered=False)
+                        inserted += len(batch)
+                        
+                print(f"✅ Loaded {inserted:,} scontrini records to database")
+                DATA_LOADING_STATUS["scontrini"] = "database_loaded"
+            else:
+                await create_minimal_scontrini_data()
+        else:
+            await create_minimal_scontrini_data()
+            
+    except Exception as e:
+        print(f"❌ Error loading scontrini to database: {e}")
+        DATA_LOADING_STATUS["scontrini"] = "database_error"
+
+async def create_minimal_scontrini_data():
+    """Create minimal scontrini data in database"""
+    docs = []
+    for i in range(100):
+        docs.append({
+            "CODICE_CLIENTE": f"DB_CUSTOMER_{i:06d}",
+            "IMPORTO_SCONTRINO": f"{(i % 100) + 10}.50",
+            "N_BOLLINI": str((i % 10) + 1),
+            "DATA_SCONTRINO": f"2025{(i % 12) + 1:02d}{(i % 28) + 1:02d}",
+            "DITTA": "001"
+        })
+    await db.scontrini_data.insert_many(docs)
+    print("✅ Created minimal scontrini data in database")
+    DATA_LOADING_STATUS["scontrini"] = "database_minimal"
     """Load vendite data after a delay to avoid startup resource pressure"""
     try:
         # Wait 30 seconds after startup before loading heavy data
