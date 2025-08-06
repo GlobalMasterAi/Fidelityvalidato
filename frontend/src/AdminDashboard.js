@@ -268,7 +268,7 @@ const AdminDashboard = () => {
               </div>
               <div>
                 <p className="text-green-100 text-sm font-medium mb-2">Clienti con Vendite</p>
-                <p className="text-4xl font-bold mb-3">{stats.vendite_stats?.unique_customers_vendite?.toLocaleString() || 0}</p>
+                <p className="text-4xl font-bold mb-3">{stats.vendite_stats?.unique_customers?.toLocaleString() || 0}</p>
                 <div className="flex items-center justify-between text-sm">
                   <span className="opacity-90">Su {stats.total_users || 0} registrati</span>
                   <span className="bg-green-400 bg-opacity-20 text-green-300 px-2 py-1 rounded-full text-xs font-medium">
