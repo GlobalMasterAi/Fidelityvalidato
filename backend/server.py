@@ -2212,80 +2212,67 @@ async def admin_check_tessera(tessera_data: TesseraCheck, credentials: HTTPAutho
 
 @api_router.post("/check-tessera")
 async def check_tessera(tessera_data: TesseraCheck):
-    """Check if tessera fisica exists and return user data with enhanced validation"""
+    """Check tessera fisica with enhanced validation using DATABASE queries"""
     try:
-        # Check in current users first
-        user = await db.users.find_one({"tessera_fisica": tessera_data.tessera_fisica})
+        tessera_fisica = tessera_data.tessera_fisica.strip()
+        cognome = tessera_data.cognome.strip().upper() if tessera_data.cognome else None
         
-        if user:
-            # If cognome is provided, validate it matches
-            if tessera_data.cognome:
-                user_cognome = user.get("cognome", "").upper().strip()
-                provided_cognome = tessera_data.cognome.upper().strip()
-                if user_cognome != provided_cognome:
-                    return {
-                        "found": False,
-                        "migrated": False,
-                        "message": "Numero tessera e cognome non combaciano"
-                    }
-            
-            if user.get("migrated", False):
-                return {
-                    "found": True,
-                    "migrated": True,
-                    "message": "Tessera già migrata"
-                }
-            else:
-                # User exists but not migrated
-                return {
-                    "found": True,
-                    "migrated": False,
-                    "user_data": {
-                        "nome": user.get("nome", ""),
-                        "cognome": user.get("cognome", ""),
-                        "sesso": user.get("sesso", "M"),
-                        "email": user.get("email", ""),
-                        "telefono": user.get("telefono", ""),
-                        "localita": user.get("localita", ""),
-                        "indirizzo": user.get("indirizzo", ""),
-                        "provincia": user.get("provincia", "")
-                    }
-                }
+        if not tessera_fisica:
+            return {"found": False, "migrated": False, "error": "Numero tessera richiesto"}
         
-        # Check in fidelity data
-        fidelity_data = get_fidelity_user_data(tessera_data.tessera_fisica)
+        # Query MongoDB directly - ZERO memory usage
+        fidelity_record = await db.fidelity_data.find_one({"_id": tessera_fisica})
         
-        if fidelity_data:
-            # If cognome is provided, validate it matches fidelity data
-            if tessera_data.cognome:
-                fidelity_cognome = fidelity_data.get("cognome", "").upper().strip()
-                provided_cognome = tessera_data.cognome.upper().strip()
-                if fidelity_cognome != provided_cognome:
-                    return {
-                        "found": False,
-                        "migrated": False,
-                        "message": "Numero tessera e cognome non combaciano"
-                    }
-            
+        if not fidelity_record:
             return {
-                "found": True,
+                "found": False,
                 "migrated": False,
-                "user_data": fidelity_data,
-                "source": "fidelity_json"
+                "error": "Tessera non trovata nel sistema di fidelizzazione"
             }
         
+        # Enhanced validation: check cognome if provided
+        if cognome:
+            record_cognome = fidelity_record.get('cognome', '').upper()
+            if record_cognome != cognome:
+                return {
+                    "found": False,
+                    "migrated": False,
+                    "error": "Numero tessera e cognome non combaciano"
+                }
+        
+        # Check if already migrated (in users collection)
+        existing_tessera = await db.users.find_one({"tessera_fisica": tessera_fisica})
+        if existing_tessera:
+            return {
+                "found": True,
+                "migrated": True,
+                "user_data": None,
+                "message": "Tessera già migrata nel nuovo sistema"
+            }
+        
+        # Return fidelity data for registration
         return {
-            "found": False,
+            "found": True,
             "migrated": False,
-            "message": "Tessera non trovata" if not tessera_data.cognome else "Numero tessera e cognome non trovati o non combaciano"
+            "user_data": {
+                "nome": fidelity_record.get('nome', ''),
+                "cognome": fidelity_record.get('cognome', ''),
+                "email": fidelity_record.get('email', ''),
+                "telefono": fidelity_record.get('telefono', ''),
+                "sesso": fidelity_record.get('sesso', ''),
+                "localita": fidelity_record.get('localita', ''),
+                "indirizzo": fidelity_record.get('indirizzo', ''),
+                "data_nascita": fidelity_record.get('data_nascita', ''),
+                "progressivo_spesa": fidelity_record.get('progressivo_spesa', 0),
+                "bollini": fidelity_record.get('bollini', 0)
+            }
         }
         
     except Exception as e:
-        print(f"Error checking tessera: {e}")
         return {
             "found": False,
             "migrated": False,
-            "message": "Errore durante la verifica"
+            "error": f"Errore nella verifica tessera: {str(e)}"
         }
 
 # User Authentication Routes
