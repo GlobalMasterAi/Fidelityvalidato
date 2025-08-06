@@ -5040,8 +5040,10 @@ async def load_fidelity_to_database():
                                         obj_str = buffer[start:end+1]
                                         record = json.loads(obj_str)
                                         
-                                        # CRITICAL: Ensure we have tessera_fisica
-                                        if record.get("tessera_fisica"):
+                                        # CRITICAL: Ensure we have card_number (not tessera_fisica!)
+                                        if record.get("card_number"):
+                                            # Normalize field name for consistency
+                                            record["tessera_fisica"] = record["card_number"]
                                             raw_data.append(record)
                                             objects_found += 1
                                             
