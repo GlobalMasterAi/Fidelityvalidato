@@ -1768,13 +1768,26 @@ async def load_fidelity_data():
             print(f"Complete JSON parsing failed: {e}")
             print("Attempting chunked parsing...")
             
-            # Fallback to chunked parsing with memory safety
+            # Fallback to chunked parsing with memory safety and multiple encodings
             chunk_size = 1000
             loaded_count = 0
             skipped_count = 0
             
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            # Try multiple encodings for chunked parsing too
+            for encoding in ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252']:
+                try:
+                    with open(file_path, 'r', encoding=encoding) as f:
+                        content = f.read()
+                    print(f"File read successfully with encoding: {encoding}")
+                    break
+                except UnicodeDecodeError as e:
+                    print(f"Chunked parsing - encoding {encoding} failed: {e}")
+                    continue
+            else:
+                print("❌ All encodings failed for chunked parsing - using emergency fallback")
+                FIDELITY_DATA = {"2020000028284": {"nome": "EMERGENCY", "cognome": "USER"}}
+                DATA_LOADING_STATUS["fidelity"] = "all_encodings_failed"
+                return
                 
             # Try to fix common JSON issues
             content = content.replace(',\n]', '\n]')
