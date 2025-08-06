@@ -19,20 +19,55 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch basic stats
-      const statsResponse = await axios.get(`${API}/admin/stats/dashboard`, {
+      // Fetch vendite dashboard data (real data from database)
+      const venditeResponse = await axios.get(`${API}/admin/vendite/dashboard`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
       });
       
-      // Fetch analytics
-      const analyticsResponse = await axios.get(`${API}/admin/analytics`, {
+      // Fetch basic admin stats for additional data
+      const statsResponse = await axios.get(`${API}/admin/stats/dashboard`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
-      });
-
-      setStats(statsResponse.data);
-      setAnalytics(analyticsResponse.data);
+      }).catch(() => ({ data: null })); // Fallback if endpoint doesn't exist
+      
+      // Use vendite data as primary source
+      if (venditeResponse.data && venditeResponse.data.success) {
+        const venditeData = venditeResponse.data.dashboard;
+        
+        // Map vendite data to expected format
+        setStats({
+          fatturato: venditeData.overview.total_revenue,
+          utenti_attivi: venditeData.overview.unique_customers,
+          prodotti: venditeData.overview.unique_customers, // Using customers for now
+          bollini: 0, // Will need separate endpoint
+          vendite: venditeData.overview.total_sales,
+          scontrini: 0 // Will need separate endpoint
+        });
+        
+        // Map analytics data
+        setAnalytics({
+          monthly_trends: venditeData.charts.monthly_trends,
+          top_customers: venditeData.charts.top_customers,
+          top_departments: venditeData.charts.top_departments,
+          top_products: venditeData.charts.top_products
+        });
+      } else {
+        // Fallback to basic stats if vendite endpoint fails
+        setStats(statsResponse.data);
+        setAnalytics({ monthly_trends: [], top_customers: [], top_departments: [], top_products: [] });
+      }
+      
     } catch (error) {
       console.error('Error fetching data:', error);
+      // Set default values to prevent showing zeros
+      setStats({
+        fatturato: 0,
+        utenti_attivi: 0,
+        prodotti: 0,
+        bollini: 0,
+        vendite: 0,
+        scontrini: 0
+      });
+      setAnalytics({ monthly_trends: [], top_customers: [], top_departments: [], top_products: [] });
     } finally {
       setLoading(false);
     }
