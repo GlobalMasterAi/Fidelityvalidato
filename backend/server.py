@@ -2091,13 +2091,24 @@ async def debug_vendite_sample():
         # Get a few sample records to inspect structure
         sample_records = await db.vendite_data.find({}).limit(3).to_list(3)
         
+        # Convert ObjectId to string for JSON serialization
+        clean_samples = []
+        for record in sample_records:
+            clean_record = {}
+            for key, value in record.items():
+                if key == "_id":
+                    clean_record[key] = str(value)
+                else:
+                    clean_record[key] = value
+            clean_samples.append(clean_record)
+        
         return {
-            "sample_count": len(sample_records),
-            "sample_records": sample_records,
+            "sample_count": len(clean_samples),
+            "sample_records": clean_samples,
             "field_types": {
-                field: type(sample_records[0].get(field)).__name__ if sample_records else "N/A"
+                field: str(type(clean_samples[0].get(field)).__name__) if clean_samples else "N/A"
                 for field in ["TOT_IMPORTO", "TOT_QNT", "CODICE_CLIENTE", "BARCODE", "REPARTO", "MESE"]
-            } if sample_records else {}
+            } if clean_samples else {}
         }
         
     except Exception as e:
