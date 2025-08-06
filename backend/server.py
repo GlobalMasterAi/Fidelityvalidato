@@ -1930,14 +1930,75 @@ async def init_super_admin():
 async def root():
     return {"message": "ImaGross Loyalty API v2.0 - Scalable System"}
 
-@api_router.get("/debug/fidelity")
-async def debug_fidelity():
-    """Debug endpoint to check fidelity data"""
+@api_router.get("/debug/data-status")
+async def debug_data_status():
+    """Debug endpoint to check data loading status and file availability"""
+    import os
+    
+    file_status = {}
+    
+    # Check all JSON files
+    json_files = [
+        '/app/Fidelity.json',
+        '/app/SCONTRINI_da_Gen2025.json', 
+        '/app/Vendite_20250101_to_20250630.json'
+    ]
+    
+    for file_path in json_files:
+        filename = os.path.basename(file_path)
+        file_status[filename] = {
+            "exists": os.path.exists(file_path),
+            "size_bytes": os.path.getsize(file_path) if os.path.exists(file_path) else 0,
+            "size_mb": round(os.path.getsize(file_path) / 1024 / 1024, 2) if os.path.exists(file_path) else 0
+        }
+    
     return {
-        "loaded_records": len(FIDELITY_DATA),
-        "available_cards": list(FIDELITY_DATA.keys()),
-        "sample_data": next(iter(FIDELITY_DATA.values())) if FIDELITY_DATA else None
+        "loading_status": DATA_LOADING_STATUS,
+        "data_counts": {
+            "fidelity_loaded": len(FIDELITY_DATA),
+            "scontrini_loaded": len(SCONTRINI_DATA),
+            "vendite_loaded": len(VENDITE_DATA)
+        },
+        "file_status": file_status,
+        "container_files": {
+            "app_directory": os.listdir('/app') if os.path.exists('/app') else [],
+            "working_directory": os.listdir('.') if os.path.exists('.') else []
+        }
     }
+
+@api_router.get("/debug/force-reload-data")
+async def force_reload_data():
+    """Force reload all data - for debugging deployment issues"""
+    global FIDELITY_DATA, SCONTRINI_DATA, VENDITE_DATA
+    
+    try:
+        # Reset data
+        FIDELITY_DATA = []
+        SCONTRINI_DATA = []
+        VENDITE_DATA = []
+        
+        # Reset status
+        DATA_LOADING_STATUS["fidelity"] = "force_reloading"
+        DATA_LOADING_STATUS["scontrini"] = "force_reloading" 
+        DATA_LOADING_STATUS["vendite"] = "force_reloading"
+        
+        # Force reload all data
+        asyncio.create_task(load_fidelity_data())
+        asyncio.create_task(load_scontrini_data())
+        asyncio.create_task(load_vendite_data())
+        
+        return {
+            "message": "Force reload initiated",
+            "status": "reloading_started",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "message": "Force reload failed",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
 @api_router.get("/qr/{qr_code}")
 async def get_qr_info(qr_code: str):
