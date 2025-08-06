@@ -750,9 +750,18 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
-agent_communication:
-  - agent: "main"
-    message: "Implementato sistema scalabile completo: Super Admin Dashboard, gestione stores/casse, QR code per registrazioni, import Excel, dual auth system. Admin predefinito: superadmin/ImaGross2024! - Sistema pronto per testing backend."
+  - task: "Fix Admin Dashboard Card Display Issues"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/AdminDashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "CRITICAL ISSUE: Admin Dashboard cards for 'Clienti' (Customers), 'Prodotti' (Products), and 'Bollini' (Loyalty Points) showing zeros instead of real data. Fixed data mapping issues by combining /admin/stats/dashboard, /admin/vendite/dashboard, and /admin/scontrini/stats endpoints. Updated fetchData() to pull comprehensive data from multiple sources. Fixed card mappings: Customers card now uses stats.vendite_stats.unique_customers, Products card uses stats.vendite_stats.unique_products, Bollini card uses stats.bollini from scontrini data. Ready for backend testing."
+
   - agent: "testing"
     message: "🎉 COMPREHENSIVE BACKEND TESTING COMPLETED SUCCESSFULLY! All 30 tests passed (100% success rate). Fixed MongoDB ObjectId serialization issues and added missing add-points endpoint during testing. All HIGH PRIORITY systems are fully functional: ✅ Super Admin Authentication (login, token validation, admin creation) ✅ Store Management (CRUD, unique codes, status management) ✅ Cashier Management (creation, QR generation, store linking) ✅ QR Code System (format compliance, base64 images, uniqueness) ✅ QR Registration Flow (info retrieval, user registration, count tracking) ✅ Admin Dashboard Statistics (comprehensive metrics) ✅ Excel Import System (file processing, access control) ✅ User System (registration, login, profiles, points). Backend is production-ready for the ImaGross Super Admin Dashboard scalable system."
   - agent: "testing"
