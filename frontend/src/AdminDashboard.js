@@ -41,7 +41,14 @@ const AdminDashboard = () => {
           prodotti: venditeData.charts.top_products ? venditeData.charts.top_products.length : 0,
           bollini: scontriniData.total_bollini,
           vendite: venditeData.overview.total_sales,
-          scontrini: scontriniData.total_scontrini
+          scontrini: scontriniData.total_scontrini,
+          // Add vendite_stats structure that dashboard expects
+          vendite_stats: {
+            total_revenue: venditeData.overview.total_revenue,
+            total_sales_records: venditeData.overview.total_sales,
+            unique_customers: venditeData.overview.unique_customers,
+            avg_transaction: venditeData.overview.avg_transaction
+          }
         });
         
         // Map analytics data for charts
