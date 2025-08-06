@@ -1742,9 +1742,21 @@ async def load_fidelity_data():
         
         # Try complete JSON loading first
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                raw_data = json.load(f)
-            print(f"Complete JSON loaded successfully with {len(raw_data)} records")
+            # Try multiple encodings for compatibility
+            encodings_to_try = ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252']
+            
+            for encoding in encodings_to_try:
+                try:
+                    with open(file_path, 'r', encoding=encoding) as f:
+                        raw_data = json.load(f)
+                    print(f"Complete JSON loaded successfully with {len(raw_data)} records (encoding: {encoding})")
+                    break
+                except UnicodeDecodeError as e:
+                    print(f"Encoding {encoding} failed: {e}")
+                    continue
+            else:
+                # If all encodings failed, raise an exception to trigger the JSONDecodeError handler
+                raise json.JSONDecodeError("All encodings failed", "", 0)
             
             # Process the data safely - increased limit for production
             for record in raw_data[:30000]:  # Increased to 30K for production
