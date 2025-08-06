@@ -1727,6 +1727,10 @@ async def load_fidelity_data():
         # Check if file exists first - search in multiple locations
         file_path = find_json_file('Fidelity.json')
         if not file_path:
+            # Try alternative names
+            file_path = find_json_file('fidelity_complete.json')
+            
+        if not file_path:
             print(f"⚠️ Fidelity file not found in any location - creating minimal fallback")
             FIDELITY_DATA = {"2020000028284": {"nome": "FALLBACK", "cognome": "USER"}}
             DATA_LOADING_STATUS["fidelity"] = "file_not_found"
