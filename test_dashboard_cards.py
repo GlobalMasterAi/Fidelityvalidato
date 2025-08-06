@@ -241,9 +241,13 @@ def test_admin_dashboard_card_endpoints():
                 card_data["revenue"] = "MISSING"
                 print(f"❌ Revenue data: MISSING")
             
-            # Bollini count (from scontrini)
-            card_data["bollini"] = scontrini_data.get("total_bollini", 0)
-            print(f"✅ Bollini data: {card_data['bollini']:,}")
+            # Bollini count (from scontrini stats object)
+            if "stats" in scontrini_data:
+                card_data["bollini"] = scontrini_data["stats"].get("total_bollini", 0)
+                print(f"✅ Bollini data: {card_data['bollini']:,}")
+            else:
+                card_data["bollini"] = "MISSING"
+                print(f"❌ Bollini data: MISSING")
             
             # Check if all required data is available
             missing_data = [key for key, value in card_data.items() if value == "MISSING"]
