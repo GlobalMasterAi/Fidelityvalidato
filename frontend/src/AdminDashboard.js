@@ -30,6 +30,13 @@ const AdminDashboard = () => {
         throw new Error('No authentication token');
       }
       
+      // Fetch comprehensive admin stats (includes total_users, stores, cashiers, etc.)
+      console.log('🔄 Fetching admin stats dashboard...');
+      const adminStatsResponse = await axios.get(`${API}/admin/stats/dashboard`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('✅ Admin Stats response:', adminStatsResponse.data);
+      
       // Fetch vendite dashboard data (real data from database)
       console.log('🔄 Fetching vendite dashboard...');
       const venditeResponse = await axios.get(`${API}/admin/vendite/dashboard`, {
@@ -47,36 +54,46 @@ const AdminDashboard = () => {
       });
       console.log('✅ Scontrini response:', scontriniResponse.data);
       
-      // Use vendite data as primary source
-      if (venditeResponse.data && venditeResponse.data.success) {
+      // Combine all data sources
+      if (venditeResponse.data && venditeResponse.data.success && adminStatsResponse.data) {
         const venditeData = venditeResponse.data.dashboard;
+        const adminData = adminStatsResponse.data;
         const scontriniData = scontriniResponse.data.success ? scontriniResponse.data.stats : { total_scontrini: 0, total_bollini: 0 };
         
-        console.log('📊 Processing data:', {
+        console.log('📊 Processing combined data:', {
           revenue: venditeData.overview.total_revenue,
           sales: venditeData.overview.total_sales,
           customers: venditeData.overview.unique_customers,
-          bollini: scontriniData.total_bollini
+          products: adminData.vendite_stats?.unique_products,
+          bollini: scontriniData.total_bollini,
+          total_users: adminData.total_users
         });
         
         // Map database data to expected dashboard format
         const newStats = {
           fatturato: venditeData.overview.total_revenue,
           utenti_attivi: venditeData.overview.unique_customers,
-          prodotti: venditeData.charts.top_products ? venditeData.charts.top_products.length : 0,
+          prodotti: adminData.vendite_stats?.unique_products || 0,
           bollini: scontriniData.total_bollini,
           vendite: venditeData.overview.total_sales,
           scontrini: scontriniData.total_scontrini,
+          total_users: adminData.total_users,
+          total_stores: adminData.total_stores,
+          total_cashiers: adminData.total_cashiers,
+          total_points_distributed: adminData.total_points_distributed,
+          recent_registrations: adminData.recent_registrations,
           // Add vendite_stats structure that dashboard expects
           vendite_stats: {
             total_revenue: venditeData.overview.total_revenue,
             total_sales_records: venditeData.overview.total_sales,
             unique_customers: venditeData.overview.unique_customers,
+            unique_products: adminData.vendite_stats?.unique_products || 0,
+            total_quantity_sold: adminData.vendite_stats?.total_quantity_sold || 0,
             avg_transaction: venditeData.overview.avg_transaction
           }
         };
         
-        console.log('🎯 Setting stats:', newStats);
+        console.log('🎯 Setting combined stats:', newStats);
         setStats(newStats);
         
         // Map analytics data for charts
@@ -84,13 +101,19 @@ const AdminDashboard = () => {
           monthly_trends: venditeData.charts.monthly_trends || [],
           top_customers: venditeData.charts.top_customers || [],
           top_departments: venditeData.charts.top_departments || [],
-          top_products: venditeData.charts.top_products || []
+          top_products: venditeData.charts.top_products || [],
+          summary: {
+            total_bollini: scontriniData.total_bollini,
+            total_transactions: venditeData.overview.total_sales,
+            avg_transaction: venditeData.overview.avg_transaction,
+            avg_bollini_per_transaction: (scontriniData.total_bollini / venditeData.overview.total_sales) || 0
+          }
         });
         
-        console.log('✅ Real database data loaded successfully!');
+        console.log('✅ Combined real database data loaded successfully!');
       } else {
-        console.error('❌ Vendite dashboard API failed:', venditeResponse.data);
-        throw new Error('Vendite API returned failure');
+        console.error('❌ One or more APIs failed:', { vendite: venditeResponse.data, adminStats: adminStatsResponse.data });
+        throw new Error('API requests failed');
       }
       
     } catch (error) {
@@ -105,14 +128,32 @@ const AdminDashboard = () => {
         bollini: 0,
         vendite: 0,
         scontrini: 0,
+        total_users: 0,
+        total_stores: 0,
+        total_cashiers: 0,
+        total_points_distributed: 0,
+        recent_registrations: 0,
         vendite_stats: {
           total_revenue: 0,
           total_sales_records: 0,
           unique_customers: 0,
+          unique_products: 0,
+          total_quantity_sold: 0,
           avg_transaction: 0
         }
       });
-      setAnalytics({ monthly_trends: [], top_customers: [], top_departments: [], top_products: [] });
+      setAnalytics({ 
+        monthly_trends: [], 
+        top_customers: [], 
+        top_departments: [], 
+        top_products: [],
+        summary: {
+          total_bollini: 0,
+          total_transactions: 0,
+          avg_transaction: 0,
+          avg_bollini_per_transaction: 0
+        }
+      });
     } finally {
       setLoading(false);
     }
