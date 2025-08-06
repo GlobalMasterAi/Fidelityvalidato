@@ -712,7 +712,7 @@ async def load_vendite_data():
             print(f"✅ Loaded {len(VENDITE_DATA)} detailed sales records")
             
             # Calculate statistics only if data loaded successfully and not too large
-            if VENDITE_DATA and len(VENDITE_DATA) < 500000:  # Only for smaller datasets
+            if VENDITE_DATA and len(VENDITE_DATA) < 2000000:  # Increased to 2M records
                 unique_customers = len(set(record.get('CODICE_CLIENTE', '') for record in VENDITE_DATA))
                 unique_products = len(set(record.get('BARCODE', '') for record in VENDITE_DATA if record.get('BARCODE')))
                 unique_departments = len(set(record.get('REPARTO', '') for record in VENDITE_DATA))
