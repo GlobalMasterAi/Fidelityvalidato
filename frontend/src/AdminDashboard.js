@@ -389,10 +389,10 @@ const AdminDashboard = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500 font-medium">Con acquisti</span>
-                  <span className="font-bold text-gray-900">{stats.vendite_stats?.unique_customers_vendite || 0}</span>
+                  <span className="font-bold text-gray-900">{stats.vendite_stats?.unique_customers || 0}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-teal-600 h-2 rounded-full" style={{width: `${((stats.vendite_stats?.unique_customers_vendite || 0) / (stats.total_users || 1)) * 100}%`}}></div>
+                  <div className="bg-teal-600 h-2 rounded-full" style={{width: `${((stats.vendite_stats?.unique_customers || 0) / (stats.total_users || 1)) * 100}%`}}></div>
                 </div>
               </div>
             </div>
