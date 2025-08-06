@@ -3729,8 +3729,8 @@ async def get_vendite_dashboard(admin = Depends(get_current_admin)):
             {
                 "$group": {
                     "_id": "$BARCODE",
-                    "total_revenue": {"$sum": {"$toDouble": "$TOT_IMPORTO"}},
-                    "quantity": {"$sum": {"$toDouble": "$TOT_QNT"}}
+                    "total_revenue": {"$sum": "$TOT_IMPORTO"},  # Already float
+                    "quantity": {"$sum": "$TOT_QNT"}  # Already float
                 }
             },
             {"$sort": {"total_revenue": -1}},
