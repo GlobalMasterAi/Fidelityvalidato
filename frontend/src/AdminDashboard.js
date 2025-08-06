@@ -19,23 +19,48 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       
+      // Debug: Log API URL and token
+      const token = localStorage.getItem('adminToken');
+      console.log('🔍 DEBUG: API URL:', API);
+      console.log('🔍 DEBUG: Token exists:', !!token);
+      console.log('🔍 DEBUG: Token preview:', token ? token.substring(0, 20) + '...' : 'NULL');
+      
+      if (!token) {
+        console.error('❌ No admin token found in localStorage');
+        throw new Error('No authentication token');
+      }
+      
       // Fetch vendite dashboard data (real data from database)
+      console.log('🔄 Fetching vendite dashboard...');
       const venditeResponse = await axios.get(`${API}/admin/vendite/dashboard`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('✅ Vendite response:', venditeResponse.data);
       
       // Fetch scontrini stats for bollini data
+      console.log('🔄 Fetching scontrini stats...');
       const scontriniResponse = await axios.get(`${API}/admin/scontrini/stats`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
-      }).catch(() => ({ data: { success: false, stats: { total_scontrini: 0, total_bollini: 0 } } }));
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(error => {
+        console.error('⚠️ Scontrini API failed:', error);
+        return { data: { success: false, stats: { total_scontrini: 0, total_bollini: 0 } } };
+      });
+      console.log('✅ Scontrini response:', scontriniResponse.data);
       
       // Use vendite data as primary source
       if (venditeResponse.data && venditeResponse.data.success) {
         const venditeData = venditeResponse.data.dashboard;
         const scontriniData = scontriniResponse.data.success ? scontriniResponse.data.stats : { total_scontrini: 0, total_bollini: 0 };
         
+        console.log('📊 Processing data:', {
+          revenue: venditeData.overview.total_revenue,
+          sales: venditeData.overview.total_sales,
+          customers: venditeData.overview.unique_customers,
+          bollini: scontriniData.total_bollini
+        });
+        
         // Map database data to expected dashboard format
-        setStats({
+        const newStats = {
           fatturato: venditeData.overview.total_revenue,
           utenti_attivi: venditeData.overview.unique_customers,
           prodotti: venditeData.charts.top_products ? venditeData.charts.top_products.length : 0,
@@ -49,7 +74,10 @@ const AdminDashboard = () => {
             unique_customers: venditeData.overview.unique_customers,
             avg_transaction: venditeData.overview.avg_transaction
           }
-        });
+        };
+        
+        console.log('🎯 Setting stats:', newStats);
+        setStats(newStats);
         
         // Map analytics data for charts
         setAnalytics({
@@ -59,36 +87,30 @@ const AdminDashboard = () => {
           top_products: venditeData.charts.top_products || []
         });
         
-        console.log('✅ Real database data loaded:', {
-          fatturato: venditeData.overview.total_revenue,
-          vendite: venditeData.overview.total_sales,
-          clienti: venditeData.overview.unique_customers,
-          bollini: scontriniData.total_bollini
-        });
+        console.log('✅ Real database data loaded successfully!');
       } else {
         console.error('❌ Vendite dashboard API failed:', venditeResponse.data);
-        // Set minimal fallback values
-        setStats({
-          fatturato: 0,
-          utenti_attivi: 0,
-          prodotti: 0,
-          bollini: 0,
-          vendite: 0,
-          scontrini: 0
-        });
-        setAnalytics({ monthly_trends: [], top_customers: [], top_departments: [], top_products: [] });
+        throw new Error('Vendite API returned failure');
       }
       
     } catch (error) {
-      console.error('❌ Error fetching dashboard data:', error);
-      // Set fallback values to prevent showing zeros incorrectly
+      console.error('❌ CRITICAL ERROR fetching dashboard data:', error);
+      console.error('❌ Error details:', error.response?.data || error.message);
+      
+      // Set fallback values
       setStats({
         fatturato: 0,
         utenti_attivi: 0,
         prodotti: 0,
         bollini: 0,
         vendite: 0,
-        scontrini: 0
+        scontrini: 0,
+        vendite_stats: {
+          total_revenue: 0,
+          total_sales_records: 0,
+          unique_customers: 0,
+          avg_transaction: 0
+        }
       });
       setAnalytics({ monthly_trends: [], top_customers: [], top_departments: [], top_products: [] });
     } finally {
