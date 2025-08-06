@@ -5000,7 +5000,7 @@ async def load_fidelity_to_database():
                     
                     print(f"✅ Line-by-line parsed {len(raw_data)} records")
                 
-                # Approach 3: Chunk-based parsing for very large files
+                # Approach 3: Chunk-based parsing for very large files  
                 if not raw_data or len(raw_data) < 1000:
                     print("🔧 Attempting chunk-based parsing...")
                     raw_data = []
@@ -5008,6 +5008,7 @@ async def load_fidelity_to_database():
                     with open(file_path, 'r', encoding='latin-1') as f:
                         chunk_size = 1024 * 1024  # 1MB chunks
                         buffer = ""
+                        objects_found = 0
                         
                         while True:
                             chunk = f.read(chunk_size)
@@ -5038,7 +5039,15 @@ async def load_fidelity_to_database():
                                     try:
                                         obj_str = buffer[start:end+1]
                                         record = json.loads(obj_str)
-                                        raw_data.append(record)
+                                        
+                                        # CRITICAL: Ensure we have tessera_fisica
+                                        if record.get("tessera_fisica"):
+                                            raw_data.append(record)
+                                            objects_found += 1
+                                            
+                                            if objects_found % 5000 == 0:
+                                                print(f"📊 Found {objects_found} valid fidelity records...")
+                                        
                                     except json.JSONDecodeError:
                                         pass
                                     
@@ -5046,7 +5055,7 @@ async def load_fidelity_to_database():
                                 else:
                                     break
                     
-                    print(f"✅ Chunk-based parsed {len(raw_data)} records")
+                    print(f"✅ Chunk-based parsed {len(raw_data)} valid records with tessera_fisica")
                 
                 # Insert records in database
                 if raw_data and len(raw_data) > 0:
