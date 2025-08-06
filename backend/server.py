@@ -2114,6 +2114,16 @@ async def debug_vendite_sample():
     except Exception as e:
         return {"error": f"Sample query error: {str(e)}"}
 
+@api_router.get("/debug/test-auth")
+async def test_auth(admin = Depends(get_current_admin)):
+    """Test endpoint to verify authentication is working"""
+    return {
+        "success": True,
+        "message": "Authentication working",
+        "admin_id": admin.id,
+        "admin_username": admin.username
+    }
+
 @api_router.get("/debug/database-status")
 async def debug_database_status():
     """Debug endpoint to check ACTUAL database data counts"""
