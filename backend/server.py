@@ -4374,6 +4374,22 @@ async def readiness_probe():
     """Kubernetes readiness probe - ultra simple"""
     return {"ready": True}
 
+# EMERGENCY DEPLOYMENT endpoints - ALWAYS work regardless of app state
+@app.get("/emergency")
+async def emergency_health():
+    """Emergency health check that NEVER fails"""
+    return {"status": "emergency_ok", "timestamp": "always_available"}
+
+@app.get("/deploy-test")
+async def deployment_test():
+    """Deployment test endpoint - bypasses all systems"""
+    return {
+        "deployment": "active",
+        "container": "running", 
+        "timestamp": datetime.utcnow().isoformat(),
+        "message": "ImaGross container is operational"
+    }
+
 # Simple ping endpoint
 @app.get("/ping")
 async def ping():
