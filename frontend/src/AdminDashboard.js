@@ -320,9 +320,9 @@ const AdminDashboard = () => {
               </div>
               <div>
                 <p className="text-blue-100 text-sm font-medium mb-2">Bollini Distribuiti</p>
-                <p className="text-4xl font-bold mb-3">{analytics?.summary?.total_bollini?.toLocaleString() || 0}</p>
+                <p className="text-4xl font-bold mb-3">{stats.bollini?.toLocaleString() || 0}</p>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="opacity-90">{stats.scontrini_stats?.total_scontrini?.toLocaleString() || 0} scontrini</span>
+                  <span className="opacity-90">{stats.scontrini?.toLocaleString() || 0} scontrini</span>
                   <span className="bg-blue-400 bg-opacity-20 text-blue-300 px-2 py-1 rounded-full text-xs font-medium">
                     ↗ +8.9%
                   </span>
