@@ -2081,6 +2081,28 @@ async def debug_data_status():
         }
     }
 
+@api_router.get("/debug/vendite-sample")
+async def debug_vendite_sample():
+    """Debug endpoint to check vendite data structure"""
+    try:
+        if db is None:
+            return {"error": "Database not ready"}
+            
+        # Get a few sample records to inspect structure
+        sample_records = await db.vendite_data.find({}).limit(3).to_list(3)
+        
+        return {
+            "sample_count": len(sample_records),
+            "sample_records": sample_records,
+            "field_types": {
+                field: type(sample_records[0].get(field)).__name__ if sample_records else "N/A"
+                for field in ["TOT_IMPORTO", "TOT_QNT", "CODICE_CLIENTE", "BARCODE", "REPARTO", "MESE"]
+            } if sample_records else {}
+        }
+        
+    except Exception as e:
+        return {"error": f"Sample query error: {str(e)}"}
+
 @api_router.get("/debug/database-status")
 async def debug_database_status():
     """Debug endpoint to check ACTUAL database data counts"""
