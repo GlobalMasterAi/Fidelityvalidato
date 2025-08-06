@@ -2817,13 +2817,45 @@ async def get_dashboard_stats(current_admin = Depends(get_current_admin)):
             "total_quantity_sold": 0
         }
     
-    # Add scontrini statistics for comparison
-    scontrini_stats = {
-        "total_scontrini": len(SCONTRINI_DATA),
-        "scontrini_revenue": sum(float(record.get('IMPORTO_SCONTRINO', 0)) for record in SCONTRINI_DATA),
-        "scontrini_bollini": sum(float(record.get('N_BOLLINI', 0)) for record in SCONTRINI_DATA),
-        "unique_customers_scontrini": len(set(record.get('CODICE_CLIENTE', '') for record in SCONTRINI_DATA))
-    }
+    # Add scontrini statistics from MongoDB scontrini_data collection
+    scontrini_count = await db.scontrini_data.count_documents({})
+    
+    if scontrini_count > 0:
+        # Calculate scontrini metrics from database
+        scontrini_pipeline = [
+            {
+                "$group": {
+                    "_id": None,
+                    "total_revenue": {"$sum": {"$toDouble": "$IMPORTO_SCONTRINO"}},
+                    "total_bollini": {"$sum": {"$toDouble": "$N_BOLLINI"}},
+                    "unique_customers": {"$addToSet": "$CODICE_CLIENTE"}
+                }
+            }
+        ]
+        
+        scontrini_result = await db.scontrini_data.aggregate(scontrini_pipeline).to_list(1)
+        if scontrini_result:
+            result_data = scontrini_result[0]
+            scontrini_stats = {
+                "total_scontrini": scontrini_count,
+                "scontrini_revenue": result_data.get("total_revenue", 0),
+                "scontrini_bollini": result_data.get("total_bollini", 0),
+                "unique_customers_scontrini": len(result_data.get("unique_customers", []))
+            }
+        else:
+            scontrini_stats = {
+                "total_scontrini": scontrini_count,
+                "scontrini_revenue": 0,
+                "scontrini_bollini": 0,
+                "unique_customers_scontrini": 0
+            }
+    else:
+        scontrini_stats = {
+            "total_scontrini": 0,
+            "scontrini_revenue": 0,
+            "scontrini_bollini": 0,
+            "unique_customers_scontrini": 0
+        }
     
     return {
         "total_users": total_users,
