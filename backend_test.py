@@ -3128,6 +3128,156 @@ def test_excel_import_unauthorized():
         log_test("Excel Import Unauthorized", False, f"Exception: {str(e)}")
         return False
 
+def test_admin_dashboard_card_endpoints():
+    """Test the three specific API endpoints for Admin Dashboard cards"""
+    print("\n🎯 TESTING ADMIN DASHBOARD CARD ENDPOINTS")
+    print("=" * 60)
+    
+    if not admin_access_token:
+        log_test("Admin Dashboard Cards Setup", False, "No admin access token available")
+        return False
+    
+    headers = {"Authorization": f"Bearer {admin_access_token}"}
+    
+    # Test 1: Admin Stats Dashboard API (/api/admin/stats/dashboard)
+    try:
+        response = requests.get(f"{API_BASE}/admin/stats/dashboard", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Check for required fields for dashboard cards
+            required_fields = ["total_users", "total_stores", "total_cashiers"]
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if missing_fields:
+                log_test("Admin Stats Dashboard API", False, f"Missing required fields: {missing_fields}")
+            else:
+                # Check if vendite_stats exists with unique_products and unique_customers
+                if "vendite_stats" in data:
+                    vendite_stats = data["vendite_stats"]
+                    if "unique_products" in vendite_stats and "unique_customers" in vendite_stats:
+                        log_test("Admin Stats Dashboard API", True, f"✅ Complete data: {data['total_users']} users, {data['total_stores']} stores, {data['total_cashiers']} cashiers, {vendite_stats.get('unique_products', 0)} products, {vendite_stats.get('unique_customers', 0)} customers")
+                    else:
+                        log_test("Admin Stats Dashboard API", False, f"vendite_stats missing unique_products or unique_customers: {vendite_stats}")
+                else:
+                    log_test("Admin Stats Dashboard API", False, "Missing vendite_stats field needed for Products card")
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Admin Stats Dashboard API", False, f"Status {response.status_code}: {error_detail}")
+            
+    except Exception as e:
+        log_test("Admin Stats Dashboard API", False, f"Exception: {str(e)}")
+    
+    # Test 2: Vendite Dashboard API (/api/admin/vendite/dashboard)
+    try:
+        response = requests.get(f"{API_BASE}/admin/vendite/dashboard", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Check for proper structure with overview data
+            if "success" in data and data["success"]:
+                if "dashboard" in data:
+                    dashboard = data["dashboard"]
+                    
+                    # Check for cards structure with required fields
+                    if "cards" in dashboard:
+                        cards = dashboard["cards"]
+                        required_card_fields = ["total_revenue", "total_sales", "unique_customers", "avg_transaction"]
+                        missing_card_fields = [field for field in required_card_fields if field not in cards]
+                        
+                        if missing_card_fields:
+                            log_test("Vendite Dashboard API", False, f"Missing card fields: {missing_card_fields}")
+                        else:
+                            log_test("Vendite Dashboard API", True, f"✅ Complete sales data: €{cards.get('total_revenue', 0):,.2f} revenue, {cards.get('total_sales', 0):,} sales, {cards.get('unique_customers', 0):,} customers, €{cards.get('avg_transaction', 0):.2f} avg")
+                    else:
+                        log_test("Vendite Dashboard API", False, "Missing 'cards' structure in dashboard response")
+                else:
+                    log_test("Vendite Dashboard API", False, "Missing 'dashboard' field in response")
+            else:
+                log_test("Vendite Dashboard API", False, f"API returned success=false or missing success field")
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Vendite Dashboard API", False, f"Status {response.status_code}: {error_detail}")
+            
+    except Exception as e:
+        log_test("Vendite Dashboard API", False, f"Exception: {str(e)}")
+    
+    # Test 3: Scontrini Stats API (/api/admin/scontrini/stats)
+    try:
+        response = requests.get(f"{API_BASE}/admin/scontrini/stats", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Check for required loyalty data fields
+            required_fields = ["total_bollini", "total_scontrini"]
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if missing_fields:
+                log_test("Scontrini Stats API", False, f"Missing required fields: {missing_fields}")
+            else:
+                log_test("Scontrini Stats API", True, f"✅ Complete loyalty data: {data.get('total_bollini', 0):,} bollini, {data.get('total_scontrini', 0):,} scontrini")
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Scontrini Stats API", False, f"Status {response.status_code}: {error_detail}")
+            
+    except Exception as e:
+        log_test("Scontrini Stats API", False, f"Exception: {str(e)}")
+    
+    # Test 4: Data Integration Test - Verify all required fields for dashboard cards
+    print("\n🔍 DASHBOARD CARD DATA INTEGRATION TEST")
+    print("-" * 40)
+    
+    try:
+        # Get all three endpoints data
+        stats_response = requests.get(f"{API_BASE}/admin/stats/dashboard", headers=headers)
+        vendite_response = requests.get(f"{API_BASE}/admin/vendite/dashboard", headers=headers)
+        scontrini_response = requests.get(f"{API_BASE}/admin/scontrini/stats", headers=headers)
+        
+        if all(r.status_code == 200 for r in [stats_response, vendite_response, scontrini_response]):
+            stats_data = stats_response.json()
+            vendite_data = vendite_response.json()
+            scontrini_data = scontrini_response.json()
+            
+            # Extract data for each dashboard card
+            card_data = {}
+            
+            # Customers count (from vendite)
+            if "dashboard" in vendite_data and "cards" in vendite_data["dashboard"]:
+                card_data["customers"] = vendite_data["dashboard"]["cards"].get("unique_customers", 0)
+            else:
+                card_data["customers"] = "MISSING"
+            
+            # Products count (from admin stats vendite_stats)
+            if "vendite_stats" in stats_data:
+                card_data["products"] = stats_data["vendite_stats"].get("unique_products", 0)
+            else:
+                card_data["products"] = "MISSING"
+            
+            # Revenue data (from vendite)
+            if "dashboard" in vendite_data and "cards" in vendite_data["dashboard"]:
+                card_data["revenue"] = vendite_data["dashboard"]["cards"].get("total_revenue", 0)
+            else:
+                card_data["revenue"] = "MISSING"
+            
+            # Bollini count (from scontrini)
+            card_data["bollini"] = scontrini_data.get("total_bollini", 0)
+            
+            # Check if all required data is available
+            missing_data = [key for key, value in card_data.items() if value == "MISSING"]
+            
+            if missing_data:
+                log_test("Dashboard Card Data Integration", False, f"Missing data for cards: {missing_data}")
+            else:
+                log_test("Dashboard Card Data Integration", True, f"✅ All card data available - Customers: {card_data['customers']:,}, Products: {card_data['products']:,}, Revenue: €{card_data['revenue']:,.2f}, Bollini: {card_data['bollini']:,}")
+        else:
+            log_test("Dashboard Card Data Integration", False, "One or more API endpoints failed")
+            
+    except Exception as e:
+        log_test("Dashboard Card Data Integration", False, f"Exception: {str(e)}")
+
 def run_all_tests():
     """Run all backend API tests"""
     print("🚀 Starting ImaGross Loyalty System Backend API Tests")
