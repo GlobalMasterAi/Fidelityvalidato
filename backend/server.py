@@ -1700,6 +1700,24 @@ def parse_json_tolerant(file_path: str, encoding: str = 'latin-1') -> list:
     print(f"Loaded {len(records)} records, skipped {skipped_records} malformed records")
     return records
 
+def find_json_file(filename):
+    """Find JSON file in multiple possible locations"""
+    possible_paths = [
+        f'/app/{filename}',
+        f'/app/backend/{filename}',
+        f'/app/data/{filename}',
+        f'./{filename}',
+        f'../{filename}',
+        f'/data/{filename}',
+        f'/shared/{filename}'
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+            
+    return None
+
 async def load_fidelity_data():
     """Load fidelity data from JSON file with ultra-safe error handling"""
     global FIDELITY_DATA
