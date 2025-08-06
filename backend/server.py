@@ -2757,7 +2757,7 @@ async def get_dashboard_stats(current_admin = Depends(get_current_admin)):
     total_users = await db.users.count_documents({})
     total_stores = await db.stores.count_documents({})
     total_cashiers = await db.cashiers.count_documents({})
-    total_transactions = await db.transactions.count_documents({})
+    total_transactions = await db.scontrini_data.count_documents({})
     
     # Recent registrations (last 7 days)
     from datetime import timedelta
