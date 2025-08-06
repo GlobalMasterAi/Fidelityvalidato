@@ -5073,13 +5073,14 @@ async def load_fidelity_to_database():
                         # Clean and prepare documents
                         docs = []
                         for record in batch:
-                            tessera = record.get("tessera_fisica")
+                            # Use card_number as primary key (original field name)
+                            tessera = record.get("tessera_fisica") or record.get("card_number")
                             if tessera and tessera.strip():
                                 # Clean record and add MongoDB _id
                                 clean_record = {}
                                 for key, value in record.items():
-                                    # Fix European decimal format
-                                    if isinstance(value, str) and key in ['progressivo_spesa', 'bollini']:
+                                    # Fix European decimal format for financial fields
+                                    if isinstance(value, str) and key in ['prog_spesa', 'bollini', 'progressivo_spesa']:
                                         try:
                                             clean_record[key] = float(value.replace(',', '.'))
                                         except:
@@ -5087,6 +5088,8 @@ async def load_fidelity_to_database():
                                     else:
                                         clean_record[key] = value
                                 
+                                # Ensure tessera_fisica field exists for API compatibility
+                                clean_record["tessera_fisica"] = tessera.strip()
                                 clean_record["_id"] = tessera.strip()
                                 docs.append(clean_record)
                             else:
