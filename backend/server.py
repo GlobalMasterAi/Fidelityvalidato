@@ -4934,7 +4934,7 @@ async def background_data_loading():
         print(f"❌ Error during database data loading: {e}")
 
 async def load_fidelity_to_database():
-    """Load fidelity data directly to MongoDB collection"""
+    """Load fidelity data directly to MongoDB collection - FIXED for 30K+ records"""
     try:
         print("📊 Loading fidelity data to database...")
         
@@ -4945,47 +4945,167 @@ async def load_fidelity_to_database():
         # Clear existing collection
         await db.fidelity_data.delete_many({})
         
-        # Try to load from file
+        # Try to load from file with AGGRESSIVE parsing
         file_path = find_json_file('fidelity_complete.json')
         if file_path:
+            print(f"📁 Found fidelity file: {file_path}")
+            file_size = os.path.getsize(file_path)
+            print(f"📁 File size: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)")
+            
             try:
-                # Try multiple encodings
-                for encoding in ['utf-8', 'latin-1', 'iso-8859-1']:
+                # Try MULTIPLE approaches for 30K+ records
+                raw_data = None
+                
+                # Approach 1: Multiple encodings with JSON repair
+                for encoding in ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252']:
                     try:
                         with open(file_path, 'r', encoding=encoding) as f:
-                            raw_data = json.load(f)
+                            content = f.read()
+                        
+                        # AGGRESSIVE JSON REPAIR
+                        print(f"🔧 Attempting JSON repair with encoding: {encoding}")
+                        
+                        # Fix common JSON issues
+                        content = content.strip()
+                        if not content.startswith('['):
+                            content = '[' + content
+                        if not content.endswith(']'):
+                            content = content.rstrip(',') + ']'
+                        
+                        # Fix trailing commas
+                        content = content.replace(',]', ']')
+                        content = content.replace(',}', '}')
+                        content = content.replace('}\n{', '},\n{')
+                        
+                        # Try to parse
+                        raw_data = json.loads(content)
+                        print(f"✅ JSON parsed successfully with {len(raw_data)} records using {encoding}")
                         break
-                    except UnicodeDecodeError:
+                        
+                    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+                        print(f"❌ Encoding/JSON {encoding} failed: {e}")
                         continue
                 
-                # Insert in batches to avoid memory issues
-                batch_size = 1000
-                inserted = 0
-                for i in range(0, len(raw_data), batch_size):
-                    batch = raw_data[i:i+batch_size]
-                    # Clean and prepare documents
-                    docs = []
-                    for record in batch:
-                        if record.get("tessera_fisica"):
-                            # Add MongoDB _id as tessera_fisica for fast queries
-                            record["_id"] = record["tessera_fisica"]
-                            docs.append(record)
+                # Approach 2: Line-by-line parsing if JSON repair failed
+                if not raw_data:
+                    print("🔧 Attempting line-by-line parsing...")
+                    raw_data = []
                     
-                    if docs:
-                        await db.fidelity_data.insert_many(docs, ordered=False)
-                        inserted += len(docs)
-                        
-                print(f"✅ Loaded {inserted} fidelity records to database")
-                DATA_LOADING_STATUS["fidelity"] = "database_loaded"
+                    with open(file_path, 'r', encoding='latin-1') as f:
+                        for line_num, line in enumerate(f, 1):
+                            line = line.strip()
+                            if line and line.startswith('{') and line.endswith('}'):
+                                try:
+                                    record = json.loads(line.rstrip(','))
+                                    raw_data.append(record)
+                                except json.JSONDecodeError:
+                                    if line_num <= 10:  # Only log first 10 errors
+                                        print(f"⚠️ Skipped malformed line {line_num}")
+                    
+                    print(f"✅ Line-by-line parsed {len(raw_data)} records")
                 
+                # Approach 3: Chunk-based parsing for very large files
+                if not raw_data or len(raw_data) < 1000:
+                    print("🔧 Attempting chunk-based parsing...")
+                    raw_data = []
+                    
+                    with open(file_path, 'r', encoding='latin-1') as f:
+                        chunk_size = 1024 * 1024  # 1MB chunks
+                        buffer = ""
+                        
+                        while True:
+                            chunk = f.read(chunk_size)
+                            if not chunk:
+                                break
+                                
+                            buffer += chunk
+                            
+                            # Extract complete JSON objects
+                            while True:
+                                start = buffer.find('{')
+                                if start == -1:
+                                    break
+                                    
+                                brace_count = 0
+                                end = start
+                                
+                                for i in range(start, len(buffer)):
+                                    if buffer[i] == '{':
+                                        brace_count += 1
+                                    elif buffer[i] == '}':
+                                        brace_count -= 1
+                                        if brace_count == 0:
+                                            end = i
+                                            break
+                                
+                                if brace_count == 0:
+                                    try:
+                                        obj_str = buffer[start:end+1]
+                                        record = json.loads(obj_str)
+                                        raw_data.append(record)
+                                    except json.JSONDecodeError:
+                                        pass
+                                    
+                                    buffer = buffer[end+1:]
+                                else:
+                                    break
+                    
+                    print(f"✅ Chunk-based parsed {len(raw_data)} records")
+                
+                # Insert records in database
+                if raw_data and len(raw_data) > 0:
+                    print(f"🔄 Inserting {len(raw_data)} fidelity records into database...")
+                    
+                    # Insert in batches to avoid memory issues
+                    batch_size = 1000
+                    inserted = 0
+                    
+                    for i in range(0, len(raw_data), batch_size):
+                        batch = raw_data[i:i+batch_size]
+                        # Clean and prepare documents
+                        docs = []
+                        for record in batch:
+                            tessera = record.get("tessera_fisica")
+                            if tessera:
+                                # Clean record and add MongoDB _id
+                                clean_record = {}
+                                for key, value in record.items():
+                                    # Fix European decimal format
+                                    if isinstance(value, str) and key in ['progressivo_spesa', 'bollini']:
+                                        try:
+                                            clean_record[key] = float(value.replace(',', '.'))
+                                        except:
+                                            clean_record[key] = 0.0
+                                    else:
+                                        clean_record[key] = value
+                                
+                                clean_record["_id"] = tessera
+                                docs.append(clean_record)
+                        
+                        if docs:
+                            await db.fidelity_data.insert_many(docs, ordered=False)
+                            inserted += len(docs)
+                            
+                            if inserted % 5000 == 0:
+                                print(f"📊 Inserted {inserted:,} fidelity records...")
+                    
+                    print(f"✅ Successfully loaded {inserted:,} REAL fidelity records to database!")
+                    DATA_LOADING_STATUS["fidelity"] = "database_loaded_real"
+                    
+                else:
+                    print("⚠️ No valid records found, creating synthetic data as fallback")
+                    await create_synthetic_fidelity_data()
+                    
             except Exception as e:
-                print(f"⚠️ File loading failed, creating synthetic data: {e}")
+                print(f"❌ All parsing methods failed: {e}")
+                print("🔄 Creating synthetic data as emergency fallback...")
                 await create_synthetic_fidelity_data()
         else:
+            print("❌ Fidelity file not found, creating synthetic data...")
             await create_synthetic_fidelity_data()
             
     except Exception as e:
-        print(f"❌ Error loading fidelity to database: {e}")
+        print(f"❌ Critical error loading fidelity to database: {e}")
         DATA_LOADING_STATUS["fidelity"] = "database_error"
 
 async def create_synthetic_fidelity_data():
