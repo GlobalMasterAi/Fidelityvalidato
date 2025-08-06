@@ -689,6 +689,18 @@ frontend:
         agent: "main"
         comment: "RESOLVED! Frontend routing working correctly. Manual verification confirms TesseraCheckPage is accessible at /register with complete fidelity import functionality: card 2020000028284 successfully imports CHIARA ABATANGELO data with pre-population of all form fields (nome: CHIARA, cognome: ABATANGELO, email: chiara.abatangelo@libero.it, telefono: 3497312268, localita: MOLA, indirizzo: VIA G. DI VITTORIO N.52, progressivo_spesa: €100.01). Success message and import summary displaying correctly. Complete integration working."
 
+  - task: "Fix Admin Dashboard Card Display Issues"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/AdminDashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "CRITICAL ISSUE: Admin Dashboard cards for 'Clienti' (Customers), 'Prodotti' (Products), and 'Bollini' (Loyalty Points) showing zeros instead of real data. Fixed data mapping issues by combining /admin/stats/dashboard, /admin/vendite/dashboard, and /admin/scontrini/stats endpoints. Updated fetchData() to pull comprehensive data from multiple sources. Fixed card mappings: Customers card now uses stats.vendite_stats.unique_customers, Products card uses stats.vendite_stats.unique_products, Bollini card uses stats.bollini from scontrini data. Ready for backend testing."
+
   - task: "Enhanced Fidelity Validation with Cognome + Tessera"
     implemented: true
     working: true
