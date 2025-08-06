@@ -169,19 +169,25 @@ def test_admin_dashboard_card_endpoints():
             data = response.json()
             print(f"✅ Status: 200 OK")
             
-            # Check for required loyalty data fields
-            required_fields = ["total_bollini", "total_scontrini"]
-            missing_fields = [field for field in required_fields if field not in data]
-            
-            if missing_fields:
-                print(f"❌ Missing required fields: {missing_fields}")
-                print(f"   Available keys: {list(data.keys())}")
-                results.append(("Scontrini Stats API", False, f"Missing fields: {missing_fields}"))
+            # Check for required loyalty data fields - data is nested under 'stats'
+            if "stats" in data:
+                stats = data["stats"]
+                required_fields = ["total_bollini", "total_scontrini"]
+                missing_fields = [field for field in required_fields if field not in stats]
+                
+                if missing_fields:
+                    print(f"❌ Missing required fields in stats: {missing_fields}")
+                    print(f"   Available keys in stats: {list(stats.keys())}")
+                    results.append(("Scontrini Stats API", False, f"Missing fields in stats: {missing_fields}"))
+                else:
+                    print(f"✅ All loyalty fields present in stats:")
+                    print(f"   - Total Bollini: {stats.get('total_bollini', 0):,}")
+                    print(f"   - Total Scontrini: {stats.get('total_scontrini', 0):,}")
+                    results.append(("Scontrini Stats API", True, "Complete loyalty data available"))
             else:
-                print(f"✅ All loyalty fields present:")
-                print(f"   - Total Bollini: {data.get('total_bollini', 0):,}")
-                print(f"   - Total Scontrini: {data.get('total_scontrini', 0):,}")
-                results.append(("Scontrini Stats API", True, "Complete loyalty data available"))
+                print(f"❌ Missing 'stats' object in response")
+                print(f"   Available keys: {list(data.keys())}")
+                results.append(("Scontrini Stats API", False, "Missing stats object"))
         else:
             error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
             print(f"❌ Status {response.status_code}: {error_detail}")
