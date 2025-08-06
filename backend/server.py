@@ -1747,7 +1747,7 @@ async def load_fidelity_data():
             try:
                 raw_data = json.loads(content)
                 for i, record in enumerate(raw_data):
-                    if i >= 1000:  # Safety limit for deployment
+                    if i >= 30000:  # Increased safety limit for production
                         break
                         
                     try:
