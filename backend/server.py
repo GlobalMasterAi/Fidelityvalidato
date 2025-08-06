@@ -3611,76 +3611,157 @@ async def generate_vendite_report(
 
 @api_router.get("/admin/vendite/dashboard")
 async def get_vendite_dashboard(admin = Depends(get_current_admin)):
-    """Get comprehensive dashboard data for vendite analytics with deployment-safe fallbacks"""
+    """Get comprehensive dashboard data for vendite analytics using DATABASE queries"""
     try:
-        # If vendite data is not loaded yet, return minimal working dashboard
-        if not is_data_ready("vendite") or len(VENDITE_DATA) == 0:
+        # Query data directly from MongoDB - ZERO memory usage
+        vendite_cursor = db.vendite_data.find({})
+        
+        # Get overview stats efficiently
+        total_sales = await db.vendite_data.count_documents({})
+        
+        if total_sales == 0:
+            # Return minimal working dashboard if no data yet
             return {
                 "success": True,
-                "message": "Vendite data is still loading, showing minimal dashboard",
+                "message": "Vendite data is still loading into database",
                 "dashboard": {
-                    "overview": {
-                        "total_sales": 0,
-                        "unique_customers": 0,
-                        "total_revenue": 0.0,
-                        "avg_transaction": 0.0
-                    },
-                    "charts": {
-                        "monthly_trends": [{"month": "Loading...", "revenue": 0, "transactions": 0}],
-                        "top_customers": [{"codice_cliente": "Loading...", "spent": 0}],
-                        "top_departments": [{"reparto_name": "Loading...", "total_revenue": 0}],
-                        "top_products": [{"barcode": "Loading...", "total_revenue": 0}],
-                        "top_promotions": [{"promotion_id": "Loading...", "total_usage": 0}]
-                    },
-                    "cards": {
-                        "total_sales": 0,
-                        "unique_customers": 0,
-                        "total_revenue": 0.0,
-                        "avg_transaction": 0.0
-                    }
-                },
-                "data_loading_status": DATA_LOADING_STATUS.get("vendite", "not_started")
+                    "overview": {"total_sales": 0, "unique_customers": 0, "total_revenue": 0.0, "avg_transaction": 0.0},
+                    "charts": {"monthly_trends": [], "top_customers": [], "top_departments": [], "top_products": [], "top_promotions": []},
+                    "cards": {"total_sales": 0, "unique_customers": 0, "total_revenue": 0.0, "avg_transaction": 0.0}
+                }
             }
         
-        # Overview statistics
-        total_sales = len(VENDITE_DATA)
-        unique_customers = len(set(sale.get('CODICE_CLIENTE', '') for sale in VENDITE_DATA))
-        total_revenue = sum(float(sale.get('TOT_IMPORTO', 0)) for sale in VENDITE_DATA)
-        
-        # Monthly trends
-        monthly_revenue = defaultdict(float)
-        monthly_transactions = defaultdict(int)
-        for sale in VENDITE_DATA:
-            month = sale.get('MESE', '')
-            monthly_revenue[month] += float(sale.get('TOT_IMPORTO', 0))
-            monthly_transactions[month] += 1
-            
-        monthly_trends = [
+        # Aggregate queries for performance
+        pipeline = [
             {
-                'month': month,
-                'revenue': revenue,
-                'transactions': monthly_transactions[month]
+                "$group": {
+                    "_id": None,
+                    "total_revenue": {"$sum": {"$toDouble": "$TOT_IMPORTO"}},
+                    "unique_customers": {"$addToSet": "$CODICE_CLIENTE"},
+                    "unique_products": {"$addToSet": "$BARCODE"}
+                }
             }
-            for month, revenue in sorted(monthly_revenue.items())
         ]
         
-        # Top customers (last 30 days - using most recent month)
-        latest_month = max(monthly_revenue.keys()) if monthly_revenue else ''
-        latest_sales = [sale for sale in VENDITE_DATA if sale.get('MESE') == latest_month]
+        result = await db.vendite_data.aggregate(pipeline).to_list(1)
+        if result:
+            agg_data = result[0]
+            total_revenue = agg_data.get("total_revenue", 0)
+            unique_customers = len(agg_data.get("unique_customers", []))
+            unique_products = len(agg_data.get("unique_products", []))
+        else:
+            total_revenue = unique_customers = unique_products = 0
         
-        customer_spending = defaultdict(float)
-        for sale in latest_sales:
-            customer_spending[sale.get('CODICE_CLIENTE', '')] += float(sale.get('TOT_IMPORTO', 0))
-            
+        # Monthly trends aggregation
+        monthly_pipeline = [
+            {
+                "$group": {
+                    "_id": "$MESE",
+                    "revenue": {"$sum": {"$toDouble": "$TOT_IMPORTO"}},
+                    "transactions": {"$sum": 1}
+                }
+            },
+            {"$sort": {"_id": 1}},
+            {"$limit": 12}
+        ]
+        
+        monthly_results = await db.vendite_data.aggregate(monthly_pipeline).to_list(12)
+        monthly_trends = [
+            {"month": item["_id"], "revenue": item["revenue"], "transactions": item["transactions"]}
+            for item in monthly_results
+        ]
+        
+        # Top customers aggregation  
+        customers_pipeline = [
+            {
+                "$group": {
+                    "_id": "$CODICE_CLIENTE",
+                    "spent": {"$sum": {"$toDouble": "$TOT_IMPORTO"}}
+                }
+            },
+            {"$sort": {"spent": -1}},
+            {"$limit": 10}
+        ]
+        
+        customer_results = await db.vendite_data.aggregate(customers_pipeline).to_list(10)
         top_customers = [
-            {'codice_cliente': k, 'spent': v}
-            for k, v in sorted(customer_spending.items(), key=lambda x: x[1], reverse=True)[:10]
+            {"codice_cliente": item["_id"], "spent": item["spent"]}
+            for item in customer_results
         ]
         
-        # Department summary
-        departments = get_department_analytics()[:5]  # Top 5 departments
+        # Top departments aggregation
+        dept_pipeline = [
+            {
+                "$group": {
+                    "_id": "$REPARTO",
+                    "total_revenue": {"$sum": {"$toDouble": "$TOT_IMPORTO"}},
+                    "transactions": {"$sum": 1}
+                }
+            },
+            {"$sort": {"total_revenue": -1}},
+            {"$limit": 10}
+        ]
         
-        # Product insights
+        dept_results = await db.vendite_data.aggregate(dept_pipeline).to_list(10)
+        departments = [
+            {"reparto_name": f"Reparto {item['_id']}", "total_revenue": item["total_revenue"], "transactions": item["transactions"]}
+            for item in dept_results
+        ]
+        
+        # Top products aggregation
+        products_pipeline = [
+            {
+                "$group": {
+                    "_id": "$BARCODE",
+                    "total_revenue": {"$sum": {"$toDouble": "$TOT_IMPORTO"}},
+                    "quantity": {"$sum": {"$toDouble": "$TOT_QNT"}}
+                }
+            },
+            {"$sort": {"total_revenue": -1}},
+            {"$limit": 10}
+        ]
+        
+        product_results = await db.vendite_data.aggregate(products_pipeline).to_list(10)
+        products = [
+            {"barcode": item["_id"], "total_revenue": item["total_revenue"], "quantity": item["quantity"]}
+            for item in product_results
+        ]
+        
+        return {
+            "success": True,
+            "dashboard": {
+                "overview": {
+                    "total_sales": total_sales,
+                    "unique_customers": unique_customers,
+                    "total_revenue": total_revenue,
+                    "avg_transaction": total_revenue / total_sales if total_sales > 0 else 0
+                },
+                "charts": {
+                    "monthly_trends": monthly_trends,
+                    "top_customers": top_customers,
+                    "top_departments": departments[:5],
+                    "top_products": products[:10],
+                    "top_promotions": []  # Can add later if needed
+                },
+                "cards": {
+                    "total_sales": total_sales,
+                    "unique_customers": unique_customers,
+                    "total_revenue": total_revenue,
+                    "avg_transaction": total_revenue / total_sales if total_sales > 0 else 0
+                }
+            }
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Database query error: {str(e)}",
+            "dashboard": {
+                "overview": {"total_sales": 0, "unique_customers": 0, "total_revenue": 0.0, "avg_transaction": 0.0},
+                "charts": {"monthly_trends": [], "top_customers": [], "top_departments": [], "top_products": [], "top_promotions": []},
+                "cards": {"total_sales": 0, "unique_customers": 0, "total_revenue": 0.0, "avg_transaction": 0.0}
+            }
+        }
         products = get_product_analytics(limit=10)  # Top 10 products
         
         # Promotion performance
