@@ -5064,6 +5064,7 @@ async def load_fidelity_to_database():
                     # Insert in batches to avoid memory issues
                     batch_size = 1000
                     inserted = 0
+                    skipped = 0
                     
                     for i in range(0, len(raw_data), batch_size):
                         batch = raw_data[i:i+batch_size]
@@ -5071,7 +5072,7 @@ async def load_fidelity_to_database():
                         docs = []
                         for record in batch:
                             tessera = record.get("tessera_fisica")
-                            if tessera:
+                            if tessera and tessera.strip():
                                 # Clean record and add MongoDB _id
                                 clean_record = {}
                                 for key, value in record.items():
@@ -5084,17 +5085,31 @@ async def load_fidelity_to_database():
                                     else:
                                         clean_record[key] = value
                                 
-                                clean_record["_id"] = tessera
+                                clean_record["_id"] = tessera.strip()
                                 docs.append(clean_record)
+                            else:
+                                skipped += 1
                         
                         if docs:
-                            await db.fidelity_data.insert_many(docs, ordered=False)
-                            inserted += len(docs)
-                            
-                            if inserted % 5000 == 0:
-                                print(f"📊 Inserted {inserted:,} fidelity records...")
+                            try:
+                                await db.fidelity_data.insert_many(docs, ordered=False)
+                                inserted += len(docs)
+                                
+                                if inserted % 5000 == 0:
+                                    print(f"📊 Inserted {inserted:,} fidelity records...")
+                            except Exception as batch_error:
+                                print(f"❌ Batch insert error: {batch_error}")
+                                # Try individual inserts
+                                for doc in docs:
+                                    try:
+                                        await db.fidelity_data.insert_one(doc)
+                                        inserted += 1
+                                    except Exception as doc_error:
+                                        print(f"⚠️ Skipped document: {doc_error}")
+                                        skipped += 1
                     
                     print(f"✅ Successfully loaded {inserted:,} REAL fidelity records to database!")
+                    print(f"📊 Skipped {skipped} invalid records")
                     DATA_LOADING_STATUS["fidelity"] = "database_loaded_real"
                     
                 else:
