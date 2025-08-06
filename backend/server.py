@@ -1722,8 +1722,8 @@ async def load_fidelity_data():
                 raw_data = json.load(f)
             print(f"Complete JSON loaded successfully with {len(raw_data)} records")
             
-            # Process the data safely
-            for record in raw_data[:1000]:  # Limit to 1000 for deployment safety
+            # Process the data safely - increased limit for production
+            for record in raw_data[:30000]:  # Increased to 30K for production
                 tessera = record.get("tessera_fisica")
                 if tessera:
                     FIDELITY_DATA[tessera] = record
