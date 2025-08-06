@@ -3330,6 +3330,9 @@ def run_all_tests():
         test_stores_statistics
     ]
     
+    # CRITICAL: Admin Dashboard Card Endpoints Test
+    test_admin_dashboard_card_endpoints()
+    
     print("\n🔒 ACCESS CONTROL TESTS")
     print("-" * 50)
     access_tests = [
