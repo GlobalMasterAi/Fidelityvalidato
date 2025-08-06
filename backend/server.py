@@ -3652,7 +3652,7 @@ async def get_vendite_dashboard(admin = Depends(get_current_admin)):
             {
                 "$group": {
                     "_id": None,
-                    "total_revenue": {"$sum": {"$toDouble": "$TOT_IMPORTO"}},
+                    "total_revenue": {"$sum": "$TOT_IMPORTO"},  # Already float, no conversion needed
                     "unique_customers": {"$addToSet": "$CODICE_CLIENTE"},
                     "unique_products": {"$addToSet": "$BARCODE"}
                 }
