@@ -135,14 +135,27 @@ def test_admin_stats_dashboard_zero_values_fix(admin_token):
             
             # CRITICAL TEST 3: Check for scontrini stats
             # Should show actual loyalty data from scontrini_data collection
-            scontrini_fields_to_check = ["total_bollini", "total_scontrini", "bollini"]
             scontrini_has_data = False
             scontrini_data_found = {}
             
-            for field in scontrini_fields_to_check:
-                if field in data and data[field] != 0:
-                    scontrini_has_data = True
-                    scontrini_data_found[field] = data[field]
+            # Check if scontrini_stats object exists and has data
+            if "scontrini_stats" in data:
+                scontrini_stats = data["scontrini_stats"]
+                print(f"📊 Scontrini Stats: {scontrini_stats}")
+                
+                # Check if scontrini stats have actual data instead of zeros
+                scontrini_fields_to_check = ["total_scontrini", "scontrini_revenue", "scontrini_bollini", "unique_customers_scontrini"]
+                for field in scontrini_fields_to_check:
+                    if field in scontrini_stats and scontrini_stats[field] != 0:
+                        scontrini_has_data = True
+                        scontrini_data_found[field] = scontrini_stats[field]
+            else:
+                # Check for direct fields in main data object
+                scontrini_fields_to_check = ["total_bollini", "total_scontrini", "bollini"]
+                for field in scontrini_fields_to_check:
+                    if field in data and data[field] != 0:
+                        scontrini_has_data = True
+                        scontrini_data_found[field] = data[field]
             
             if scontrini_has_data:
                 log_test("Scontrini Stats Database Fix", True, f"✅ FIXED: Scontrini stats now show actual database data: {scontrini_data_found}")
