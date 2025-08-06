@@ -24,41 +24,57 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
       });
       
-      // Fetch basic admin stats for additional data
-      const statsResponse = await axios.get(`${API}/admin/stats/dashboard`, {
+      // Fetch scontrini stats for bollini data
+      const scontriniResponse = await axios.get(`${API}/admin/scontrini/stats`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
-      }).catch(() => ({ data: null })); // Fallback if endpoint doesn't exist
+      }).catch(() => ({ data: { success: false, stats: { total_scontrini: 0, total_bollini: 0 } } }));
       
       // Use vendite data as primary source
       if (venditeResponse.data && venditeResponse.data.success) {
         const venditeData = venditeResponse.data.dashboard;
+        const scontriniData = scontriniResponse.data.success ? scontriniResponse.data.stats : { total_scontrini: 0, total_bollini: 0 };
         
-        // Map vendite data to expected format
+        // Map database data to expected dashboard format
         setStats({
           fatturato: venditeData.overview.total_revenue,
           utenti_attivi: venditeData.overview.unique_customers,
-          prodotti: venditeData.overview.unique_customers, // Using customers for now
-          bollini: 0, // Will need separate endpoint
+          prodotti: venditeData.charts.top_products ? venditeData.charts.top_products.length : 0,
+          bollini: scontriniData.total_bollini,
           vendite: venditeData.overview.total_sales,
-          scontrini: 0 // Will need separate endpoint
+          scontrini: scontriniData.total_scontrini
         });
         
-        // Map analytics data
+        // Map analytics data for charts
         setAnalytics({
-          monthly_trends: venditeData.charts.monthly_trends,
-          top_customers: venditeData.charts.top_customers,
-          top_departments: venditeData.charts.top_departments,
-          top_products: venditeData.charts.top_products
+          monthly_trends: venditeData.charts.monthly_trends || [],
+          top_customers: venditeData.charts.top_customers || [],
+          top_departments: venditeData.charts.top_departments || [],
+          top_products: venditeData.charts.top_products || []
+        });
+        
+        console.log('✅ Real database data loaded:', {
+          fatturato: venditeData.overview.total_revenue,
+          vendite: venditeData.overview.total_sales,
+          clienti: venditeData.overview.unique_customers,
+          bollini: scontriniData.total_bollini
         });
       } else {
-        // Fallback to basic stats if vendite endpoint fails
-        setStats(statsResponse.data);
+        console.error('❌ Vendite dashboard API failed:', venditeResponse.data);
+        // Set minimal fallback values
+        setStats({
+          fatturato: 0,
+          utenti_attivi: 0,
+          prodotti: 0,
+          bollini: 0,
+          vendite: 0,
+          scontrini: 0
+        });
         setAnalytics({ monthly_trends: [], top_customers: [], top_departments: [], top_products: [] });
       }
       
     } catch (error) {
-      console.error('Error fetching data:', error);
-      // Set default values to prevent showing zeros
+      console.error('❌ Error fetching dashboard data:', error);
+      // Set fallback values to prevent showing zeros incorrectly
       setStats({
         fatturato: 0,
         utenti_attivi: 0,
