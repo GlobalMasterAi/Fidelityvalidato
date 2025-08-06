@@ -2773,14 +2773,49 @@ async def get_dashboard_stats(current_admin = Depends(get_current_admin)):
     points_result = await db.users.aggregate(pipeline).to_list(1)
     total_points = points_result[0]["total_points"] if points_result else 0
     
-    # Add detailed sales statistics from VENDITE_DATA
-    vendite_stats = {
-        "total_sales_records": len(VENDITE_DATA),
-        "total_revenue": sum(float(sale.get('TOT_IMPORTO', 0)) for sale in VENDITE_DATA),
-        "unique_customers_vendite": len(set(sale.get('CODICE_CLIENTE', '') for sale in VENDITE_DATA)),
-        "unique_products": len(set(sale.get('BARCODE', '') for sale in VENDITE_DATA if sale.get('BARCODE'))),
-        "total_quantity_sold": sum(float(sale.get('TOT_QNT', 0)) for sale in VENDITE_DATA)
-    }
+    # Add detailed sales statistics from MongoDB vendite_data collection
+    vendite_count = await db.vendite_data.count_documents({})
+    
+    if vendite_count > 0:
+        # Calculate revenue from database
+        revenue_pipeline = [
+            {
+                "$group": {
+                    "_id": None,
+                    "total_revenue": {"$sum": "$TOT_IMPORTO"},
+                    "unique_customers": {"$addToSet": "$CODICE_CLIENTE"},
+                    "unique_products": {"$addToSet": "$BARCODE"},
+                    "total_quantity": {"$sum": "$TOT_QNT"}
+                }
+            }
+        ]
+        
+        revenue_result = await db.vendite_data.aggregate(revenue_pipeline).to_list(1)
+        if revenue_result:
+            result_data = revenue_result[0]
+            vendite_stats = {
+                "total_sales_records": vendite_count,
+                "total_revenue": result_data.get("total_revenue", 0),
+                "unique_customers_vendite": len(result_data.get("unique_customers", [])),
+                "unique_products": len(result_data.get("unique_products", [])),
+                "total_quantity_sold": result_data.get("total_quantity", 0)
+            }
+        else:
+            vendite_stats = {
+                "total_sales_records": vendite_count,
+                "total_revenue": 0,
+                "unique_customers_vendite": 0,
+                "unique_products": 0,
+                "total_quantity_sold": 0
+            }
+    else:
+        vendite_stats = {
+            "total_sales_records": 0,
+            "total_revenue": 0,
+            "unique_customers_vendite": 0,
+            "unique_products": 0,
+            "total_quantity_sold": 0
+        }
     
     # Add scontrini statistics for comparison
     scontrini_stats = {
