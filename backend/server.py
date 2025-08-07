@@ -1937,6 +1937,15 @@ def safe_int_convert(value: str, default: int = 0) -> int:
     except (ValueError, TypeError):
         return default
 
+def safe_string_convert(value, default: str = "") -> str:
+    """Safely convert any value to string and strip whitespace"""
+    if value is None:
+        return default
+    try:
+        return str(value).strip()
+    except (ValueError, TypeError):
+        return default
+
 def get_fidelity_user_data(card_number: str) -> dict:
     """Get user data from fidelity JSON by card number"""
     if card_number in FIDELITY_DATA:
