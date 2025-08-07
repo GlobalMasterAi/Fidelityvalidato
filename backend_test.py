@@ -3553,6 +3553,14 @@ def run_all_tests():
         test_stores_statistics
     ]
     
+    # URGENT: Debug admin stats vendite field mapping issue
+    print("\n🚨 URGENT DEBUG TESTS FOR ADMIN STATS VENDITE FIELD MAPPING")
+    print("-" * 50)
+    debug_tests = [
+        test_admin_stats_vendite_field_mapping,
+        test_mongodb_vendite_collection_structure
+    ]
+    
     # CRITICAL: Admin Dashboard Card Endpoints Test
     test_admin_dashboard_card_endpoints()
     
