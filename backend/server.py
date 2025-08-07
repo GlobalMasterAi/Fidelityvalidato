@@ -2708,21 +2708,21 @@ async def get_fidelity_users(
         paginated_users = []
         async for user_data in fidelity_cursor:
             user_record = {
-                "tessera_fisica": user_data.get("tessera_fisica", ""),
-                "nome": user_data.get("nome", "").strip(),
-                "cognome": user_data.get("cognome", "").strip(),
-                "email": user_data.get("email", "").strip(),
-                "telefono": user_data.get("n_telefono", "").strip(),
-                "localita": user_data.get("localita", "").strip(),
-                "indirizzo": user_data.get("indirizzo", "").strip(),
-                "provincia": user_data.get("provincia", "").strip(),
-                "sesso": user_data.get("sesso", "M"),
-                "data_nascita": user_data.get("data_nas", "").strip(),
-                "data_creazione": user_data.get("data_creazione", "").strip(),
+                "tessera_fisica": safe_string_convert(user_data.get("tessera_fisica", "")),
+                "nome": safe_string_convert(user_data.get("nome", "")),
+                "cognome": safe_string_convert(user_data.get("cognome", "")),
+                "email": safe_string_convert(user_data.get("email", "")),
+                "telefono": safe_string_convert(user_data.get("n_telefono", "")),
+                "localita": safe_string_convert(user_data.get("localita", "")),
+                "indirizzo": safe_string_convert(user_data.get("indirizzo", "")),
+                "provincia": safe_string_convert(user_data.get("provincia", "")),
+                "sesso": safe_string_convert(user_data.get("sesso", "M")),
+                "data_nascita": safe_string_convert(user_data.get("data_nas", "")),
+                "data_creazione": safe_string_convert(user_data.get("data_creazione", "")),
                 "progressivo_spesa": safe_float_convert(user_data.get("prog_spesa", "0")),
                 "bollini": safe_int_convert(user_data.get("bollini", "0")),
-                "negozio": user_data.get("negozio", "").strip(),
-                "stato_tessera": user_data.get("stato_tes", "").strip(),
+                "negozio": safe_string_convert(user_data.get("negozio", "")),
+                "stato_tessera": safe_string_convert(user_data.get("stato_tes", "")),
                 "source": "mongodb_database"
             }
             paginated_users.append(user_record)
