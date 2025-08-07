@@ -2759,12 +2759,17 @@ async def get_all_users(current_admin = Depends(get_current_admin)):
 # Statistics and Analytics Routes
 @api_router.get("/admin/stats/dashboard")
 async def get_dashboard_stats(current_admin = Depends(get_current_admin)):
-    total_users = await db.users.count_documents({})
+    # Count registered users (from users collection)
+    registered_users = await db.users.count_documents({})
+    
+    # Count total fidelity clients (the real 24,958+ database)
+    total_fidelity_clients = await db.fidelity_data.count_documents({})
+    
     total_stores = await db.stores.count_documents({})
     total_cashiers = await db.cashiers.count_documents({})
     total_transactions = await db.scontrini_data.count_documents({})
     
-    # Recent registrations (last 7 days)
+    # Recent registrations (last 7 days) - only from users collection
     from datetime import timedelta
     week_ago = datetime.utcnow() - timedelta(days=7)
     recent_registrations = await db.users.count_documents({
@@ -2863,7 +2868,8 @@ async def get_dashboard_stats(current_admin = Depends(get_current_admin)):
         }
     
     return {
-        "total_users": total_users,
+        "registered_users": registered_users,
+        "total_fidelity_clients": total_fidelity_clients,
         "total_stores": total_stores,
         "total_cashiers": total_cashiers,
         "total_transactions": total_transactions,
