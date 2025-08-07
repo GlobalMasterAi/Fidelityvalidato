@@ -3638,7 +3638,7 @@ def run_all_tests():
     
     # Run all test suites
     all_tests = (admin_auth_tests + store_tests + cashier_tests + 
-                qr_tests + stats_tests + access_tests + rewards_tests + excel_tests + user_tests + profile_tests + admin_profile_tests)
+                qr_tests + stats_tests + debug_tests + access_tests + rewards_tests + excel_tests + user_tests + profile_tests + admin_profile_tests)
     
     passed = 0
     total = len(all_tests)
