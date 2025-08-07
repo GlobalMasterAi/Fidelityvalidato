@@ -54,23 +54,23 @@ const AdminDashboard = () => {
       });
       console.log('✅ Scontrini response:', scontriniResponse.data);
       
-      // Combine all data sources
-      if (venditeResponse.data && venditeResponse.data.success && adminStatsResponse.data) {
-        const venditeData = venditeResponse.data.dashboard;
+      // Combine all data sources - prioritize admin stats data (has real database values)
+      if (adminStatsResponse.data && venditeResponse.data && venditeResponse.data.success) {
         const adminData = adminStatsResponse.data;
+        const venditeData = venditeResponse.data.dashboard;
         const scontriniData = scontriniResponse.data.success ? scontriniResponse.data.stats : { total_scontrini: 0, total_bollini: 0 };
         
-        console.log('📊 Processing combined data:', {
-          revenue: venditeData.overview.total_revenue,
-          sales: venditeData.overview.total_sales,
-          customers: venditeData.overview.unique_customers,
-          products: adminData.vendite_stats?.unique_products,
+        console.log('📊 Processing combined data with admin stats priority:', {
+          admin_revenue: adminData.vendite_stats?.total_revenue,
+          admin_sales: adminData.vendite_stats?.total_sales_records,
+          admin_customers: adminData.vendite_stats?.unique_customers_vendite,
+          admin_products: adminData.vendite_stats?.unique_products,
+          vendite_revenue: venditeData.overview?.total_revenue,
           bollini: scontriniData.total_bollini,
           total_users: adminData.total_users
         });
         
-        // Map database data to expected dashboard format
-        // Use vendite data from admin stats (has real data) as primary source, fallback to vendite dashboard
+        // Use admin stats as primary source (has real data from database)
         const venditeStatsFromAdmin = adminData.vendite_stats || {};
         const venditeDataFromVendite = venditeData.overview || {};
         
@@ -93,11 +93,11 @@ const AdminDashboard = () => {
             unique_customers: venditeStatsFromAdmin.unique_customers_vendite || venditeDataFromVendite.unique_customers || 0,
             unique_products: venditeStatsFromAdmin.unique_products || 0,
             total_quantity_sold: venditeStatsFromAdmin.total_quantity_sold || 0,
-            avg_transaction: venditeDataFromVendite.avg_transaction || (venditeStatsFromAdmin.total_revenue / venditeStatsFromAdmin.total_sales_records) || 0
+            avg_transaction: venditeDataFromVendite.avg_transaction || (venditeStatsFromAdmin.total_revenue && venditeStatsFromAdmin.total_sales_records ? (venditeStatsFromAdmin.total_revenue / venditeStatsFromAdmin.total_sales_records) : 0)
           }
         };
         
-        console.log('🎯 Setting combined stats:', newStats);
+        console.log('🎯 Setting combined stats with admin priority:', newStats);
         setStats(newStats);
         
         // Map analytics data for charts
