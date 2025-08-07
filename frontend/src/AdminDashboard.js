@@ -69,16 +69,20 @@ const AdminDashboard = () => {
       console.log('✅ Scontrini response:', scontriniResponse.data);
       
       // Combine all data sources - prioritize admin stats data (has real database values)
-      if (adminStatsResponse.data && venditeResponse.data && venditeResponse.data.success) {
+      if (adminStatsResponse.data) {
         const adminData = adminStatsResponse.data;
-        const venditeData = venditeResponse.data.dashboard;
         const scontriniData = scontriniResponse.data.success ? scontriniResponse.data.stats : { total_scontrini: 0, total_bollini: 0 };
+        
+        // Check if vendite response is valid, otherwise use admin data only
+        const venditeSuccess = venditeResponse.data && venditeResponse.data.success;
+        const venditeData = venditeSuccess ? venditeResponse.data.dashboard : {};
         
         console.log('📊 Processing combined data with admin stats priority:', {
           admin_revenue: adminData.vendite_stats?.total_revenue,
           admin_sales: adminData.vendite_stats?.total_sales_records,
           admin_customers: adminData.vendite_stats?.unique_customers_vendite,
           admin_products: adminData.vendite_stats?.unique_products,
+          vendite_success: venditeSuccess,
           vendite_revenue: venditeData.overview?.total_revenue,
           bollini: scontriniData.total_bollini,
           total_users: adminData.total_users
@@ -113,6 +117,38 @@ const AdminDashboard = () => {
         
         console.log('🎯 Setting combined stats with admin priority:', newStats);
         setStats(newStats);
+        
+        // Map analytics data for charts (use vendite data if available, otherwise minimal)
+        if (venditeSuccess && venditeData.charts) {
+          setAnalytics({
+            monthly_trends: venditeData.charts.monthly_trends || [],
+            top_customers: venditeData.charts.top_customers || [],
+            top_departments: venditeData.charts.top_departments || [],
+            top_products: venditeData.charts.top_products || [],
+            summary: {
+              total_bollini: scontriniData.total_bollini,
+              total_transactions: venditeStatsFromAdmin.total_sales_records || venditeDataFromVendite.total_sales || 0,
+              avg_transaction: venditeDataFromVendite.avg_transaction || (venditeStatsFromAdmin.total_revenue && venditeStatsFromAdmin.total_sales_records ? (venditeStatsFromAdmin.total_revenue / venditeStatsFromAdmin.total_sales_records) : 0),
+              avg_bollini_per_transaction: (scontriniData.total_bollini && (venditeStatsFromAdmin.total_sales_records || venditeDataFromVendite.total_sales)) ? (scontriniData.total_bollini / (venditeStatsFromAdmin.total_sales_records || venditeDataFromVendite.total_sales)) : 0
+            }
+          });
+        } else {
+          // Fallback analytics when vendite API fails or times out
+          setAnalytics({
+            monthly_trends: [],
+            top_customers: [],
+            top_departments: [],
+            top_products: [],
+            summary: {
+              total_bollini: scontriniData.total_bollini,
+              total_transactions: venditeStatsFromAdmin.total_sales_records || 0,
+              avg_transaction: (venditeStatsFromAdmin.total_revenue && venditeStatsFromAdmin.total_sales_records) ? (venditeStatsFromAdmin.total_revenue / venditeStatsFromAdmin.total_sales_records) : 0,
+              avg_bollini_per_transaction: (scontriniData.total_bollini && venditeStatsFromAdmin.total_sales_records) ? (scontriniData.total_bollini / venditeStatsFromAdmin.total_sales_records) : 0
+            }
+          });
+        }
+        
+        console.log(`✅ ${venditeSuccess ? 'Combined' : 'Admin-only'} real database data loaded successfully!`);
         
         // Map analytics data for charts
         setAnalytics({
