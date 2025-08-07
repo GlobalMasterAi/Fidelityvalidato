@@ -2671,11 +2671,35 @@ async def get_fidelity_users(
         raise HTTPException(status_code=401, detail="Token non valido")
     
     try:
-        # Convert FIDELITY_DATA to list of users
-        all_users = []
-        for card_number, user_data in FIDELITY_DATA.items():
+        # Query MongoDB fidelity_data collection directly (24,958+ records)
+        print("🔍 Querying fidelity_data collection from MongoDB...")
+        
+        # Build search query if provided
+        query = {}
+        if search:
+            search_regex = {"$regex": search, "$options": "i"}
+            query = {
+                "$or": [
+                    {"tessera_fisica": search_regex},
+                    {"nome": search_regex},
+                    {"cognome": search_regex},
+                    {"email": search_regex},
+                    {"n_telefono": search_regex}
+                ]
+            }
+        
+        # Get total count for pagination
+        total = await db.fidelity_data.count_documents(query)
+        print(f"🔍 Found {total} fidelity clients matching query")
+        
+        # Get paginated results
+        skip = (page - 1) * limit
+        fidelity_cursor = db.fidelity_data.find(query).skip(skip).limit(limit).sort("prog_spesa", -1)
+        
+        paginated_users = []
+        async for user_data in fidelity_cursor:
             user_record = {
-                "tessera_fisica": card_number,
+                "tessera_fisica": user_data.get("tessera_fisica", ""),
                 "nome": user_data.get("nome", "").strip(),
                 "cognome": user_data.get("cognome", "").strip(),
                 "email": user_data.get("email", "").strip(),
@@ -2690,37 +2714,18 @@ async def get_fidelity_users(
                 "bollini": safe_int_convert(user_data.get("bollini", "0")),
                 "negozio": user_data.get("negozio", "").strip(),
                 "stato_tessera": user_data.get("stato_tes", "").strip(),
-                "source": "fidelity_json"
+                "source": "mongodb_database"
             }
-            all_users.append(user_record)
+            paginated_users.append(user_record)
         
-        # Apply search filter if provided
-        if search:
-            search_lower = search.lower()
-            all_users = [
-                user for user in all_users 
-                if (search_lower in user["tessera_fisica"].lower() or
-                    search_lower in user["nome"].lower() or
-                    search_lower in user["cognome"].lower() or
-                    search_lower in user["email"].lower() or
-                    search_lower in user["telefono"].lower())
-            ]
-        
-        # Sort by progressivo_spesa descending
-        all_users.sort(key=lambda x: x["progressivo_spesa"], reverse=True)
-        
-        # Pagination
-        total = len(all_users)
-        start = (page - 1) * limit
-        end = start + limit
-        paginated_users = all_users[start:end]
+        print(f"✅ Successfully loaded {len(paginated_users)} fidelity clients from database (page {page})")
         
         return {
             "users": paginated_users,
             "total": total,
             "page": page,
             "pages": (total + limit - 1) // limit,
-            "has_next": end < total,
+            "has_next": skip + limit < total,
             "has_prev": page > 1
         }
         
