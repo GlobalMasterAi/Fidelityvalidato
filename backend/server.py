@@ -1917,7 +1917,7 @@ async def load_fidelity_data():
 
 def safe_float_convert(value: str, default: float = 0.0) -> float:
     """Safely convert string to float, handling European decimal format"""
-    if not value or value.strip() == "":
+    if value is None or str(value).strip() == "":
         return default
     try:
         # Replace comma with dot for European decimal format
@@ -1928,7 +1928,7 @@ def safe_float_convert(value: str, default: float = 0.0) -> float:
 
 def safe_int_convert(value: str, default: int = 0) -> int:
     """Safely convert string to int"""
-    if not value or value.strip() == "":
+    if value is None or str(value).strip() == "":
         return default
     try:
         # Handle float strings first (like "0.0")
