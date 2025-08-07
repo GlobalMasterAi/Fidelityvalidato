@@ -164,64 +164,9 @@ const AdminDashboard = () => {
           }
         });
         
-      } else if (adminStatsResponse.data) {
-        // Use admin stats data even if vendite dashboard fails
-        const adminData = adminStatsResponse.data;
-        const scontriniData = scontriniResponse.data.success ? scontriniResponse.data.stats : { total_scontrini: 0, total_bollini: 0 };
-        
-        console.log('📊 Using admin stats data only (vendite dashboard failed):', {
-          admin_revenue: adminData.vendite_stats?.total_revenue,
-          admin_sales: adminData.vendite_stats?.total_sales_records,
-          admin_customers: adminData.vendite_stats?.unique_customers_vendite,
-          admin_products: adminData.vendite_stats?.unique_products,
-          bollini: scontriniData.total_bollini
-        });
-        
-        const venditeStatsFromAdmin = adminData.vendite_stats || {};
-        
-        const newStats = {
-          fatturato: venditeStatsFromAdmin.total_revenue || 0,
-          utenti_attivi: venditeStatsFromAdmin.unique_customers_vendite || 0,
-          prodotti: venditeStatsFromAdmin.unique_products || 0,
-          bollini: scontriniData.total_bollini,
-          vendite: venditeStatsFromAdmin.total_sales_records || 0,
-          scontrini: scontriniData.total_scontrini,
-          total_users: adminData.total_users,
-          total_stores: adminData.total_stores,
-          total_cashiers: adminData.total_cashiers,
-          total_points_distributed: adminData.total_points_distributed,
-          recent_registrations: adminData.recent_registrations,
-          vendite_stats: {
-            total_revenue: venditeStatsFromAdmin.total_revenue || 0,
-            total_sales_records: venditeStatsFromAdmin.total_sales_records || 0,
-            unique_customers: venditeStatsFromAdmin.unique_customers_vendite || 0,
-            unique_products: venditeStatsFromAdmin.unique_products || 0,
-            total_quantity_sold: venditeStatsFromAdmin.total_quantity_sold || 0,
-            avg_transaction: (venditeStatsFromAdmin.total_revenue && venditeStatsFromAdmin.total_sales_records) ? (venditeStatsFromAdmin.total_revenue / venditeStatsFromAdmin.total_sales_records) : 0
-          }
-        };
-        
-        console.log('🎯 Setting admin-only stats:', newStats);
-        setStats(newStats);
-        
-        // Set minimal analytics for charts
-        setAnalytics({
-          monthly_trends: [],
-          top_customers: [],
-          top_departments: [],
-          top_products: [],
-          summary: {
-            total_bollini: scontriniData.total_bollini,
-            total_transactions: venditeStatsFromAdmin.total_sales_records || 0,
-            avg_transaction: (venditeStatsFromAdmin.total_revenue && venditeStatsFromAdmin.total_sales_records) ? (venditeStatsFromAdmin.total_revenue / venditeStatsFromAdmin.total_sales_records) : 0,
-            avg_bollini_per_transaction: (scontriniData.total_bollini && venditeStatsFromAdmin.total_sales_records) ? (scontriniData.total_bollini / venditeStatsFromAdmin.total_sales_records) : 0
-          }
-        });
-        
-        console.log('✅ Admin-only real database data loaded successfully!');
       } else {
-        console.error('❌ Both APIs failed:', { vendite: venditeResponse.data, adminStats: adminStatsResponse.data });
-        throw new Error('Both API requests failed');
+        console.error('❌ Admin stats API failed:', adminStatsResponse.data);
+        throw new Error('Admin stats API failed');
       }
       
     } catch (error) {
