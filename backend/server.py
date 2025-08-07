@@ -2868,6 +2868,7 @@ async def get_dashboard_stats(current_admin = Depends(get_current_admin)):
         }
     
     return {
+        "total_users": registered_users,  # For backward compatibility
         "registered_users": registered_users,
         "total_fidelity_clients": total_fidelity_clients,
         "total_stores": total_stores,
