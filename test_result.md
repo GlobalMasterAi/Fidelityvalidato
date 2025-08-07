@@ -706,6 +706,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "✅ CRITICAL ISSUE COMPLETELY RESOLVED! Root cause identified as database collection mismatch in backend - was querying non-existent 'transactions' collection instead of 'scontrini_data' collection. Backend fixes applied: (1) Changed db.transactions.count_documents({}) to db.scontrini_data.count_documents({}) (2) Updated vendite_stats to use MongoDB vendite_data collection instead of empty VENDITE_DATA variable (3) Updated scontrini_stats to use MongoDB scontrini_data collection. Verified with comprehensive testing: Transaction count now shows 5000 instead of 0, Vendite stats show real data (1,067,280 sales, €3,584,524.55 revenue, 7,823 customers, 7,422 products), Scontrini stats show real data (5,000 scontrini, €105,873.03 revenue, 92,058 bollini). All dashboard cards will now display correct data from database instead of zeros."
+      - working: true
+        agent: "testing"
+        comment: "✅ URGENT DEBUG COMPLETED: Admin stats vendite field mapping issue investigated and CONFIRMED WORKING. /api/admin/stats/dashboard endpoint returns correct vendite_stats with non-zero values: {'total_sales_records': 130000, 'total_revenue': 522939.02, 'unique_customers_vendite': 4803, 'unique_products': 5584, 'total_quantity_sold': 240764.0}. Vendite dashboard endpoint also shows proper data: 180000 sales, 6315 customers, €724777.84 revenue. Field mapping in MongoDB aggregation pipeline is working correctly. The reported issue of all 0 values in vendite_stats appears to be resolved. Database collections are properly connected and returning real sales data."
 
   - task: "Enhanced Fidelity Validation with Cognome + Tessera"
     implemented: true
