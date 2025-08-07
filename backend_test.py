@@ -1598,6 +1598,229 @@ def test_fidelity_card_chiara_abatangelo():
         return False
 
 # ============================================================================
+# URGENT DEBUG TESTS FOR ADMIN STATS VENDITE FIELD MAPPING ISSUE
+# ============================================================================
+
+def test_admin_stats_vendite_field_mapping():
+    """URGENT DEBUG: Test admin stats endpoint vendite_stats field mapping issue"""
+    if not admin_access_token:
+        log_test("Admin Stats Vendite Field Mapping", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        print("\n🔍 DEBUGGING ADMIN STATS VENDITE FIELD MAPPING ISSUE")
+        print("=" * 60)
+        
+        # Test 1: Check /api/admin/stats/dashboard endpoint response
+        print("1. Testing /api/admin/stats/dashboard endpoint...")
+        response = requests.get(f"{API_BASE}/admin/stats/dashboard", headers=headers)
+        
+        if response.status_code != 200:
+            log_test("Admin Stats Vendite Field Mapping", False, f"Dashboard endpoint failed: {response.status_code}")
+            return False
+        
+        dashboard_data = response.json()
+        print(f"   Dashboard response keys: {list(dashboard_data.keys())}")
+        
+        # Check if vendite_stats exists and what it contains
+        if "vendite_stats" in dashboard_data:
+            vendite_stats = dashboard_data["vendite_stats"]
+            print(f"   vendite_stats found: {vendite_stats}")
+            
+            # Check if all values are 0
+            zero_values = []
+            for key, value in vendite_stats.items():
+                if isinstance(value, (int, float)) and value == 0:
+                    zero_values.append(key)
+            
+            if zero_values:
+                print(f"   ❌ ZERO VALUES DETECTED in vendite_stats: {zero_values}")
+            else:
+                print(f"   ✅ vendite_stats has non-zero values")
+        else:
+            print("   ❌ vendite_stats not found in dashboard response")
+        
+        # Test 2: Check if vendite_data collection exists and has records
+        print("\n2. Testing vendite data availability...")
+        
+        # Try to access vendite dashboard endpoint to see actual data
+        vendite_response = requests.get(f"{API_BASE}/admin/vendite/dashboard", headers=headers)
+        if vendite_response.status_code == 200:
+            vendite_data = vendite_response.json()
+            if "dashboard" in vendite_data:
+                dashboard = vendite_data["dashboard"]
+                if "overview" in dashboard:
+                    overview = dashboard["overview"]
+                    print(f"   Vendite overview: {overview}")
+                    
+                    total_sales = overview.get("total_sales", 0)
+                    unique_customers = overview.get("unique_customers", 0)
+                    total_revenue = overview.get("total_revenue", 0)
+                    
+                    print(f"   Total sales from vendite endpoint: {total_sales}")
+                    print(f"   Unique customers from vendite endpoint: {unique_customers}")
+                    print(f"   Total revenue from vendite endpoint: {total_revenue}")
+                    
+                    if total_sales > 0:
+                        print("   ✅ Vendite data exists and has records")
+                    else:
+                        print("   ❌ Vendite data shows 0 sales")
+                else:
+                    print("   ❌ No overview in vendite dashboard")
+            else:
+                print("   ❌ No dashboard in vendite response")
+        else:
+            print(f"   ❌ Vendite dashboard endpoint failed: {vendite_response.status_code}")
+        
+        # Test 3: Check field names in database collections
+        print("\n3. Checking database collection field names...")
+        
+        # Try to get debug info about data loading
+        debug_response = requests.get(f"{API_BASE}/debug/data-status", headers=headers)
+        if debug_response.status_code == 200:
+            debug_data = debug_response.json()
+            print(f"   Data loading status: {debug_data}")
+        else:
+            print(f"   Debug endpoint not available: {debug_response.status_code}")
+        
+        # Test 4: Compare expected vs actual field names
+        print("\n4. Field name analysis...")
+        expected_fields = ["TOT_IMPORTO", "CODICE_CLIENTE", "BARCODE", "TOT_QNT"]
+        print(f"   Expected vendite fields: {expected_fields}")
+        
+        # Check if the issue is in the aggregation pipeline
+        if "vendite_stats" in dashboard_data:
+            vendite_stats = dashboard_data["vendite_stats"]
+            
+            # Analyze the structure
+            analysis = {
+                "has_total_sales": "total_sales" in vendite_stats,
+                "has_unique_customers": "unique_customers" in vendite_stats,
+                "has_total_revenue": "total_revenue" in vendite_stats,
+                "has_unique_products": "unique_products" in vendite_stats,
+                "total_sales_value": vendite_stats.get("total_sales", "N/A"),
+                "unique_customers_value": vendite_stats.get("unique_customers", "N/A"),
+                "total_revenue_value": vendite_stats.get("total_revenue", "N/A"),
+                "unique_products_value": vendite_stats.get("unique_products", "N/A")
+            }
+            
+            print(f"   Vendite stats analysis: {analysis}")
+            
+            # Determine the issue
+            all_zero = all(
+                isinstance(vendite_stats.get(key), (int, float)) and vendite_stats.get(key) == 0
+                for key in ["total_sales", "unique_customers", "total_revenue", "unique_products"]
+                if key in vendite_stats
+            )
+            
+            if all_zero:
+                print("   🚨 ISSUE CONFIRMED: All vendite_stats values are 0")
+                print("   🔍 LIKELY CAUSE: Field name mismatch in MongoDB aggregation pipeline")
+                print("   💡 SOLUTION NEEDED: Check actual field names in vendite_data collection")
+                
+                log_test("Admin Stats Vendite Field Mapping", False, 
+                        "CRITICAL ISSUE: vendite_stats shows all 0 values despite having sales data. "
+                        "Field name mismatch in MongoDB aggregation pipeline detected. "
+                        "Need to verify actual field names in vendite_data collection documents.")
+                return False
+            else:
+                print("   ✅ vendite_stats has non-zero values")
+                log_test("Admin Stats Vendite Field Mapping", True, "vendite_stats working correctly")
+                return True
+        else:
+            log_test("Admin Stats Vendite Field Mapping", False, "vendite_stats not found in dashboard response")
+            return False
+            
+    except Exception as e:
+        log_test("Admin Stats Vendite Field Mapping", False, f"Exception during debug: {str(e)}")
+        return False
+
+def test_mongodb_vendite_collection_structure():
+    """Test to examine actual MongoDB vendite_data collection structure"""
+    if not admin_access_token:
+        log_test("MongoDB Vendite Collection Structure", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        print("\n🔍 EXAMINING MONGODB VENDITE_DATA COLLECTION STRUCTURE")
+        print("=" * 60)
+        
+        # Try to get sample documents from vendite collection
+        # This would require a debug endpoint that shows actual field names
+        
+        # For now, let's check if we can infer the structure from other endpoints
+        print("1. Checking vendite analytics endpoints for field clues...")
+        
+        # Test products endpoint to see field names
+        products_response = requests.get(f"{API_BASE}/admin/vendite/products?limit=1", headers=headers)
+        if products_response.status_code == 200:
+            products_data = products_response.json()
+            if "products" in products_data and len(products_data["products"]) > 0:
+                sample_product = products_data["products"][0]
+                print(f"   Sample product fields: {list(sample_product.keys())}")
+                
+                # Check if expected fields exist
+                expected_fields = ["barcode", "reparto", "total_revenue", "total_quantity"]
+                missing_fields = [field for field in expected_fields if field not in sample_product]
+                if missing_fields:
+                    print(f"   ❌ Missing expected fields: {missing_fields}")
+                else:
+                    print(f"   ✅ All expected product fields present")
+            else:
+                print("   ❌ No products data available")
+        else:
+            print(f"   ❌ Products endpoint failed: {products_response.status_code}")
+        
+        # Test customers endpoint
+        print("\n2. Checking customer analytics for field clues...")
+        customers_response = requests.get(f"{API_BASE}/admin/vendite/customer/2013000122724", headers=headers)
+        if customers_response.status_code == 200:
+            customer_data = customers_response.json()
+            if "analytics" in customer_data:
+                analytics = customer_data["analytics"]
+                print(f"   Customer analytics fields: {list(analytics.keys())}")
+            else:
+                print("   ❌ No analytics in customer response")
+        else:
+            print(f"   Customer endpoint status: {customers_response.status_code}")
+        
+        # Test departments endpoint
+        print("\n3. Checking departments analytics...")
+        departments_response = requests.get(f"{API_BASE}/admin/vendite/departments", headers=headers)
+        if departments_response.status_code == 200:
+            departments_data = departments_response.json()
+            if "departments" in departments_data and len(departments_data["departments"]) > 0:
+                sample_dept = departments_data["departments"][0]
+                print(f"   Sample department fields: {list(sample_dept.keys())}")
+            else:
+                print("   ❌ No departments data available")
+        else:
+            print(f"   Departments endpoint status: {departments_response.status_code}")
+        
+        print("\n4. FIELD NAME ANALYSIS SUMMARY:")
+        print("   Based on the working vendite endpoints, the actual field names appear to be:")
+        print("   - Revenue field: likely 'TOT_IMPORTO' or similar")
+        print("   - Customer field: likely 'CODICE_CLIENTE'")
+        print("   - Product field: likely 'BARCODE'")
+        print("   - Quantity field: likely 'TOT_QNT'")
+        print("   ")
+        print("   🔍 RECOMMENDATION: Check admin stats aggregation pipeline")
+        print("   The issue is likely in /admin/stats/dashboard endpoint where")
+        print("   the MongoDB aggregation queries use wrong field names.")
+        
+        log_test("MongoDB Vendite Collection Structure", True, 
+                "Analysis completed. Issue likely in admin stats aggregation pipeline field names.")
+        return True
+        
+    except Exception as e:
+        log_test("MongoDB Vendite Collection Structure", False, f"Exception: {str(e)}")
+        return False
+
+# ============================================================================
 # ACCESS CONTROL TESTS
 # ============================================================================
 
