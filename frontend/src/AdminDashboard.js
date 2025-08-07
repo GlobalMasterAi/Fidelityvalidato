@@ -70,26 +70,30 @@ const AdminDashboard = () => {
         });
         
         // Map database data to expected dashboard format
+        // Use vendite data from admin stats (has real data) as primary source, fallback to vendite dashboard
+        const venditeStatsFromAdmin = adminData.vendite_stats || {};
+        const venditeDataFromVendite = venditeData.overview || {};
+        
         const newStats = {
-          fatturato: venditeData.overview.total_revenue,
-          utenti_attivi: venditeData.overview.unique_customers,
-          prodotti: adminData.vendite_stats?.unique_products || 0,
+          fatturato: venditeStatsFromAdmin.total_revenue || venditeDataFromVendite.total_revenue || 0,
+          utenti_attivi: venditeStatsFromAdmin.unique_customers_vendite || venditeDataFromVendite.unique_customers || 0,
+          prodotti: venditeStatsFromAdmin.unique_products || 0,
           bollini: scontriniData.total_bollini,
-          vendite: venditeData.overview.total_sales,
+          vendite: venditeStatsFromAdmin.total_sales_records || venditeDataFromVendite.total_sales || 0,
           scontrini: scontriniData.total_scontrini,
           total_users: adminData.total_users,
           total_stores: adminData.total_stores,
           total_cashiers: adminData.total_cashiers,
           total_points_distributed: adminData.total_points_distributed,
           recent_registrations: adminData.recent_registrations,
-          // Add vendite_stats structure that dashboard expects
+          // Add vendite_stats structure that dashboard expects (prioritize admin stats data)
           vendite_stats: {
-            total_revenue: venditeData.overview.total_revenue,
-            total_sales_records: venditeData.overview.total_sales,
-            unique_customers: venditeData.overview.unique_customers,
-            unique_products: adminData.vendite_stats?.unique_products || 0,
-            total_quantity_sold: adminData.vendite_stats?.total_quantity_sold || 0,
-            avg_transaction: venditeData.overview.avg_transaction
+            total_revenue: venditeStatsFromAdmin.total_revenue || venditeDataFromVendite.total_revenue || 0,
+            total_sales_records: venditeStatsFromAdmin.total_sales_records || venditeDataFromVendite.total_sales || 0,
+            unique_customers: venditeStatsFromAdmin.unique_customers_vendite || venditeDataFromVendite.unique_customers || 0,
+            unique_products: venditeStatsFromAdmin.unique_products || 0,
+            total_quantity_sold: venditeStatsFromAdmin.total_quantity_sold || 0,
+            avg_transaction: venditeDataFromVendite.avg_transaction || (venditeStatsFromAdmin.total_revenue / venditeStatsFromAdmin.total_sales_records) || 0
           }
         };
         
