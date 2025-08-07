@@ -37,10 +37,24 @@ const AdminDashboard = () => {
       });
       console.log('✅ Admin Stats response:', adminStatsResponse.data);
       
-      // Fetch vendite dashboard data (real data from database)
+      // Fetch vendite dashboard data (real data from database) - increase timeout for large dataset
       console.log('🔄 Fetching vendite dashboard...');
       const venditeResponse = await axios.get(`${API}/admin/vendite/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 15000 // 15 seconds timeout for large dataset processing
+      }).catch(error => {
+        console.error('⚠️ Vendite API failed:', error);
+        // Return minimal structure to prevent blocking
+        return { 
+          data: { 
+            success: false, 
+            dashboard: { 
+              overview: { total_sales: 0, unique_customers: 0, total_revenue: 0, avg_transaction: 0 },
+              charts: { monthly_trends: [], top_customers: [], top_departments: [], top_products: [], top_promotions: [] },
+              cards: { total_sales: 0, unique_customers: 0, total_revenue: 0, avg_transaction: 0 }
+            } 
+          } 
+        };
       });
       console.log('✅ Vendite response:', venditeResponse.data);
       
