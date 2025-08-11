@@ -5703,5 +5703,8 @@ if __name__ == "__main__":
         # Production optimizations
         workers=1,  # Single worker for Atlas connection consistency
         timeout_keep_alive=30,
-        timeout_graceful_shutdown=10
+        timeout_graceful_shutdown=10,
+        # Enhanced logging for deployment debugging
+        loop="asyncio",
+        reload=False  # Disable reload in production
     )
