@@ -14,7 +14,7 @@ ADMIN_CREDENTIALS = {
 }
 
 # URLs to test
-CURRENT_URL = "https://c1e05f28-1cc8-4c95-adee-7fd4dd71b6a5.preview.emergentagent.com/api"
+CURRENT_URL = "https://98d429a1-72ee-4413-8993-63bc46952cf5.preview.emergentagent.com/api"
 PRODUCTION_URL = "https://rfm-dashboard-1.emergent.host/api"
 
 def test_admin_login(api_url, url_name):
