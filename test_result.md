@@ -816,15 +816,18 @@ test_plan:
 
   - task: "Final Frontend Testing After Data Migration"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/frontend/src/App.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Final comprehensive frontend testing dopo migrazione completa dei 3 file JSON. Verifica dashboard admin con dati reali, login funzionalità, navigazione, e display delle statistiche corrette con i nuovi dati MongoDB Atlas."
+      - working: false
+        agent: "testing"
+        comment: "🚨 CRITICAL FRONTEND ISSUES IDENTIFIED: Comprehensive testing reveals 2 major problems: (1) ADMIN LOGIN FAILURE: Backend API works perfectly (superadmin/ImaGross2024! returns valid JWT token), but frontend admin login fails with 'Credenziali non valide' error and redirects to /login instead of /admin. This indicates a JavaScript authentication handling bug in the frontend adminLogin function. (2) DASHBOARD ZERO VALUES: Dashboard correctly shows some real data (92,058 bollini from scontrini) but displays €0,00 revenue because vendite data is still loading into database (API returns 'Vendite data is still loading into database'). ✅ WORKING FEATURES: User login page with multi-format support (email/tessera/telefono), fidelity card import functionality, proper routing to registration page, admin area link accessible. ROOT CAUSE: Frontend JavaScript adminLogin function has authentication bug preventing successful admin dashboard access despite valid backend credentials."
 
   - task: "Final Data Migration Verification - All 3 JSON Files"
     implemented: true
