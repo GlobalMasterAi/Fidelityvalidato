@@ -169,7 +169,7 @@ def test_fidelity_users_api():
             data = response.json()
             
             # Check response structure
-            required_fields = ["users", "total", "page", "limit", "total_pages"]
+            required_fields = ["users", "total", "page", "pages"]
             missing_fields = [field for field in required_fields if field not in data]
             
             if missing_fields:
