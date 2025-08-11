@@ -2525,7 +2525,7 @@ async def admin_login(login_data: AdminLogin):
     if not admin or not verify_password(login_data.password, admin["password_hash"]):
         raise HTTPException(status_code=401, detail="Credenziali non valide")
     
-    if not admin["active"]:
+    if not admin.get("active", True):  # Default to True if field doesn't exist
         raise HTTPException(status_code=401, detail="Account disattivato")
     
     access_token = create_access_token(data={"sub": admin["id"], "type": "admin", "role": admin["role"]})
