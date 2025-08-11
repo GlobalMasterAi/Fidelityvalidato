@@ -87,13 +87,23 @@ const AuthProvider = ({ children }) => {
   const adminLogin = async (username, password) => {
     try {
       const response = await axios.post(`${API}/admin/login`, { username, password });
-      const { access_token, admin } = response.data;
-      localStorage.setItem('adminToken', access_token);
-      setAdminToken(access_token);
-      setAdmin(admin);
-      return true;
+      
+      if (response.data && response.data.access_token && response.data.admin) {
+        const { access_token, admin } = response.data;
+        localStorage.setItem('adminToken', access_token);
+        setAdminToken(access_token);
+        setAdmin(admin);
+        return true;
+      } else {
+        console.error('Invalid response structure:', response.data);
+        return false;
+      }
     } catch (error) {
       console.error('Admin login error:', error);
+      if (error.response) {
+        console.error('Response error:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
       return false;
     }
   };
