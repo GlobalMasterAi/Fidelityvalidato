@@ -5141,23 +5141,30 @@ async def load_vendite_minimal():
         DATA_LOADING_STATUS["vendite"] = "minimal_error"
 
 async def background_data_loading():
-    """PRODUCTION: Light background data loading - no heavy files to avoid timeout"""
+    """PRODUCTION: Re-enable data loading after successful deployment"""
     try:
-        # In production deployment, prioritize fast startup over data loading
-        print("🔄 Starting LIGHT background data initialization...")
+        print("🔄 POST-DEPLOYMENT: Starting full data loading...")
         
-        # Only load essential admin data and minimal collections
-        await asyncio.sleep(2)  # Brief delay before starting
+        # Brief delay to let system stabilize after deployment
+        await asyncio.sleep(5)
         
-        # Initialize basic collections without heavy file loading
+        # Load admin first
         await init_super_admin()
         
-        # Skip heavy data loading in production startup to prevent timeout
-        print("📊 Production mode: Heavy data loading disabled for fast deployment")
-        print("✅ Use /api/debug/force-reload-data to load data after deployment if needed")
+        # Now load all data since deployment succeeded
+        print("📊 Loading fidelity, scontrini, and vendite data...")
+        
+        # Load data in sequence to avoid overwhelming the system
+        await load_fidelity_to_database()
+        await load_scontrini_to_database()
+        
+        # Load vendite data (lighter subset for now)
+        await load_vendite_minimal()  # Start with minimal data
+        
+        print("✅ Post-deployment data loading completed!")
         
     except Exception as e:
-        print(f"⚠️ Light background loading error: {e}")
+        print(f"⚠️ Post-deployment loading error: {e}")
 
 async def load_fidelity_to_database():
     """Load fidelity data directly to MongoDB collection - FIXED for 30K+ records"""
