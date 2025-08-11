@@ -5392,11 +5392,9 @@ async def load_vendite_to_database():
         print("💰 Starting optimized vendite data loading to database...")
         DATA_LOADING_STATUS["vendite"] = "loading_to_database"
         
-        db = await get_db()
-        if not db:
-            print("❌ Database not available for vendite loading")
-            DATA_LOADING_STATUS["vendite"] = "database_unavailable"
-            return
+        # Wait for database to be ready
+        while db is None:
+            await asyncio.sleep(1)
         
         # Drop existing collection to avoid duplicates
         try:
