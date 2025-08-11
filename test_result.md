@@ -778,8 +778,8 @@ metadata:
 
 test_plan:
   current_focus: 
-    - "Final Data Migration Verification - All 3 JSON Files"
-    - "Complete Platform Testing - Backend + Frontend"
+    - "Final Data Migration Verification - All 3 JSON Files"  
+    - "Complete Platform Testing - Frontend Verification"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
