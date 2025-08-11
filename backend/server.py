@@ -2163,6 +2163,40 @@ async def debug_database_status():
     except Exception as e:
         return {"error": f"Database query error: {str(e)}"}
 
+@api_router.post("/debug/force-reload-data")
+async def force_reload_data(current_admin = Depends(get_current_admin)):
+    """Force reload all data from JSON files to MongoDB Atlas"""
+    try:
+        global DATA_LOADING_STATUS
+        
+        # Reset loading status
+        DATA_LOADING_STATUS["fidelity"] = "force_reloading"
+        DATA_LOADING_STATUS["scontrini"] = "force_reloading"
+        DATA_LOADING_STATUS["vendite"] = "force_reloading"
+        
+        # Start background reload tasks using existing functions
+        import asyncio
+        
+        # Create background tasks for data loading
+        asyncio.create_task(load_fidelity_to_database())
+        asyncio.create_task(load_scontrini_to_database())
+        asyncio.create_task(load_vendite_to_database())
+        
+        return {
+            "success": True,
+            "message": "Force data reload initiated for all collections",
+            "details": "Background tasks started for fidelity, scontrini, and vendite data using existing database loading functions",
+            "status": DATA_LOADING_STATUS,
+            "initiated_by": current_admin.username if hasattr(current_admin, 'username') else "admin"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to initiate force reload: {str(e)}",
+            "error": str(e)
+        }
+
 @api_router.get("/qr/{qr_code}")
 async def get_qr_info(qr_code: str):
     """Get information about a QR code (store and cashier info)"""
