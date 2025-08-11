@@ -5636,3 +5636,29 @@ async def shutdown_db_client():
 
 # Include the router in the main app (MUST be after all endpoints are defined)
 app.include_router(api_router)
+
+# Production server startup configuration for containerized deployment
+if __name__ == "__main__":
+    import uvicorn
+    
+    # Get port from environment for production flexibility
+    port = int(os.environ.get("PORT", 8001))
+    host = os.environ.get("HOST", "0.0.0.0")  # Must bind to 0.0.0.0 for container
+    
+    print(f"🚀 Starting ImaGross Backend on {host}:{port}")
+    print(f"📍 Health Check: http://{host}:{port}/health")
+    print(f"📍 API Health: http://{host}:{port}/api/health")
+    print(f"📍 Readiness: http://{host}:{port}/readiness")
+    
+    # Production uvicorn configuration
+    uvicorn.run(
+        "server:app",
+        host=host,
+        port=port,
+        log_level="info",
+        access_log=True,
+        # Production optimizations
+        workers=1,  # Single worker for Atlas connection consistency
+        timeout_keep_alive=30,
+        timeout_graceful_shutdown=10
+    )
