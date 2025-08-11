@@ -945,15 +945,28 @@ const AdminLoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { adminLogin } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     
-    const success = await adminLogin(username, password);
-    if (!success) {
-      setError('Credenziali amministratore non valide');
+    try {
+      const success = await adminLogin(username, password);
+      if (success) {
+        // Successo: reindirizza alla dashboard admin
+        navigate('/admin');
+      } else {
+        setError('Credenziali amministratore non valide');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Errore durante il login. Riprova.');
+    } finally {
+      setLoading(false);
     }
   };
 
