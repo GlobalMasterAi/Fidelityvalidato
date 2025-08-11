@@ -331,14 +331,16 @@ def test_dashboard_statistics_non_zero():
                 log_test("Dashboard Statistics Non-Zero", False, f"Found zero values in: {', '.join(zero_stats)}")
                 return False
             
-            # Log actual values for verification
+            # Log actual values for verification - include all important metrics
             stats_summary = []
             if "total_transactions" in data:
                 stats_summary.append(f"Transactions: {data['total_transactions']:,}")
+            if "total_fidelity_clients" in data:
+                stats_summary.append(f"Fidelity Clients: {data['total_fidelity_clients']:,}")
             if "vendite_stats" in data and "total_revenue" in data["vendite_stats"]:
                 stats_summary.append(f"Vendite Revenue: €{data['vendite_stats']['total_revenue']:,.2f}")
-            if "scontrini_stats" in data and "total_bollini" in data["scontrini_stats"]:
-                stats_summary.append(f"Bollini: {data['scontrini_stats']['total_bollini']:,}")
+            if "scontrini_stats" in data and "scontrini_bollini" in data["scontrini_stats"]:
+                stats_summary.append(f"Bollini: {data['scontrini_stats']['scontrini_bollini']:,}")
             
             log_test("Dashboard Statistics Non-Zero", True, 
                    f"All statistics show real data - {', '.join(stats_summary)} (response time: {response_time:.2f}s)")
