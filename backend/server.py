@@ -5636,7 +5636,14 @@ async def background_mongo_check():
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    client.close()
+    """Gracefully shutdown MongoDB client"""
+    try:
+        if client is not None:
+            print("🔄 Closing MongoDB connection...")
+            client.close()
+            print("✅ MongoDB connection closed")
+    except Exception as e:
+        print(f"⚠️ Error during shutdown: {e}")
 
 # Include the router in the main app (MUST be after all endpoints are defined)
 app.include_router(api_router)
