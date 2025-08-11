@@ -117,7 +117,7 @@ def test_admin_stats_dashboard():
                 return False
             
             # Additional validation of vendite_stats structure
-            expected_vendite_fields = ["total_revenue", "unique_customers", "unique_products"]
+            expected_vendite_fields = ["total_revenue", "unique_customers_vendite", "unique_products"]
             for field in expected_vendite_fields:
                 if field not in vendite_stats:
                     log_test("Admin Stats Dashboard", False, f"Missing vendite_stats field: {field}")
