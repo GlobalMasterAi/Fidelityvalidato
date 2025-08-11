@@ -4814,6 +4814,27 @@ async def readiness_probe():
     """Kubernetes readiness probe - ultra simple"""
     return {"ready": True}
 
+# Deployment debug endpoint
+@app.get("/deploy-test")
+async def deploy_test():
+    """Debug endpoint for deployment verification"""
+    return {
+        "status": "deployment_ready",
+        "timestamp": datetime.utcnow().isoformat(),
+        "environment": {
+            "mongo_configured": bool(os.environ.get('MONGO_URL')),
+            "db_name": os.environ.get('DB_NAME', 'default'),
+            "port": os.environ.get('PORT', '8001'),
+            "host": os.environ.get('HOST', '0.0.0.0')
+        },
+        "endpoints": {
+            "health": "/health",
+            "api_health": "/api/health", 
+            "readiness": "/readiness",
+            "api_readiness": "/api/readiness"
+        }
+    }
+
 # EMERGENCY DEPLOYMENT endpoints - ALWAYS work regardless of app state
 @app.get("/emergency")
 async def emergency_health():
