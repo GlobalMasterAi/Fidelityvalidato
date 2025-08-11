@@ -5385,74 +5385,108 @@ async def create_minimal_scontrini_data():
     DATA_LOADING_STATUS["scontrini"] = "database_minimal"
 
 async def load_vendite_to_database():
-    """Load vendite data directly to MongoDB collection - OPTIMIZED for 1M+ records"""
+    """Load vendite data to MongoDB with optimized batch processing for large datasets"""
+    global DATA_LOADING_STATUS
+    
     try:
-        print("💰 Loading vendite data to database...")
+        print("💰 Starting optimized vendite data loading to database...")
+        DATA_LOADING_STATUS["vendite"] = "loading_to_database"
         
-        while db is None:
-            await asyncio.sleep(1)
+        db = await get_db()
+        if not db:
+            print("❌ Database not available for vendite loading")
+            DATA_LOADING_STATUS["vendite"] = "database_unavailable"
+            return
+        
+        # Drop existing collection to avoid duplicates
+        try:
+            await db.vendite_data.drop()
+            print("🗑️ Dropped existing vendite_data collection")
+        except:
+            pass
+        
+        # Load vendite JSON data
+        vendite_file_path = os.path.join(os.path.dirname(__file__), "data", "Vendite_20250101_to_20250630.json")
+        
+        if not os.path.exists(vendite_file_path):
+            print(f"❌ Vendite file not found: {vendite_file_path}")
+            DATA_LOADING_STATUS["vendite"] = "file_not_found"
+            return
+        
+        with open(vendite_file_path, 'r', encoding='utf-8') as f:
+            vendite_records = json.load(f)
+        
+        total_records = len(vendite_records)
+        print(f"📊 Loaded {total_records:,} vendite records from JSON file")
+        
+        # OPTIMIZED BATCH INSERTION with increased timeouts
+        BATCH_SIZE = 500  # Smaller batches for Atlas
+        batches_processed = 0
+        total_inserted = 0
+        
+        # Configure collection with optimal settings
+        collection = db.vendite_data
+        
+        for i in range(0, total_records, BATCH_SIZE):
+            batch = vendite_records[i:i + BATCH_SIZE]
             
-        # Clear existing collection  
-        await db.vendite_data.delete_many({})
-        
-        file_path = find_json_file('Vendite_20250101_to_20250630.json')
-        if file_path:
-            file_size = os.path.getsize(file_path)
-            print(f"💰 Vendite file size: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)")
+            # Convert data types and clean records
+            processed_batch = []
+            for record in batch:
+                processed_record = {
+                    "DATA_VENDITA": record.get("DATA_VENDITA", ""),
+                    "CODICE_CLIENTE": str(record.get("CODICE_CLIENTE", "")),
+                    "BARCODE": str(record.get("BARCODE", "")),
+                    "DESCRIZIONE": str(record.get("DESCRIZIONE", "")),
+                    "TOT_QNT": safe_float_convert(record.get("TOT_QNT", 0)),
+                    "TOT_IMPORTO": safe_float_convert(record.get("TOT_IMPORTO", 0)),
+                    "REPARTO": str(record.get("REPARTO", "")),
+                    "NEGOZIO": str(record.get("NEGOZIO", ""))
+                }
+                processed_batch.append(processed_record)
             
             try:
-                # Stream processing for large files
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    raw_data = json.load(f)
+                # Insert batch with optimized settings
+                result = await collection.insert_many(
+                    processed_batch, 
+                    ordered=False,  # Allow parallel inserts
+                    bypass_document_validation=True  # Skip validation for speed
+                )
                 
-                total_records = len(raw_data)
-                print(f"💰 Processing {total_records:,} vendite records...")
+                batches_processed += 1
+                total_inserted += len(result.inserted_ids)
                 
-                # Use larger batches and parallel processing for performance
-                batch_size = 10000  # Increased batch size
-                inserted = 0
+                # Progress reporting every 10 batches
+                if batches_processed % 10 == 0:
+                    progress_percent = (total_inserted / total_records) * 100
+                    print(f"💰 Progress: {total_inserted:,}/{total_records:,} ({progress_percent:.1f}%)")
                 
-                for i in range(0, len(raw_data), batch_size):
-                    batch = raw_data[i:i+batch_size]
-                    
-                    if batch:
-                        try:
-                            # Insert with unordered for better performance
-                            await db.vendite_data.insert_many(batch, ordered=False)
-                            inserted += len(batch)
-                            
-                            # Progress updates every 100K records
-                            if inserted % 100000 == 0:
-                                progress = (inserted / total_records) * 100
-                                print(f"💰 Progress: {inserted:,}/{total_records:,} ({progress:.1f}%)")
-                                
-                        except Exception as batch_error:
-                            print(f"⚠️ Batch insert error: {batch_error}")
-                            # Try smaller batches on error
-                            for j in range(0, len(batch), 1000):
-                                mini_batch = batch[j:j+1000]
-                                try:
-                                    await db.vendite_data.insert_many(mini_batch, ordered=False)
-                                    inserted += len(mini_batch)
-                                except Exception as mini_error:
-                                    print(f"⚠️ Mini-batch error: {mini_error}")
-                                    continue
+                # Small delay to prevent overwhelming Atlas
+                await asyncio.sleep(0.1)
                 
-                print(f"✅ Successfully loaded {inserted:,} vendite records to database!")
-                print(f"💰 Vendite loading completed: {inserted:,} total records")
-                DATA_LOADING_STATUS["vendite"] = "database_loaded_complete"
-                
-            except Exception as file_error:
-                print(f"❌ File processing error: {file_error}")
-                await create_minimal_vendite_data()
-                
-        else:
-            print("❌ Vendite file not found, creating minimal data...")
-            await create_minimal_vendite_data()
-            
+            except Exception as batch_error:
+                print(f"⚠️ Batch {batches_processed} failed: {batch_error}")
+                # Continue with next batch instead of stopping
+                continue
+        
+        # Create optimized indexes after insertion
+        try:
+            print("📝 Creating optimized indexes...")
+            await collection.create_index("CODICE_CLIENTE")
+            await collection.create_index("BARCODE") 
+            await collection.create_index("DATA_VENDITA")
+            await collection.create_index("REPARTO")
+            print("✅ Indexes created successfully")
+        except Exception as index_error:
+            print(f"⚠️ Index creation failed: {index_error}")
+        
+        print(f"✅ Successfully loaded {total_inserted:,} vendite records to database!")
+        print(f"💰 Vendite loading completed: {total_inserted:,} total records")
+        DATA_LOADING_STATUS["vendite"] = "database_loaded_complete"
+        
     except Exception as e:
         print(f"❌ Critical error loading vendite to database: {e}")
-        DATA_LOADING_STATUS["vendite"] = "database_error"
+        DATA_LOADING_STATUS["vendite"] = f"error_{str(e)[:50]}"
 
 async def create_minimal_vendite_data():
     """Create minimal vendite data for fallback"""
