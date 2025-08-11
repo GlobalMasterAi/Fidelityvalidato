@@ -802,13 +802,16 @@ test_plan:
     implemented: true
     working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "🚨 CRITICAL PRODUCTION ISSUE IDENTIFIED: Admin login credentials (superadmin/ImaGross2024!) work perfectly on development URL (https://c1e05f28-1cc8-4c95-adee-7fd4dd71b6a5.preview.emergentagent.com/api) but FAIL on production URL (https://rfm-dashboard-1.emergent.host/api) with 500 Internal Server Error. ROOT CAUSE: Production deployment/routing issue - the production URL is not properly connected to the backend service or has configuration problems. EVIDENCE: (1) Admin user exists in MongoDB Atlas with correct credentials and super_admin role (2) Authentication system works on dev URL (3) Production URL returns 500 error instead of 401, indicating server-side failure (4) Database connection verified working. SOLUTION NEEDED: Fix production deployment routing to connect https://rfm-dashboard-1.emergent.host to the correct backend service."
+      - working: false
+        agent: "testing"
+        comment: "🔄 VENDITE DATA LOADING RETRY TESTING COMPLETED - PARTIAL SUCCESS WITH CRITICAL TIMEOUT ISSUE: Comprehensive testing of vendite data loading retry functionality reveals: ✅ FORCE RELOAD API: Successfully initiated with /api/debug/force-reload-data endpoint ✅ LOADING PROGRESS: Monitored vendite loading progress showing 1,067,280 records processed (84.3% → 93.7% → 100%) ✅ FIDELITY DATA: Successfully loaded 24,958 real fidelity records to database ✅ SCONTRINI DATA: Successfully loaded 5,000 scontrini records to database ❌ CRITICAL MONGODB TIMEOUT: 'The read operation timed out' error on fidelity-cluster-shard-00-02.rtsr8t.mongodb.net:27017 during vendite database insertion ❌ DATABASE PERSISTENCE FAILURE: Despite logs showing 'Successfully loaded 1,067,280 vendite records', database queries return 0 records, indicating timeout prevented successful insertion ❌ DASHBOARD STILL SHOWS €0.00: Both admin stats dashboard and vendite dashboard show zero revenue, confirming data not persisted. CONCLUSION: Vendite data loading retry mechanism works but MongoDB Atlas timeout issue persists - need increased timeout configuration for large dataset operations."
 
   - agent: "testing"
     message: "🚨 URGENT PRODUCTION ADMIN LOGIN ISSUE RESOLVED! Comprehensive investigation completed with definitive root cause identification. FINDINGS: ✅ Admin credentials (superadmin/ImaGross2024!) are 100% VALID and working ✅ Admin user exists in MongoDB Atlas with correct super_admin role ✅ Authentication system is fully functional ✅ Backend API works perfectly on development URL ❌ CRITICAL ISSUE: Production URL (https://rfm-dashboard-1.emergent.host/api) returns 500 Internal Server Error instead of reaching backend. ROOT CAUSE: Production deployment routing failure - the production domain is not properly connected to the backend service. This is NOT a credentials issue but a deployment/infrastructure issue. IMMEDIATE ACTION REQUIRED: Fix production URL routing to connect to the correct backend service."
