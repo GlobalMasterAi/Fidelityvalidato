@@ -87,7 +87,16 @@ def get_client():
     return client
 
 # Create the main app without a prefix
-app = FastAPI()
+app = FastAPI(
+    title="ImaGross Loyalty API",
+    description="Loyalty management system for ImaGross",
+    version="1.0.0",
+    # Production configuration
+    docs_url="/docs",
+    redoc_url="/redoc",
+    # Disable on production if needed
+    openapi_url="/openapi.json"
+)
 
 # Simple root endpoint for load balancer health check
 @app.get("/")
