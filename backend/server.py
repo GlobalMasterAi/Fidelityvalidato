@@ -89,6 +89,17 @@ def get_client():
 # Create the main app without a prefix
 app = FastAPI()
 
+# Simple root endpoint for load balancer health check
+@app.get("/")
+async def root():
+    """Root endpoint for basic connectivity test"""
+    return {
+        "message": "ImaGross Loyalty API",
+        "status": "running",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
+
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
