@@ -125,7 +125,7 @@ def test_admin_stats_dashboard():
             
             # Validate realistic values
             total_revenue = vendite_stats.get("total_revenue", 0)
-            unique_customers = vendite_stats.get("unique_customers", 0)
+            unique_customers = vendite_stats.get("unique_customers_vendite", 0)
             unique_products = vendite_stats.get("unique_products", 0)
             
             if total_revenue <= 0:
