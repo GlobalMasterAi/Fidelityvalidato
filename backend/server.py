@@ -5132,23 +5132,23 @@ async def load_vendite_minimal():
         DATA_LOADING_STATUS["vendite"] = "minimal_error"
 
 async def background_data_loading():
-    """Load data directly into MongoDB - ZERO RAM usage"""
+    """PRODUCTION: Light background data loading - no heavy files to avoid timeout"""
     try:
-        print("🔄 Starting DATABASE-BASED data loading...")
+        # In production deployment, prioritize fast startup over data loading
+        print("🔄 Starting LIGHT background data initialization...")
         
-        # Load critical admin first
-        asyncio.create_task(load_data_chunk("admin", init_super_admin))
+        # Only load essential admin data and minimal collections
+        await asyncio.sleep(2)  # Brief delay before starting
         
-        # Load all data into MongoDB collections (not RAM)
-        asyncio.create_task(load_fidelity_to_database())
-        asyncio.create_task(load_scontrini_to_database()) 
-        asyncio.create_task(load_vendite_to_database())
+        # Initialize basic collections without heavy file loading
+        await init_super_admin()
         
-        print("✅ Database loading tasks started!")
-        print("🚀 App ready with ZERO memory usage!")
+        # Skip heavy data loading in production startup to prevent timeout
+        print("📊 Production mode: Heavy data loading disabled for fast deployment")
+        print("✅ Use /api/debug/force-reload-data to load data after deployment if needed")
         
     except Exception as e:
-        print(f"❌ Error during database data loading: {e}")
+        print(f"⚠️ Light background loading error: {e}")
 
 async def load_fidelity_to_database():
     """Load fidelity data directly to MongoDB collection - FIXED for 30K+ records"""
