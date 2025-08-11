@@ -5651,20 +5651,27 @@ async def background_mongo_check():
             print("⚠️ MongoDB client not initialized after 10 seconds")
             return
             
-        await asyncio.wait_for(client.admin.command('ping'), timeout=5.0)
+        # Test connection with timeout
+        await asyncio.wait_for(client.admin.command('ping'), timeout=10.0)
         print("✅ Background MongoDB ping successful")
+        
+    except asyncio.TimeoutError:
+        print("⚠️ MongoDB ping timeout - will continue without blocking")
     except Exception as e:
         print(f"⚠️ Background MongoDB ping failed: {e} (will retry)")
-        # Retry mechanism
-        for i in range(3):
+        
+        # Retry mechanism with exponential backoff
+        for retry in range(3):
             try:
-                await asyncio.sleep(5)
+                await asyncio.sleep(5 * (retry + 1))  # Exponential backoff
                 if client is not None:
-                    await client.admin.command('ping')
-                    print(f"✅ MongoDB connection restored (retry {i+1})")
+                    await asyncio.wait_for(client.admin.command('ping'), timeout=10.0)
+                    print(f"✅ MongoDB connection restored (retry {retry+1})")
                     break
             except Exception as retry_error:
-                print(f"⚠️ MongoDB retry {i+1} failed: {retry_error}")
+                print(f"⚠️ MongoDB retry {retry+1} failed: {retry_error}")
+        else:
+            print("⚠️ All MongoDB retries failed - app will continue without database initially")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
