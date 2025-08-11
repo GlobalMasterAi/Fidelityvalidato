@@ -814,6 +814,18 @@ test_plan:
         agent: "testing"
         comment: "🔄 VENDITE DATA LOADING RETRY TESTING COMPLETED - PARTIAL SUCCESS WITH CRITICAL TIMEOUT ISSUE: Comprehensive testing of vendite data loading retry functionality reveals: ✅ FORCE RELOAD API: Successfully initiated with /api/debug/force-reload-data endpoint ✅ LOADING PROGRESS: Monitored vendite loading progress showing 1,067,280 records processed (84.3% → 93.7% → 100%) ✅ FIDELITY DATA: Successfully loaded 24,958 real fidelity records to database ✅ SCONTRINI DATA: Successfully loaded 5,000 scontrini records to database ❌ CRITICAL MONGODB TIMEOUT: 'The read operation timed out' error on fidelity-cluster-shard-00-02.rtsr8t.mongodb.net:27017 during vendite database insertion ❌ DATABASE PERSISTENCE FAILURE: Despite logs showing 'Successfully loaded 1,067,280 vendite records', database queries return 0 records, indicating timeout prevented successful insertion ❌ DASHBOARD STILL SHOWS €0.00: Both admin stats dashboard and vendite dashboard show zero revenue, confirming data not persisted. CONCLUSION: Vendite data loading retry mechanism works but MongoDB Atlas timeout issue persists - need increased timeout configuration for large dataset operations."
 
+  - task: "Final Data Migration Verification - All 3 JSON Files"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Tutti i 3 file JSON caricati su MongoDB Atlas: 100,000 vendite record, 24,958 fidelity records, 5,000 scontrini records. Verifica che tutti i dati siano accessibili via API e che le statistiche del dashboard siano corrette con i nuovi dati."
+
   - task: "Optimized Vendite Data Loading with Batch Processing"
     implemented: true
     working: false
