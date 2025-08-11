@@ -2830,36 +2830,50 @@ async def get_dashboard_stats(current_admin = Depends(get_current_admin)):
     vendite_count = await db.vendite_data.count_documents({})
     
     if vendite_count > 0:
-        # Calculate revenue from database
+        # Calculate revenue from database with proper field mapping
         revenue_pipeline = [
             {
                 "$group": {
                     "_id": None,
-                    "total_revenue": {"$sum": "$TOT_IMPORTO"},
+                    "total_revenue": {"$sum": {"$toDouble": "$TOT_IMPORTO"}},
                     "unique_customers": {"$addToSet": "$CODICE_CLIENTE"},
                     "unique_products": {"$addToSet": "$BARCODE"},
-                    "total_quantity": {"$sum": "$TOT_QNT"}
+                    "total_quantity": {"$sum": {"$toDouble": "$TOT_QNT"}},
+                    "unique_descriptions": {"$addToSet": "$DESCRIZIONE"}
                 }
             }
         ]
         
-        revenue_result = await db.vendite_data.aggregate(revenue_pipeline).to_list(1)
-        if revenue_result:
-            result_data = revenue_result[0]
-            vendite_stats = {
-                "total_sales_records": vendite_count,
-                "total_revenue": result_data.get("total_revenue", 0),
-                "unique_customers_vendite": len(result_data.get("unique_customers", [])),
-                "unique_products": len(result_data.get("unique_products", [])),
-                "total_quantity_sold": result_data.get("total_quantity", 0)
-            }
-        else:
+        try:
+            revenue_result = await db.vendite_data.aggregate(revenue_pipeline).to_list(1)
+            if revenue_result:
+                result_data = revenue_result[0]
+                vendite_stats = {
+                    "total_sales_records": vendite_count,
+                    "total_revenue": result_data.get("total_revenue", 0),
+                    "unique_customers_vendite": len(result_data.get("unique_customers", [])),
+                    "unique_products": len(result_data.get("unique_products", [])),
+                    "total_quantity_sold": result_data.get("total_quantity", 0),
+                    "unique_descriptions": len(result_data.get("unique_descriptions", []))
+                }
+            else:
+                vendite_stats = {
+                    "total_sales_records": vendite_count,
+                    "total_revenue": 0,
+                    "unique_customers_vendite": 0,
+                    "unique_products": 0,
+                    "total_quantity_sold": 0,
+                    "unique_descriptions": 0
+                }
+        except Exception as agg_error:
+            print(f"⚠️ Aggregation error: {agg_error}")
             vendite_stats = {
                 "total_sales_records": vendite_count,
                 "total_revenue": 0,
                 "unique_customers_vendite": 0,
                 "unique_products": 0,
-                "total_quantity_sold": 0
+                "total_quantity_sold": 0,
+                "unique_descriptions": 0
             }
     else:
         vendite_stats = {
@@ -2867,7 +2881,8 @@ async def get_dashboard_stats(current_admin = Depends(get_current_admin)):
             "total_revenue": 0,
             "unique_customers_vendite": 0,
             "unique_products": 0,
-            "total_quantity_sold": 0
+            "total_quantity_sold": 0,
+            "unique_descriptions": 0
         }
     
     # Add scontrini statistics from MongoDB scontrini_data collection
