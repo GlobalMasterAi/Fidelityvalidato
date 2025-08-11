@@ -5583,23 +5583,27 @@ async def create_minimal_scontrini_data():
 async def startup_event():
     """INSTANT startup for Kubernetes deployment - ZERO blocking"""
     print("🚀 ImaGross Backend - INSTANT READY MODE")
+    print(f"📊 Environment: {os.environ.get('ENV', 'development')}")
+    print(f"📊 MongoDB URL configured: {bool(os.environ.get('MONGO_URL'))}")
+    print(f"📊 Database name: {os.environ.get('DB_NAME', 'loyalty_production')}")
     
-    # FIRST: Initialize MongoDB connection (but don't wait for it)
-    asyncio.create_task(initialize_mongo_connection())
-    
-    # NO BLOCKING OPERATIONS AT ALL
     try:
-        # Don't even wait for MongoDB ping - do it in background
-        asyncio.create_task(background_mongo_check())
+        # FIRST: Initialize MongoDB connection (but don't wait for it)
+        mongo_task = asyncio.create_task(initialize_mongo_connection())
         
-        # Start all data loading in background (completely non-blocking)
+        # NO BLOCKING OPERATIONS AT ALL
+        # Start all checks and data loading in background (completely non-blocking)
+        asyncio.create_task(background_mongo_check())
         asyncio.create_task(background_data_loading())
         
         print("🎉 ImaGross Backend INSTANTLY ready for traffic!")
         print("📊 All data loading happens in background without blocking startup")
+        print("🔧 Use /health or /api/health for health checks")
+        print("🔧 Use /readiness or /api/readiness for readiness checks")
         
     except Exception as e:
         print(f"⚠️ Startup error (non-blocking): {e}")
+        # Even with errors, continue startup for deployment compatibility
 
 async def background_mongo_check():
     """Check MongoDB connection in background"""
