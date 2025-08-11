@@ -1019,9 +1019,10 @@ const AdminLoginPage = () => {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-2 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-2 px-4 rounded-md hover:opacity-90 transition duration-200 font-medium disabled:opacity-50"
             >
-              Accedi come Admin
+              {loading ? 'Accesso in corso...' : 'Accedi come Admin'}
             </button>
           </form>
 
