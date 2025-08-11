@@ -816,11 +816,11 @@ test_plan:
 
   - task: "Final Frontend Testing After Data Migration"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/frontend/src/App.js"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -831,6 +831,9 @@ test_plan:
       - working: "NA"
         agent: "main"
         comment: "FIXED ADMIN LOGIN BUG! Implemented proper error handling and navigation in adminLogin function: added useNavigate hook, proper async/await error handling, loading states, and automatic redirect to /admin after successful login. Enhanced adminLogin function with better response validation and error logging. Frontend now correctly processes JWT tokens and redirects to admin dashboard upon successful authentication."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL ADMIN LOGIN FIX VERIFICATION FAILED: Comprehensive testing reveals the admin login fix is NOT working as expected. FINDINGS: (1) ADMIN LOGIN ISSUE PERSISTS: Despite backend API returning 200 OK status for superadmin/ImaGross2024! credentials, frontend still shows 'Credenziali non valide' error and redirects to /login instead of /admin dashboard. (2) FRONTEND-BACKEND DISCONNECT: The adminLogin function appears to have a bug in response handling or token processing, causing successful API responses to be treated as failures. ✅ USER FEATURES WORKING: Multi-format login support (email/tessera/telefono) confirmed, fidelity card import functionality accessible, admin area link working, platform branding loading correctly. ❌ ADMIN DASHBOARD INACCESSIBLE: Cannot test dashboard data display (24,958 fidelity clients, 5,000 scontrini, 92,058 bollini) because admin authentication is failing at the frontend level. URGENT: The useNavigate() fix implementation needs debugging - the issue is in JavaScript response parsing or token storage logic."
 
   - task: "Final Data Migration Verification - All 3 JSON Files"
     implemented: true
