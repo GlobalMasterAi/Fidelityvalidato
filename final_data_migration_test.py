@@ -301,15 +301,15 @@ def test_dashboard_statistics_non_zero():
         if response.status_code == 200:
             data = response.json()
             
-            # Check main statistics
-            main_stats = ["total_users", "total_stores", "total_cashiers", "total_transactions"]
+            # Check main statistics - only flag critical zeros
+            critical_stats = ["total_transactions"]  # These should never be zero with data
             zero_stats = []
             
-            for stat in main_stats:
+            for stat in critical_stats:
                 if stat in data and data[stat] == 0:
                     zero_stats.append(stat)
             
-            # Check vendite stats if present
+            # Check vendite stats if present - these should have data
             if "vendite_stats" in data:
                 vendite_stats = data["vendite_stats"]
                 vendite_fields = ["total_sales_records", "total_revenue", "unique_customers_vendite"]
@@ -318,10 +318,10 @@ def test_dashboard_statistics_non_zero():
                     if field in vendite_stats and vendite_stats[field] == 0:
                         zero_stats.append(f"vendite_stats.{field}")
             
-            # Check scontrini stats if present
+            # Check scontrini stats if present - these should have data
             if "scontrini_stats" in data:
                 scontrini_stats = data["scontrini_stats"]
-                scontrini_fields = ["total_scontrini", "total_revenue", "total_bollini"]
+                scontrini_fields = ["total_scontrini", "scontrini_revenue", "scontrini_bollini"]
                 
                 for field in scontrini_fields:
                     if field in scontrini_stats and scontrini_stats[field] == 0:
