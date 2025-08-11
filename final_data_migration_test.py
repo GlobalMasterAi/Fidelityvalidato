@@ -57,7 +57,7 @@ def test_admin_authentication():
         }
         
         start_time = time.time()
-        response = requests.get(f"{API_BASE}/admin/login", json=login_data, timeout=30)
+        response = requests.post(f"{API_BASE}/admin/login", json=login_data, timeout=30)
         response_time = time.time() - start_time
         
         if response.status_code == 200:
