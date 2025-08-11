@@ -813,6 +813,18 @@ test_plan:
         agent: "testing"
         comment: "🔄 VENDITE DATA LOADING RETRY TESTING COMPLETED - PARTIAL SUCCESS WITH CRITICAL TIMEOUT ISSUE: Comprehensive testing of vendite data loading retry functionality reveals: ✅ FORCE RELOAD API: Successfully initiated with /api/debug/force-reload-data endpoint ✅ LOADING PROGRESS: Monitored vendite loading progress showing 1,067,280 records processed (84.3% → 93.7% → 100%) ✅ FIDELITY DATA: Successfully loaded 24,958 real fidelity records to database ✅ SCONTRINI DATA: Successfully loaded 5,000 scontrini records to database ❌ CRITICAL MONGODB TIMEOUT: 'The read operation timed out' error on fidelity-cluster-shard-00-02.rtsr8t.mongodb.net:27017 during vendite database insertion ❌ DATABASE PERSISTENCE FAILURE: Despite logs showing 'Successfully loaded 1,067,280 vendite records', database queries return 0 records, indicating timeout prevented successful insertion ❌ DASHBOARD STILL SHOWS €0.00: Both admin stats dashboard and vendite dashboard show zero revenue, confirming data not persisted. CONCLUSION: Vendite data loading retry mechanism works but MongoDB Atlas timeout issue persists - need increased timeout configuration for large dataset operations."
 
+  - task: "Optimized Vendite Data Loading with Batch Processing"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL VENDITE DATA LOADING FAILURE: Comprehensive testing of the newly optimized vendite data loading function reveals a critical AsyncIO database error. TESTING RESULTS: ✅ FORCE RELOAD API: Successfully initiated with /api/debug/force-reload-data endpoint ✅ ADMIN AUTHENTICATION: superadmin/ImaGross2024! credentials working correctly ✅ FIDELITY DATA: Successfully loaded 24,958 real fidelity records to database ✅ SCONTRINI DATA: Successfully loaded 5,000 scontrini records to database ❌ CRITICAL VENDITE ERROR: 'object AsyncIOMotorDatabase can't be used in 'await' expression' - this is a code-level bug in the vendite loading function ❌ DASHBOARD SHOWS €0.00: Both admin stats dashboard (total_revenue: 0) and vendite dashboard (total_revenue: 0) show zero revenue ❌ EXPECTED METRICS MISSING: Dashboard should show €3,584,524.55 revenue, 7,823 customers, and 7,422 products but shows all zeros. ROOT CAUSE: The optimized vendite data loading function has an AsyncIO syntax error preventing database insertion. The batch processing optimization introduced a bug where the database object is incorrectly awaited. URGENT FIX NEEDED: Correct the AsyncIO database usage in the vendite loading function."
+
   - agent: "testing"
     message: "🚨 URGENT PRODUCTION ADMIN LOGIN ISSUE RESOLVED! Comprehensive investigation completed with definitive root cause identification. FINDINGS: ✅ Admin credentials (superadmin/ImaGross2024!) are 100% VALID and working ✅ Admin user exists in MongoDB Atlas with correct super_admin role ✅ Authentication system is fully functional ✅ Backend API works perfectly on development URL ❌ CRITICAL ISSUE: Production URL (https://rfm-dashboard-1.emergent.host/api) returns 500 Internal Server Error instead of reaching backend. ROOT CAUSE: Production deployment routing failure - the production domain is not properly connected to the backend service. This is NOT a credentials issue but a deployment/infrastructure issue. IMMEDIATE ACTION REQUIRED: Fix production URL routing to connect to the correct backend service."
   - agent: "testing"
