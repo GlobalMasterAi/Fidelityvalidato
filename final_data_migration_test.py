@@ -235,7 +235,8 @@ def test_scontrini_stats_data():
             if "scontrini_stats" in data:
                 scontrini_stats = data["scontrini_stats"]
                 
-                required_fields = ["total_scontrini", "total_revenue", "total_bollini", "unique_customers"]
+                # Check for actual field names in the API response
+                required_fields = ["total_scontrini", "scontrini_revenue", "scontrini_bollini", "unique_customers_scontrini"]
                 missing_fields = [field for field in required_fields if field not in scontrini_stats]
                 
                 if missing_fields:
@@ -243,8 +244,8 @@ def test_scontrini_stats_data():
                     return False
                 
                 total_scontrini = scontrini_stats.get("total_scontrini", 0)
-                total_revenue = scontrini_stats.get("total_revenue", 0)
-                total_bollini = scontrini_stats.get("total_bollini", 0)
+                total_revenue = scontrini_stats.get("scontrini_revenue", 0)
+                total_bollini = scontrini_stats.get("scontrini_bollini", 0)
                 
                 # Check if we have the expected number of scontrini records
                 if total_scontrini < 4000:  # Should be around 5,000
