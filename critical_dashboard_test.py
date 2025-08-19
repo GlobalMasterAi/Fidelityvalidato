@@ -147,7 +147,7 @@ def test_user_profile_api_fix():
             log_test("User Login", False, f"Login failed (expected) - testing tessera check instead")
             
             # Test tessera check to verify MongoDB integration
-            tessera_response = requests.get(f"{API_BASE}/check-tessera", json={"tessera_fisica": test_card})
+            tessera_response = requests.post(f"{API_BASE}/check-tessera", json={"tessera_fisica": test_card})
             
             if tessera_response.status_code == 200:
                 tessera_data = tessera_response.json()
