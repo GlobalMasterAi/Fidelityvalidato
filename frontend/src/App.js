@@ -2335,8 +2335,10 @@ const StoreManagement = ({ setActiveTab }) => {
 
       {showCreateForm && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-4">Crea Nuovo Supermercato</h2>
-          <form onSubmit={handleCreateStore} className="grid grid-cols-2 gap-4">
+          <h2 className="text-xl font-bold mb-4">
+            {editingStore ? 'Modifica Supermercato' : 'Crea Nuovo Supermercato'}
+          </h2>
+          <form onSubmit={editingStore ? handleUpdateStore : handleCreateStore} className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
               <input
