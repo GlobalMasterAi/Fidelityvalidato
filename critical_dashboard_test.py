@@ -296,16 +296,16 @@ def test_dashboard_data_population():
                 tessera_data = tessera_response.json()
                 
                 if tessera_data.get("found"):
-                    user_data = tessera_data.get("user", {})
+                    user_data = tessera_data.get("user_data", {})  # Changed from "user" to "user_data"
                     
                     # Check data completeness for dashboard population
                     nome = user_data.get("nome", "")
                     cognome = user_data.get("cognome", "")
                     bollini = user_data.get("bollini", 0)
-                    spesa = float(user_data.get("prog_spesa", 0))
+                    spesa = float(user_data.get("progressivo_spesa", 0))  # This field name is correct
                     localita = user_data.get("localita", "")
                     email = user_data.get("email", "")
-                    telefono = user_data.get("n_telefono", "")
+                    telefono = user_data.get("telefono", "")
                     
                     # Calculate data completeness percentage
                     fields_to_check = [nome, cognome, localita, email, telefono]
