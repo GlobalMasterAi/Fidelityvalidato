@@ -2234,6 +2234,74 @@ const StoreManagement = ({ setActiveTab }) => {
     }
   };
 
+  const handleEditStore = (store) => {
+    setEditingStore(store);
+    setFormData({
+      name: store.name,
+      code: store.code,
+      address: store.address,
+      city: store.city,
+      province: store.province,
+      phone: store.phone,
+      manager_name: store.manager_name
+    });
+    setShowCreateForm(true);
+  };
+
+  const handleUpdateStore = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/admin/stores/${editingStore.id}`, formData, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setFormData({
+        name: '',
+        code: '',
+        address: '',
+        city: '',
+        province: '',
+        phone: '',
+        manager_name: ''
+      });
+      setShowCreateForm(false);
+      setEditingStore(null);
+      fetchStores();
+      alert('Supermercato aggiornato con successo!');
+    } catch (error) {
+      alert('Errore nell\'aggiornamento del supermercato: ' + error.response?.data?.detail);
+    }
+  };
+
+  const handleDeleteStore = async (store) => {
+    if (window.confirm(`Sei sicuro di voler cancellare il supermercato "${store.name}"? Verranno cancellate anche tutte le casse associate.`)) {
+      try {
+        await axios.delete(`${API}/admin/stores/${store.id}`, {
+          headers: { Authorization: `Bearer ${adminToken}` }
+        });
+        
+        fetchStores();
+        alert('Supermercato cancellato con successo!');
+      } catch (error) {
+        alert('Errore nella cancellazione del supermercato: ' + error.response?.data?.detail);
+      }
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingStore(null);
+    setShowCreateForm(false);
+    setFormData({
+      name: '',
+      code: '',
+      address: '',
+      city: '',
+      province: '',
+      phone: '',
+      manager_name: ''
+    });
+  };
+
   const goToCashiers = (storeId) => {
     // Update the activeTab to cashiers and add store filter to URL
     setActiveTab('cashiers');
