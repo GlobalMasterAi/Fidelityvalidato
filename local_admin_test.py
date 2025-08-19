@@ -291,7 +291,7 @@ def test_specific_card_lookup():
         test_card = "2020000063308"
         
         start_time = time.time()
-        response = requests.get(f"{API_BASE}/check-tessera", json={"tessera_fisica": test_card}, timeout=10)
+        response = requests.post(f"{API_BASE}/check-tessera", json={"tessera_fisica": test_card}, timeout=10)
         response_time = time.time() - start_time
         
         if response.status_code == 200:
