@@ -189,7 +189,7 @@ def test_personal_analytics_api_fix():
         # Since we can't easily authenticate, let's test the underlying data availability
         # by checking if the user's fidelity data is accessible
         
-        tessera_response = requests.get(f"{API_BASE}/check-tessera", json={"tessera_fisica": test_card})
+        tessera_response = requests.post(f"{API_BASE}/check-tessera", json={"tessera_fisica": test_card})
         
         if tessera_response.status_code == 200:
             tessera_data = tessera_response.json()
