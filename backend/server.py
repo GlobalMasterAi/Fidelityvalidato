@@ -1111,8 +1111,17 @@ async def get_user_profile(current_user = Depends(get_current_user)):
         user_data = current_user["data"]
         tessera_fisica = user_data.tessera_fisica
         
-        # Get fidelity data if available
-        fidelity_data = FIDELITY_DATA.get(tessera_fisica, {})
+        # Get fidelity data from MongoDB Atlas instead of in-memory cache
+        db = get_db()
+        fidelity_record = await db.fidelity_data.find_one({"tessera_fisica": tessera_fisica})
+        
+        # Convert MongoDB record to dict if found
+        fidelity_data = {}
+        if fidelity_record:
+            # Remove MongoDB _id field
+            if "_id" in fidelity_record:
+                del fidelity_record["_id"]
+            fidelity_data = fidelity_record
         
         # Merge user data with fidelity data
         complete_profile = {
