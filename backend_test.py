@@ -1072,6 +1072,285 @@ def test_get_all_cashiers():
         log_test("Get All Cashiers", False, f"Exception: {str(e)}")
         return False
 
+def test_update_cashier():
+    """Test cashier update functionality including QR code regeneration"""
+    if not admin_access_token or not test_cashier_id:
+        log_test("Update Cashier", False, "No admin token or cashier ID available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Get original cashier data
+        response = requests.get(f"{API_BASE}/admin/cashiers", headers=headers)
+        if response.status_code != 200:
+            log_test("Update Cashier", False, "Could not get original cashier data")
+            return False
+        
+        original_cashier = None
+        for cashier in response.json():
+            if cashier["id"] == test_cashier_id:
+                original_cashier = cashier
+                break
+        
+        if not original_cashier:
+            log_test("Update Cashier", False, "Original cashier not found")
+            return False
+        
+        original_qr_code = original_cashier["qr_code"]
+        
+        # Update cashier data
+        update_data = {
+            "name": "Cassa 1 - Principale Updated",
+            "cashier_number": 2  # Change cashier number to trigger QR regeneration
+        }
+        
+        response = requests.put(f"{API_BASE}/admin/cashiers/{test_cashier_id}", json=update_data, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate updates
+            if data["name"] != update_data["name"]:
+                log_test("Update Cashier", False, "Cashier name not updated")
+                return False
+            
+            if data["cashier_number"] != update_data["cashier_number"]:
+                log_test("Update Cashier", False, "Cashier number not updated")
+                return False
+            
+            # Validate QR code was regenerated
+            if data["qr_code"] == original_qr_code:
+                log_test("Update Cashier", False, "QR code was not regenerated after cashier number change")
+                return False
+            
+            # Validate new QR code format
+            if not data["qr_code"].endswith("-CASSA2"):
+                log_test("Update Cashier", False, f"New QR code format incorrect: {data['qr_code']}")
+                return False
+            
+            # Validate QR code image is still valid base64 PNG
+            if not is_valid_base64_image(data["qr_code_image"]):
+                log_test("Update Cashier", False, "QR code image not regenerated properly")
+                return False
+            
+            if "updated_at" not in data:
+                log_test("Update Cashier", False, "Missing updated_at field")
+                return False
+            
+            log_test("Update Cashier", True, f"Cashier updated successfully with new QR: {data['qr_code']}")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Update Cashier", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Update Cashier", False, f"Exception: {str(e)}")
+        return False
+
+def test_update_nonexistent_cashier():
+    """Test updating non-existent cashier"""
+    if not admin_access_token:
+        log_test("Update Nonexistent Cashier", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        fake_cashier_id = str(uuid.uuid4())
+        update_data = {
+            "name": "Fake Cashier",
+            "cashier_number": 999
+        }
+        
+        response = requests.put(f"{API_BASE}/admin/cashiers/{fake_cashier_id}", json=update_data, headers=headers)
+        
+        if response.status_code == 404:
+            error_detail = response.json().get("detail", "")
+            if "Cashier not found" in error_detail or "not found" in error_detail.lower():
+                log_test("Update Nonexistent Cashier", True, "Correctly rejected update of non-existent cashier")
+                return True
+            else:
+                log_test("Update Nonexistent Cashier", False, f"Wrong error message: {error_detail}")
+                return False
+        else:
+            log_test("Update Nonexistent Cashier", False, f"Should return 404, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Update Nonexistent Cashier", False, f"Exception: {str(e)}")
+        return False
+
+def test_delete_cashier():
+    """Test cashier deletion and store cashier count decrement"""
+    if not admin_access_token or not test_store_id:
+        log_test("Delete Cashier", False, "No admin token or store ID available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # First create a test cashier for deletion
+        cashier_data = {
+            "store_id": test_store_id,
+            "cashier_number": 98,
+            "name": "Test Delete Cashier"
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/cashiers", json=cashier_data, headers=headers)
+        if response.status_code != 200:
+            log_test("Delete Cashier", False, "Could not create test cashier for deletion")
+            return False
+        
+        delete_cashier_id = response.json()["id"]
+        
+        # Get store cashier count before deletion
+        store_response = requests.get(f"{API_BASE}/admin/stores", headers=headers)
+        if store_response.status_code != 200:
+            log_test("Delete Cashier", False, "Could not get store data before deletion")
+            return False
+        
+        original_store = None
+        for store in store_response.json():
+            if store["id"] == test_store_id:
+                original_store = store
+                break
+        
+        if not original_store:
+            log_test("Delete Cashier", False, "Could not find test store")
+            return False
+        
+        original_cashier_count = original_store.get("total_cashiers", 0)
+        
+        # Now delete the cashier
+        response = requests.delete(f"{API_BASE}/admin/cashiers/{delete_cashier_id}", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate response structure
+            if "message" not in data:
+                log_test("Delete Cashier", False, "Missing message in delete response")
+                return False
+            
+            # Verify cashier was deleted
+            verify_response = requests.get(f"{API_BASE}/admin/cashiers", headers=headers)
+            if verify_response.status_code == 200:
+                cashiers = verify_response.json()
+                if any(cashier["id"] == delete_cashier_id for cashier in cashiers):
+                    log_test("Delete Cashier", False, "Cashier was not actually deleted")
+                    return False
+            
+            # Verify store cashier count was decremented
+            store_response = requests.get(f"{API_BASE}/admin/stores", headers=headers)
+            if store_response.status_code == 200:
+                updated_store = None
+                for store in store_response.json():
+                    if store["id"] == test_store_id:
+                        updated_store = store
+                        break
+                
+                if updated_store:
+                    new_cashier_count = updated_store.get("total_cashiers", 0)
+                    if new_cashier_count != original_cashier_count - 1:
+                        log_test("Delete Cashier", False, f"Store cashier count not decremented: {original_cashier_count} -> {new_cashier_count}")
+                        return False
+            
+            log_test("Delete Cashier", True, "Cashier deleted successfully and store count decremented")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Delete Cashier", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Delete Cashier", False, f"Exception: {str(e)}")
+        return False
+
+def test_delete_nonexistent_cashier():
+    """Test deleting non-existent cashier"""
+    if not admin_access_token:
+        log_test("Delete Nonexistent Cashier", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        fake_cashier_id = str(uuid.uuid4())
+        
+        response = requests.delete(f"{API_BASE}/admin/cashiers/{fake_cashier_id}", headers=headers)
+        
+        if response.status_code == 404:
+            error_detail = response.json().get("detail", "")
+            if "Cashier not found" in error_detail or "not found" in error_detail.lower():
+                log_test("Delete Nonexistent Cashier", True, "Correctly rejected deletion of non-existent cashier")
+                return True
+            else:
+                log_test("Delete Nonexistent Cashier", False, f"Wrong error message: {error_detail}")
+                return False
+        else:
+            log_test("Delete Nonexistent Cashier", False, f"Should return 404, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Delete Nonexistent Cashier", False, f"Exception: {str(e)}")
+        return False
+
+def test_duplicate_cashier_number_after_update():
+    """Test that updating cashier number to existing number is rejected"""
+    if not admin_access_token or not test_store_id:
+        log_test("Duplicate Cashier Number After Update", False, "No admin token or store ID available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # Create two cashiers with different numbers
+        cashier1_data = {
+            "store_id": test_store_id,
+            "cashier_number": 91,
+            "name": "Test Cashier 91"
+        }
+        
+        cashier2_data = {
+            "store_id": test_store_id,
+            "cashier_number": 92,
+            "name": "Test Cashier 92"
+        }
+        
+        response1 = requests.post(f"{API_BASE}/admin/cashiers", json=cashier1_data, headers=headers)
+        response2 = requests.post(f"{API_BASE}/admin/cashiers", json=cashier2_data, headers=headers)
+        
+        if response1.status_code != 200 or response2.status_code != 200:
+            log_test("Duplicate Cashier Number After Update", False, "Could not create test cashiers")
+            return False
+        
+        cashier2_id = response2.json()["id"]
+        
+        # Try to update cashier 2 to have the same number as cashier 1
+        update_data = {
+            "cashier_number": 91  # Same as cashier 1
+        }
+        
+        response = requests.put(f"{API_BASE}/admin/cashiers/{cashier2_id}", json=update_data, headers=headers)
+        
+        if response.status_code == 400:
+            error_detail = response.json().get("detail", "")
+            if "Numero cassa già esistente" in error_detail or "already exists" in error_detail.lower():
+                log_test("Duplicate Cashier Number After Update", True, "Correctly rejected duplicate cashier number update")
+                return True
+            else:
+                log_test("Duplicate Cashier Number After Update", False, f"Wrong error message: {error_detail}")
+                return False
+        else:
+            log_test("Duplicate Cashier Number After Update", False, f"Should return 400, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Duplicate Cashier Number After Update", False, f"Exception: {str(e)}")
+        return False
+
 # ============================================================================
 # QR CODE GENERATION AND REGISTRATION FLOW TESTS
 # ============================================================================
