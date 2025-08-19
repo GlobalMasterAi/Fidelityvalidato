@@ -2652,6 +2652,33 @@ async def update_store(store_id: str, store_data: StoreCreate, current_admin = D
     
     return Store(**updated_store)
 
+@api_router.delete("/admin/stores/{store_id}")
+async def delete_store(store_id: str, current_admin = Depends(get_current_admin)):
+    """Delete a store and all its associated cashiers"""
+    try:
+        # Check if store exists
+        store = await db.stores.find_one({"id": store_id})
+        if not store:
+            raise HTTPException(status_code=404, detail="Supermercato non trovato")
+        
+        # Delete all cashiers associated with this store
+        delete_cashiers_result = await db.cashiers.delete_many({"store_id": store_id})
+        
+        # Delete the store
+        delete_store_result = await db.stores.delete_one({"id": store_id})
+        
+        if delete_store_result.deleted_count == 0:
+            raise HTTPException(status_code=500, detail="Errore durante la cancellazione del supermercato")
+        
+        return {
+            "success": True,
+            "message": f"Supermercato '{store['name']}' cancellato con successo",
+            "deleted_cashiers": delete_cashiers_result.deleted_count
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore durante la cancellazione: {str(e)}")
+
 # Cashier Management Routes
 @api_router.post("/admin/cashiers", response_model=Cashier)
 async def create_cashier(cashier_data: CashierCreate, current_admin = Depends(get_current_admin)):
