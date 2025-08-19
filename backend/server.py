@@ -2768,7 +2768,7 @@ async def update_cashier(cashier_id: str, cashier_data: CashierCreate, current_a
         
         # Generate new QR code if store or cashier number changed
         qr_data = f"{store['code']}-CASSA{cashier_data.cashier_number}"
-        base_url = "https://fedelissima.net"
+        base_url = "https://www.fidelissima.net"
         qr_url = f"{base_url}/register?qr={qr_data}"
         qr_image = generate_qr_code(qr_url)
         
