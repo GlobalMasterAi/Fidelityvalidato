@@ -2502,6 +2502,7 @@ const CashierManagement = () => {
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingCashier, setEditingCashier] = useState(null);
   const [regeneratingQR, setRegeneratingQR] = useState(false);
   const [regeneratingQRId, setRegeneratingQRId] = useState(null);
   const [selectedStore, setSelectedStore] = useState('');
