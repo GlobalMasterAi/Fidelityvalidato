@@ -2174,6 +2174,7 @@ const StoreManagement = ({ setActiveTab }) => {
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingStore, setEditingStore] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     code: '',
