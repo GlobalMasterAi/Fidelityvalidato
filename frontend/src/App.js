@@ -1907,14 +1907,6 @@ const RewardsSection = ({ analytics, profile }) => {
             <h4 className="font-semibold mb-1">2. Accumula Bollini</h4>
             <p className="text-sm opacity-90">Più spendi, più bollini guadagni</p>
           </div>
-          <div className="text-center">
-            <div className="text-3xl mb-2">🎁</div>
-            <h4 className="font-semibold mb-1">3. Riscatta Premi</h4>
-            <p className="text-sm opacity-90">Usa i bollini per ottenere fantastici premi</p>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 };
 
