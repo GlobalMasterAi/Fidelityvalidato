@@ -5195,7 +5195,7 @@ async def load_fidelity_to_database():
                         with open(file_path, 'r', encoding=encoding) as f:
                             content = f.read()
                         
-                        # AGGRESSIVE JSON REPAIR
+                        # AGGRESSIVE JSON REPAIR FOR MALFORMED ESCAPE SEQUENCES
                         print(f"🔧 Attempting JSON repair with encoding: {encoding}")
                         
                         # Fix common JSON issues
@@ -5209,6 +5209,24 @@ async def load_fidelity_to_database():
                         content = content.replace(',]', ']')
                         content = content.replace(',}', '}')
                         content = content.replace('}\n{', '},\n{')
+                        
+                        # FIX MALFORMED ESCAPE SEQUENCES - CRITICAL FOR CARD 2020000063308
+                        print(f"🔧 Fixing malformed escape sequences...")
+                        
+                        # Fix the problematic email field pattern: "email":"\" -> "email":""
+                        content = content.replace('"email":"\\","', '"email":"",')
+                        content = content.replace('"email":"\\"', '"email":""')
+                        
+                        # Fix other potential escape sequence issues
+                        content = content.replace('"\\","', '"",')
+                        content = content.replace('"\\"', '""')
+                        
+                        # Fix backslash at end of string values
+                        import re
+                        content = re.sub(r'":"\\",', '":"",', content)
+                        content = re.sub(r'":"\\"([^}])', r'":""\1', content)
+                        
+                        print(f"🔧 Escape sequence fixes applied")
                         
                         # Try to parse
                         raw_data = json.loads(content)
