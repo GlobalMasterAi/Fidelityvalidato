@@ -1144,7 +1144,7 @@ async def get_user_profile(current_user = Depends(get_current_user)):
             "cap": getattr(user_data, 'cap', fidelity_data.get('cap', '')),
             "provincia": getattr(user_data, 'provincia', fidelity_data.get('provincia', '')),
             
-            # Loyalty data
+            # Loyalty data from MongoDB
             "bollini": getattr(user_data, 'bollini', safe_int_convert(fidelity_data.get('bollini', '0'))),
             "progressivo_spesa": getattr(user_data, 'progressivo_spesa', safe_float_convert(fidelity_data.get('prog_spesa', '0'))),
             "data_ultima_spesa": fidelity_data.get('data_ult_sc', ''),
