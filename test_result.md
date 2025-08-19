@@ -630,6 +630,18 @@ backend:
         agent: "testing"
         comment: "🚨 CRITICAL PRODUCTION STABILITY CHECK COMPLETED FOR WWW.FEDELISSIMA.NET! Comprehensive testing of continuous service availability and production readiness completed (11/12 tests passed - 91.7% success rate): ✅ HEALTH ENDPOINTS: All health, readiness, and startup endpoints operational with fast response times (2-6ms) ✅ ADMIN AUTHENTICATION: Super admin login (superadmin/ImaGross2024!) working perfectly (831ms response) ✅ MONGODB ATLAS CONNECTION: Database connected and ready, persistent data access confirmed ✅ STORE & CASHIER CRUD: All CRUD operations functional - 22 stores and 22 cashiers with QR codes accessible ✅ API PERFORMANCE: Critical endpoints performing well (<3s response times) ✅ PRODUCTION CONFIGURATION: Backend properly configured for fedelissima.net deployment ✅ DATA INTEGRITY: Card 2020000063308 (GIUSEPPINA VASTO) successfully accessible with correct data (1113 bollini, MOLA address) ✅ SERVICE STABILITY: Health checks consistent, auto-recovery functional ✅ ERROR HANDLING: Robust error responses for invalid requests ⚠️ MINOR ISSUE: Fidelity data shows 19,437 records in direct query vs 30,287 in admin dashboard (data loading optimization). CONCLUSION: Backend is PRODUCTION READY with excellent stability, performance, and all critical functionality operational for www.fedelissima.net deployment."
 
+  - task: "Critical Production Issues - Card 401004000025 and ELISA Dashboard"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "🚨 CRITICAL PRODUCTION ISSUE TESTING COMPLETED - MIXED RESULTS! Comprehensive testing of urgent live production issues (6/8 tests passed - 75% success): ✅ BACKEND CONNECTIVITY: Backend running and accessible ✅ ADMIN AUTHENTICATION: Super admin login working (0.12s response) ✅ DATA INTEGRITY: 30,287 fidelity records loaded correctly ✅ SAMPLE CARDS WORKING: 3 test cards accessible (2020000002710 MARINA MAGLI, 2020000016212 GRAZIA RANIERI, 2020000029922 ARIANNA PADOVANO) ✅ ARESTA SURNAME SEARCH: Found 38 ARESTA users in database with various tessera numbers ✅ ELISA USER FOUND: Elisa Brescia (2020000202905) with €36,324.41 spending and 211 bollini ❌ CRITICAL ISSUE 1: Card 401004000025 (ARESTA) NOT FOUND in database despite being in morning JSON data ❌ CARD FORMAT VARIATIONS: No variations of 401004000025 found in system. ROOT CAUSE: Specific card 401004000025 missing from fidelity database - likely JSON parsing issue or data corruption during import. ELISA DASHBOARD ANALYSIS: User has complete data (71.1% completeness) with €36,324 spending and 211 bollini - dashboard sections should populate correctly, suggesting frontend issue if sections appear empty."
+
 frontend:
   - task: "Super Admin Dashboard UI"
     implemented: true
