@@ -743,6 +743,146 @@ def test_update_store():
         log_test("Update Store", False, f"Exception: {str(e)}")
         return False
 
+def test_update_nonexistent_store():
+    """Test updating non-existent store"""
+    if not admin_access_token:
+        log_test("Update Nonexistent Store", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        fake_store_id = str(uuid.uuid4())
+        update_data = {
+            "name": "Fake Store",
+            "address": "Fake Address"
+        }
+        
+        response = requests.put(f"{API_BASE}/admin/stores/{fake_store_id}", json=update_data, headers=headers)
+        
+        if response.status_code == 404:
+            error_detail = response.json().get("detail", "")
+            if "Store not found" in error_detail or "not found" in error_detail.lower():
+                log_test("Update Nonexistent Store", True, "Correctly rejected update of non-existent store")
+                return True
+            else:
+                log_test("Update Nonexistent Store", False, f"Wrong error message: {error_detail}")
+                return False
+        else:
+            log_test("Update Nonexistent Store", False, f"Should return 404, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Update Nonexistent Store", False, f"Exception: {str(e)}")
+        return False
+
+def test_delete_store():
+    """Test store deletion and cascade deletion of cashiers"""
+    if not admin_access_token:
+        log_test("Delete Store", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        
+        # First create a test store for deletion
+        unique_id = uuid.uuid4().hex[:8].upper()
+        store_data = {
+            "name": f"ImaGross Test Delete {unique_id}",
+            "code": f"IMGDEL{unique_id}",
+            "address": "Via Delete 123",
+            "city": "Milano",
+            "province": "MI",
+            "phone": "+39 02 9999999"
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/stores", json=store_data, headers=headers)
+        if response.status_code != 200:
+            log_test("Delete Store", False, "Could not create test store for deletion")
+            return False
+        
+        delete_store_id = response.json()["id"]
+        
+        # Create a cashier for this store to test cascade deletion
+        cashier_data = {
+            "store_id": delete_store_id,
+            "cashier_number": 99,
+            "name": "Test Delete Cashier"
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/cashiers", json=cashier_data, headers=headers)
+        if response.status_code != 200:
+            log_test("Delete Store", False, "Could not create test cashier for deletion test")
+            return False
+        
+        delete_cashier_id = response.json()["id"]
+        
+        # Now delete the store
+        response = requests.delete(f"{API_BASE}/admin/stores/{delete_store_id}", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate response structure
+            if "message" not in data or "deleted_cashiers" not in data:
+                log_test("Delete Store", False, "Missing fields in delete response")
+                return False
+            
+            # Verify store was deleted
+            verify_response = requests.get(f"{API_BASE}/admin/stores", headers=headers)
+            if verify_response.status_code == 200:
+                stores = verify_response.json()
+                if any(store["id"] == delete_store_id for store in stores):
+                    log_test("Delete Store", False, "Store was not actually deleted")
+                    return False
+            
+            # Verify associated cashier was also deleted
+            verify_cashiers_response = requests.get(f"{API_BASE}/admin/cashiers", headers=headers)
+            if verify_cashiers_response.status_code == 200:
+                cashiers = verify_cashiers_response.json()
+                if any(cashier["id"] == delete_cashier_id for cashier in cashiers):
+                    log_test("Delete Store", False, "Associated cashier was not deleted")
+                    return False
+            
+            log_test("Delete Store", True, f"Store and {data['deleted_cashiers']} associated cashiers deleted successfully")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Delete Store", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Delete Store", False, f"Exception: {str(e)}")
+        return False
+
+def test_delete_nonexistent_store():
+    """Test deleting non-existent store"""
+    if not admin_access_token:
+        log_test("Delete Nonexistent Store", False, "No admin access token available")
+        return False
+    
+    try:
+        headers = {"Authorization": f"Bearer {admin_access_token}"}
+        fake_store_id = str(uuid.uuid4())
+        
+        response = requests.delete(f"{API_BASE}/admin/stores/{fake_store_id}", headers=headers)
+        
+        if response.status_code == 404:
+            error_detail = response.json().get("detail", "")
+            if "Store not found" in error_detail or "not found" in error_detail.lower():
+                log_test("Delete Nonexistent Store", True, "Correctly rejected deletion of non-existent store")
+                return True
+            else:
+                log_test("Delete Nonexistent Store", False, f"Wrong error message: {error_detail}")
+                return False
+        else:
+            log_test("Delete Nonexistent Store", False, f"Should return 404, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Delete Nonexistent Store", False, f"Exception: {str(e)}")
+        return False
+
 # ============================================================================
 # CASHIER MANAGEMENT API TESTS
 # ============================================================================
