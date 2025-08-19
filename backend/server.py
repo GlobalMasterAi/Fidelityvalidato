@@ -5195,7 +5195,7 @@ async def load_fidelity_to_database():
                         with open(file_path, 'r', encoding=encoding) as f:
                             content = f.read()
                         
-                        # AGGRESSIVE JSON REPAIR FOR MALFORMED ESCAPE SEQUENCES
+                        # COMPREHENSIVE JSON PREPROCESSING FOR MALFORMED ESCAPE SEQUENCES
                         print(f"🔧 Attempting JSON repair with encoding: {encoding}")
                         
                         # Fix common JSON issues
@@ -5210,23 +5210,32 @@ async def load_fidelity_to_database():
                         content = content.replace(',}', '}')
                         content = content.replace('}\n{', '},\n{')
                         
-                        # FIX MALFORMED ESCAPE SEQUENCES - CRITICAL FOR CARD 2020000063308
-                        print(f"🔧 Fixing malformed escape sequences...")
+                        # COMPREHENSIVE FIX FOR MALFORMED ESCAPE SEQUENCES
+                        print(f"🔧 Applying comprehensive JSON preprocessing...")
                         
-                        # Fix the problematic email field pattern: "email":"\" -> "email":""
-                        content = content.replace('"email":"\\","', '"email":"",')
+                        # Import regex for advanced pattern matching
+                        import re
+                        
+                        # Fix the main issue: unterminated strings caused by backslash before quote
+                        # Pattern: "field":"\" followed by comma and next field -> "field":"" followed by comma
+                        content = re.sub(r'"([^"]+)":"\\",', r'"\1":"",', content)
+                        
+                        # Fix orphaned backslashes at end of field values
+                        content = re.sub(r'":"\\""', r'":""', content)
+                        
+                        # Fix specific email field patterns that are common
+                        content = content.replace('"email":"\\","negozio"', '"email":"","negozio"')
+                        content = content.replace('"email":"\\""', '"email":""')
                         content = content.replace('"email":"\\"', '"email":""')
                         
-                        # Fix other potential escape sequence issues
-                        content = content.replace('"\\","', '"",')
-                        content = content.replace('"\\"', '""')
+                        # Fix any remaining malformed escapes before field separators
+                        content = re.sub(r'\\",([^}])', r'",\1', content)
                         
-                        # Fix backslash at end of string values
-                        import re
-                        content = re.sub(r'":"\\",', '":"",', content)
-                        content = re.sub(r'":"\\"([^}])', r'":""\1', content)
+                        # Fix backslashes that aren't valid JSON escape sequences
+                        # Only preserve valid escapes: \" \\ \/ \b \f \n \r \t \uXXXX
+                        content = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', content)
                         
-                        print(f"🔧 Escape sequence fixes applied")
+                        print(f"🔧 Comprehensive JSON preprocessing completed")
                         
                         # Try to parse
                         raw_data = json.loads(content)
