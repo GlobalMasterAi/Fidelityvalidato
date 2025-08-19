@@ -39,7 +39,7 @@ def test_missing_card_search():
     try:
         # Test the specific missing card
         missing_card = "401004000025"
-        response = requests.get(f"{API_BASE}/check-tessera", json={"tessera_fisica": missing_card})
+        response = requests.post(f"{API_BASE}/check-tessera", json={"tessera_fisica": missing_card})
         
         if response.status_code == 200:
             data = response.json()
