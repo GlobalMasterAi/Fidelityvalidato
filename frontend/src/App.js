@@ -1695,8 +1695,118 @@ const RewardsSection = ({ analytics, profile }) => {
               </button>
             </div>
 
-            {/* Rewards Grid */}
+            {/* Rewards Content */}
             <div className="p-6">
+              {activeTab === 'available' ? (
+                <div>
+                  {availableRewards.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {availableRewards.map((reward) => (
+                        <div key={reward.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="text-3xl">{reward.icon}</span>
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(reward.category)}`}>
+                              {reward.category}
+                            </span>
+                          </div>
+                          
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{reward.title}</h3>
+                          <p className="text-gray-600 text-sm mb-4">{reward.description}</p>
+                          
+                          <div className="space-y-2 mb-4">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Valore:</span>
+                              <span className="font-semibold text-imagross-green">{reward.value}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Costo:</span>
+                              <span className="font-semibold">{reward.bolliniRequired} bollini</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Scade:</span>
+                              <span className="text-gray-600">{reward.validUntil}</span>
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={() => handleRedeemReward(reward)}
+                            disabled={!reward.available}
+                            className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                              reward.available
+                                ? 'bg-imagross-orange text-white hover:bg-imagross-red'
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            }`}
+                          >
+                            {reward.available ? 'Riscatta Premio' : 'Bollini Insufficienti'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-gray-400 text-6xl mb-4">🎁</div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Nessun premio disponibile</h3>
+                      <p className="text-gray-600">Continua a fare acquisti per sbloccare fantastici premi!</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {redeemedRewards.length > 0 ? (
+                    <div className="space-y-4">
+                      {redeemedRewards.map((reward) => (
+                        <div key={reward.id} className="flex items-center p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <span className="text-2xl mr-4">{reward.icon}</span>
+                          <div className="flex-1">
+                            <h3 className="font-medium text-gray-900">{reward.title}</h3>
+                            <p className="text-sm text-gray-600">{reward.description}</p>
+                            <p className="text-sm text-green-600 mt-1">
+                              Riscattato il {reward.redeemedDate}
+                            </p>
+                          </div>
+                          <div className="text-green-600">
+                            <span className="font-semibold">{reward.value}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-gray-400 text-6xl mb-4">📋</div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Nessun premio riscattato</h3>
+                      <p className="text-gray-600">I tuoi premi riscattati appariranno qui.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* How it works */}
+          <div className="bg-gradient-to-r from-imagross-orange to-imagross-red rounded-lg p-6 text-white">
+            <h3 className="text-xl font-bold mb-4">Come Funziona il Sistema Premi</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="text-3xl mb-2">🛒</div>
+                <h4 className="font-semibold mb-1">1. Fai Shopping</h4>
+                <p className="text-sm opacity-90">Ogni acquisto ti fa guadagnare bollini</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl mb-2">💎</div>
+                <h4 className="font-semibold mb-1">2. Accumula Bollini</h4>
+                <p className="text-sm opacity-90">Più spendi, più bollini guadagni</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl mb-2">🎁</div>
+                <h4 className="font-semibold mb-1">3. Riscatta Premi</h4>
+                <p className="text-sm opacity-90">Usa i bollini per ottenere fantastici premi</p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
         {activeTab === 'available' ? (
           <div>
             {availableRewards.length > 0 ? (
