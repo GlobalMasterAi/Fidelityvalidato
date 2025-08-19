@@ -3195,7 +3195,7 @@ async def regenerate_all_qr_codes(current_admin = Depends(get_current_admin)):
 async def regenerate_single_qr_code(cashier_id: str, current_admin = Depends(get_current_admin)):
     """Regenerate single QR code with full URL"""
     try:
-        base_url = "https://mongo-sync.preview.emergentagent.com"
+        base_url = "https://fedelissima.net"
         
         # Get cashier
         cashier = await db.cashiers.find_one({"id": cashier_id})
