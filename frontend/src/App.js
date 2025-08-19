@@ -2895,15 +2895,29 @@ const CashierManagement = () => {
                             navigator.clipboard.writeText(url);
                             alert('Link di registrazione copiato!');
                           }}
-                          className="text-imagross-orange hover:text-imagross-red"
+                          className="text-imagross-orange hover:text-imagross-red text-xs"
                         >
                           Copia Link
                         </button>
                         <button
                           onClick={() => printQR(cashier)}
-                          className="text-green-600 hover:text-green-800"
+                          className="text-green-600 hover:text-green-800 text-xs"
                         >
                           Stampa
+                        </button>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleEditCashier(cashier)}
+                          className="text-blue-600 hover:text-blue-900 text-xs"
+                        >
+                          Modifica
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCashier(cashier)}
+                          className="text-red-600 hover:text-red-900 text-xs"
+                        >
+                          Elimina
                         </button>
                       </div>
                       <button
