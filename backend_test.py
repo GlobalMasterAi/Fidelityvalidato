@@ -11,10 +11,25 @@ import uuid
 from datetime import datetime
 import sys
 
-# Use local backend URL for testing
-BASE_URL = "http://localhost:8001"
+# Use production backend URL from frontend .env for testing
+import os
+from pathlib import Path
+
+# Read REACT_APP_BACKEND_URL from frontend/.env
+frontend_env_path = Path(__file__).parent / "frontend" / ".env"
+BACKEND_URL = "https://mongo-sync.emergent.host"  # Default fallback
+
+if frontend_env_path.exists():
+    with open(frontend_env_path, 'r') as f:
+        for line in f:
+            if line.startswith('REACT_APP_BACKEND_URL='):
+                BACKEND_URL = line.split('=', 1)[1].strip()
+                break
+
+BASE_URL = BACKEND_URL
 API_BASE = f"{BASE_URL}/api"
 print(f"🔗 Testing API at: {API_BASE}")
+print(f"📍 Using backend URL from frontend/.env: {BACKEND_URL}")
 
 # Test data - realistic Italian data for ImaGross
 TEST_USER_DATA = {
