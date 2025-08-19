@@ -5259,24 +5259,31 @@ async def load_fidelity_to_database():
                                     record = json.loads(line.rstrip(','))
                                     raw_data.append(record)
                                 except json.JSONDecodeError:
-                                    # Try to fix malformed escape sequences
+                                    # Try comprehensive JSON preprocessing for malformed escape sequences
                                     try:
+                                        import re
+                                        
                                         fixed_line = line.rstrip(',')
-                                        fixed_line = fixed_line.replace('"email":"\\","', '"email":"",')
+                                        
+                                        # Apply comprehensive fixes
+                                        fixed_line = re.sub(r'"([^"]+)":"\\",', r'"\1":"",', fixed_line)
+                                        fixed_line = re.sub(r'":"\\""', r'":""', fixed_line)
+                                        fixed_line = fixed_line.replace('"email":"\\","negozio"', '"email":"","negozio"')
+                                        fixed_line = fixed_line.replace('"email":"\\""', '"email":""')
                                         fixed_line = fixed_line.replace('"email":"\\"', '"email":""')
-                                        fixed_line = fixed_line.replace('"\\","', '"",')
-                                        fixed_line = fixed_line.replace('"\\"', '""')
+                                        fixed_line = re.sub(r'\\",([^}])', r'",\1', fixed_line)
+                                        fixed_line = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', fixed_line)
                                         
                                         record = json.loads(fixed_line)
                                         raw_data.append(record)
                                         
                                         # Log successful repair for target card
                                         if record.get("card_number") == "2020000063308":
-                                            print(f"✅ REPAIRED target card on line {line_num}: {record.get('nome', '')} {record.get('cognome', '')}")
+                                            print(f"✅ COMPREHENSIVE REPAIR SUCCESS on line {line_num}: {record.get('nome', '')} {record.get('cognome', '')}")
                                     
                                     except json.JSONDecodeError:
                                         if line_num <= 10 or "2020000063308" in line:  # Log first 10 errors or target card
-                                            print(f"⚠️ Skipped malformed line {line_num}")
+                                            print(f"⚠️ Comprehensive repair failed for line {line_num}")
                                             if "2020000063308" in line:
                                                 print(f"   Line content: {line[:200]}...")
                     
