@@ -4697,9 +4697,25 @@ def run_all_tests():
         test_admin_user_profile_database_persistence
     ]
     
+    print("\n🔐 PASSWORD RESET SYSTEM TESTS - PRODUCTION DEPLOYMENT FOR WWW.FEDELISSIMA.NET")
+    print("-" * 50)
+    password_reset_tests = [
+        test_forgot_password_valid_email,
+        test_forgot_password_nonexistent_email,
+        test_forgot_password_invalid_email_format,
+        test_validate_reset_token_invalid,
+        test_reset_password_invalid_token,
+        test_reset_password_short_password,
+        test_token_generation_format,
+        test_email_template_configuration,
+        test_production_url_configuration,
+        test_security_no_email_disclosure,
+        test_password_reset_workflow_integration
+    ]
+    
     # Run all test suites
     all_tests = (admin_auth_tests + store_tests + cashier_tests + 
-                qr_tests + stats_tests + debug_tests + access_tests + rewards_tests + excel_tests + user_tests + profile_tests + admin_profile_tests)
+                qr_tests + stats_tests + debug_tests + access_tests + rewards_tests + excel_tests + user_tests + profile_tests + admin_profile_tests + password_reset_tests)
     
     passed = 0
     total = len(all_tests)
