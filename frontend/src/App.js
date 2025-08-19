@@ -1399,16 +1399,47 @@ const RewardsSection = ({ analytics, profile }) => {
   const [availableRewards, setAvailableRewards] = useState([]);
   const [redeemedRewards, setRedeemedRewards] = useState([]);
   const [activeTab, setActiveTab] = useState('available');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    generateRewards();
+    fetchRewards();
   }, [analytics, profile]);
 
-  const generateRewards = () => {
+  const fetchRewards = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.error('No token available');
+        return;
+      }
+
+      const response = await axios.get(`${API}/user/rewards`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Separate available and redeemed rewards
+      const available = response.data.filter(reward => reward.status === 'available');
+      const redeemed = response.data.filter(reward => reward.status === 'redeemed');
+      
+      setAvailableRewards(available);
+      setRedeemedRewards(redeemed);
+    } catch (error) {
+      console.error('Error fetching rewards:', error);
+      
+      // Fallback to generating local rewards if API fails
+      generateLocalRewards();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateLocalRewards = () => {
     if (!analytics || !profile) return;
 
-    const userLevel = analytics.loyalty_level;
-    const totalSpent = analytics.total_spending || 0;
+    const userLevel = analytics.summary?.loyalty_level || 'Bronze';
+    const totalSpent = analytics.summary?.total_spent || 0;
     const bollini = profile.bollini || 0;
 
     // Generate dynamic rewards based on user data
