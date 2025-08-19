@@ -1892,21 +1892,7 @@ const RewardsSection = ({ analytics, profile }) => {
           </div>
         )}
       </div>
-
-      {/* How it works */}
-      <div className="bg-gradient-to-r from-imagross-orange to-imagross-red rounded-lg p-6 text-white">
-        <h3 className="text-xl font-bold mb-4">Come Funziona il Sistema Premi</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center">
-            <div className="text-3xl mb-2">🛒</div>
-            <h4 className="font-semibold mb-1">1. Fai Shopping</h4>
-            <p className="text-sm opacity-90">Ogni acquisto ti fa guadagnare bollini</p>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl mb-2">💎</div>
-            <h4 className="font-semibold mb-1">2. Accumula Bollini</h4>
-            <p className="text-sm opacity-90">Più spendi, più bollini guadagni</p>
-          </div>
+    </div>
   );
 };
 
