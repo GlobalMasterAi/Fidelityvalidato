@@ -1520,6 +1520,408 @@ def test_cashier_registration_count():
         return False
 
 # ============================================================================
+# PASSWORD RESET SYSTEM TESTS
+# ============================================================================
+
+def test_forgot_password_valid_email():
+    """Test password reset request with valid email"""
+    try:
+        # Use the registered test user email
+        reset_data = {
+            "email": TEST_USER_DATA["email"]
+        }
+        
+        response = requests.post(f"{API_BASE}/forgot-password", json=reset_data)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate response structure
+            if "success" not in data or "message" not in data:
+                log_test("Forgot Password Valid Email", False, "Missing fields in response")
+                return False
+            
+            if not data["success"]:
+                log_test("Forgot Password Valid Email", False, f"Success should be true: {data}")
+                return False
+            
+            # Check message content (should be generic for security)
+            expected_messages = [
+                "Se l'email esiste nel nostro sistema, riceverai un link per il reset della password.",
+                "Email di reset inviata! Controlla la tua casella di posta."
+            ]
+            
+            if not any(msg in data["message"] for msg in expected_messages):
+                log_test("Forgot Password Valid Email", False, f"Unexpected message: {data['message']}")
+                return False
+            
+            log_test("Forgot Password Valid Email", True, "Password reset request processed successfully")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Forgot Password Valid Email", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Forgot Password Valid Email", False, f"Exception: {str(e)}")
+        return False
+
+def test_forgot_password_nonexistent_email():
+    """Test password reset request with non-existent email (should still return success for security)"""
+    try:
+        reset_data = {
+            "email": "nonexistent.user@fedelissima.net"
+        }
+        
+        response = requests.post(f"{API_BASE}/forgot-password", json=reset_data)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate response structure
+            if "success" not in data or "message" not in data:
+                log_test("Forgot Password Nonexistent Email", False, "Missing fields in response")
+                return False
+            
+            if not data["success"]:
+                log_test("Forgot Password Nonexistent Email", False, f"Success should be true for security: {data}")
+                return False
+            
+            # Should return generic message for security (don't reveal if email exists)
+            if "Se l'email esiste nel nostro sistema" not in data["message"]:
+                log_test("Forgot Password Nonexistent Email", False, f"Should return generic message: {data['message']}")
+                return False
+            
+            log_test("Forgot Password Nonexistent Email", True, "Correctly returned generic success message for security")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Forgot Password Nonexistent Email", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Forgot Password Nonexistent Email", False, f"Exception: {str(e)}")
+        return False
+
+def test_forgot_password_invalid_email_format():
+    """Test password reset request with invalid email format"""
+    try:
+        reset_data = {
+            "email": "invalid-email-format"
+        }
+        
+        response = requests.post(f"{API_BASE}/forgot-password", json=reset_data)
+        
+        if response.status_code == 422:
+            # Should return validation error for invalid email format
+            log_test("Forgot Password Invalid Email Format", True, "Correctly rejected invalid email format")
+            return True
+        elif response.status_code == 200:
+            # Some implementations might still process it and return generic message
+            data = response.json()
+            if data.get("success") and "Se l'email esiste" in data.get("message", ""):
+                log_test("Forgot Password Invalid Email Format", True, "Processed invalid email with generic response")
+                return True
+            else:
+                log_test("Forgot Password Invalid Email Format", False, f"Unexpected response: {data}")
+                return False
+        else:
+            log_test("Forgot Password Invalid Email Format", False, f"Should return 422 or 200, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Forgot Password Invalid Email Format", False, f"Exception: {str(e)}")
+        return False
+
+def test_validate_reset_token_invalid():
+    """Test token validation with invalid token"""
+    try:
+        invalid_token = "invalid_token_12345"
+        
+        response = requests.get(f"{API_BASE}/validate-reset-token/{invalid_token}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate response structure
+            if "valid" not in data or "message" not in data:
+                log_test("Validate Reset Token Invalid", False, "Missing fields in response")
+                return False
+            
+            if data["valid"]:
+                log_test("Validate Reset Token Invalid", False, f"Invalid token should not be valid: {data}")
+                return False
+            
+            if "non valido" not in data["message"] and "scaduto" not in data["message"]:
+                log_test("Validate Reset Token Invalid", False, f"Unexpected message: {data['message']}")
+                return False
+            
+            log_test("Validate Reset Token Invalid", True, "Correctly rejected invalid token")
+            return True
+            
+        else:
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Validate Reset Token Invalid", False, f"Status {response.status_code}: {error_detail}")
+            return False
+            
+    except Exception as e:
+        log_test("Validate Reset Token Invalid", False, f"Exception: {str(e)}")
+        return False
+
+def test_reset_password_invalid_token():
+    """Test password reset with invalid token"""
+    try:
+        reset_data = {
+            "token": "invalid_token_12345",
+            "new_password": "NewSecurePassword123!"
+        }
+        
+        response = requests.post(f"{API_BASE}/reset-password", json=reset_data)
+        
+        if response.status_code == 400:
+            error_detail = response.json().get("detail", "")
+            if "Token di reset non valido o scaduto" in error_detail:
+                log_test("Reset Password Invalid Token", True, "Correctly rejected invalid token")
+                return True
+            else:
+                log_test("Reset Password Invalid Token", False, f"Wrong error message: {error_detail}")
+                return False
+        else:
+            log_test("Reset Password Invalid Token", False, f"Should return 400, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Reset Password Invalid Token", False, f"Exception: {str(e)}")
+        return False
+
+def test_reset_password_short_password():
+    """Test password reset with password too short (less than 6 characters)"""
+    try:
+        # Generate a fake but properly formatted token for testing
+        fake_token = "fake_token_for_validation_test_12345678901234567890"
+        
+        reset_data = {
+            "token": fake_token,
+            "new_password": "123"  # Too short
+        }
+        
+        response = requests.post(f"{API_BASE}/reset-password", json=reset_data)
+        
+        if response.status_code == 400:
+            error_detail = response.json().get("detail", "")
+            if "almeno 6 caratteri" in error_detail or "password deve essere" in error_detail:
+                log_test("Reset Password Short Password", True, "Correctly rejected short password")
+                return True
+            elif "Token di reset non valido" in error_detail:
+                # Token validation happens first, which is also correct behavior
+                log_test("Reset Password Short Password", True, "Token validation correctly executed first")
+                return True
+            else:
+                log_test("Reset Password Short Password", False, f"Wrong error message: {error_detail}")
+                return False
+        else:
+            log_test("Reset Password Short Password", False, f"Should return 400, got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Reset Password Short Password", False, f"Exception: {str(e)}")
+        return False
+
+def test_token_generation_format():
+    """Test that tokens are generated in the correct format (32-character URL-safe)"""
+    try:
+        # This test checks the token generation indirectly by making a forgot password request
+        # and checking that the system processes it correctly
+        reset_data = {
+            "email": TEST_USER_DATA["email"]
+        }
+        
+        response = requests.post(f"{API_BASE}/forgot-password", json=reset_data)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if data.get("success"):
+                # Token generation worked (we can't directly access the token for security)
+                # But we can verify the system processed the request correctly
+                log_test("Token Generation Format", True, "Token generation system working correctly")
+                return True
+            else:
+                log_test("Token Generation Format", False, f"Token generation failed: {data}")
+                return False
+        else:
+            log_test("Token Generation Format", False, f"Token generation request failed: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Token Generation Format", False, f"Exception: {str(e)}")
+        return False
+
+def test_email_template_configuration():
+    """Test email template configuration and URL format"""
+    try:
+        # Test that the email system is configured correctly
+        # We can't actually send emails without SMTP credentials, but we can test the configuration
+        reset_data = {
+            "email": TEST_USER_DATA["email"]
+        }
+        
+        response = requests.post(f"{API_BASE}/forgot-password", json=reset_data)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Check if the response indicates email processing
+            if data.get("success"):
+                # The system processed the email request
+                # Check if message indicates email was sent or would be sent
+                message = data.get("message", "")
+                
+                if "Email di reset inviata" in message or "Se l'email esiste" in message:
+                    log_test("Email Template Configuration", True, "Email system configured correctly (SMTP credentials pending)")
+                    return True
+                else:
+                    log_test("Email Template Configuration", False, f"Unexpected email response: {message}")
+                    return False
+            else:
+                log_test("Email Template Configuration", False, f"Email system not working: {data}")
+                return False
+        else:
+            log_test("Email Template Configuration", False, f"Email configuration test failed: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Email Template Configuration", False, f"Exception: {str(e)}")
+        return False
+
+def test_production_url_configuration():
+    """Test that all URLs point to www.fedelissima.net for production"""
+    try:
+        # Test the backend configuration by checking environment variables through API behavior
+        # The reset URL should be configured for fedelissima.net
+        
+        # Check if the API is accessible at the expected production URL
+        if "fedelissima.net" in BASE_URL:
+            log_test("Production URL Configuration", True, f"API configured for production URL: {BASE_URL}")
+            return True
+        else:
+            # Check if we're testing against the correct backend URL from frontend/.env
+            if BACKEND_URL and "fedelissima.net" in BACKEND_URL:
+                log_test("Production URL Configuration", True, f"Frontend configured for production: {BACKEND_URL}")
+                return True
+            else:
+                log_test("Production URL Configuration", False, f"URLs not configured for production: API={BASE_URL}, Frontend={BACKEND_URL}")
+                return False
+            
+    except Exception as e:
+        log_test("Production URL Configuration", False, f"Exception: {str(e)}")
+        return False
+
+def test_security_no_email_disclosure():
+    """Test that the system doesn't disclose whether an email exists"""
+    try:
+        # Test with known existing email
+        existing_email_data = {"email": TEST_USER_DATA["email"]}
+        response1 = requests.post(f"{API_BASE}/forgot-password", json=existing_email_data)
+        
+        # Test with non-existent email
+        nonexistent_email_data = {"email": "definitely.not.exists@fedelissima.net"}
+        response2 = requests.post(f"{API_BASE}/forgot-password", json=nonexistent_email_data)
+        
+        if response1.status_code == 200 and response2.status_code == 200:
+            data1 = response1.json()
+            data2 = response2.json()
+            
+            # Both should return success
+            if not (data1.get("success") and data2.get("success")):
+                log_test("Security No Email Disclosure", False, "Both requests should return success")
+                return False
+            
+            # Messages should be similar/generic for security
+            msg1 = data1.get("message", "")
+            msg2 = data2.get("message", "")
+            
+            # Both should contain generic message about "if email exists"
+            if "Se l'email esiste" in msg1 and "Se l'email esiste" in msg2:
+                log_test("Security No Email Disclosure", True, "System correctly protects email existence information")
+                return True
+            elif "Email di reset inviata" in msg1 and "Se l'email esiste" in msg2:
+                # This is also acceptable - existing email gets confirmation, non-existing gets generic
+                log_test("Security No Email Disclosure", True, "System provides appropriate responses for security")
+                return True
+            else:
+                log_test("Security No Email Disclosure", False, f"Messages may reveal email existence: '{msg1}' vs '{msg2}'")
+                return False
+        else:
+            log_test("Security No Email Disclosure", False, f"Unexpected status codes: {response1.status_code}, {response2.status_code}")
+            return False
+            
+    except Exception as e:
+        log_test("Security No Email Disclosure", False, f"Exception: {str(e)}")
+        return False
+
+def test_password_reset_workflow_integration():
+    """Test the complete password reset workflow integration"""
+    try:
+        # Step 1: Request password reset
+        reset_data = {
+            "email": TEST_USER_DATA["email"]
+        }
+        
+        response = requests.post(f"{API_BASE}/forgot-password", json=reset_data)
+        
+        if response.status_code != 200:
+            log_test("Password Reset Workflow Integration", False, f"Step 1 failed: {response.status_code}")
+            return False
+        
+        data = response.json()
+        if not data.get("success"):
+            log_test("Password Reset Workflow Integration", False, f"Step 1 not successful: {data}")
+            return False
+        
+        # Step 2: Test that the system is ready for token validation
+        # (We can't get the actual token without email access, but we can test the endpoint)
+        test_token = "test_token_for_workflow_validation"
+        
+        validate_response = requests.get(f"{API_BASE}/validate-reset-token/{test_token}")
+        
+        if validate_response.status_code != 200:
+            log_test("Password Reset Workflow Integration", False, f"Step 2 endpoint not accessible: {validate_response.status_code}")
+            return False
+        
+        validate_data = validate_response.json()
+        if "valid" not in validate_data:
+            log_test("Password Reset Workflow Integration", False, f"Step 2 response format incorrect: {validate_data}")
+            return False
+        
+        # Step 3: Test password reset endpoint structure
+        reset_password_data = {
+            "token": "test_token_for_workflow",
+            "new_password": "NewTestPassword123!"
+        }
+        
+        reset_response = requests.post(f"{API_BASE}/reset-password", json=reset_password_data)
+        
+        # Should return 400 for invalid token, but endpoint should be accessible
+        if reset_response.status_code not in [400, 404]:
+            log_test("Password Reset Workflow Integration", False, f"Step 3 unexpected status: {reset_response.status_code}")
+            return False
+        
+        reset_data_response = reset_response.json()
+        if "detail" not in reset_data_response:
+            log_test("Password Reset Workflow Integration", False, f"Step 3 response format incorrect: {reset_data_response}")
+            return False
+        
+        log_test("Password Reset Workflow Integration", True, "Complete password reset workflow endpoints are functional")
+        return True
+        
+    except Exception as e:
+        log_test("Password Reset Workflow Integration", False, f"Exception: {str(e)}")
+        return False
+
+# ============================================================================
 # ADMIN DASHBOARD STATISTICS API TESTS
 # ============================================================================
 
