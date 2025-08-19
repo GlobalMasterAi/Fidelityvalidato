@@ -10,8 +10,8 @@ import time
 from datetime import datetime
 import sys
 
-# Use production backend URL for testing
-BACKEND_URL = "https://www.fedelissima.net"
+# Use local backend URL for testing (production URL not accessible from container)
+BACKEND_URL = "http://localhost:8001"
 API_BASE = f"{BACKEND_URL}/api"
 
 print(f"🔗 Testing Admin Dashboard at: {API_BASE}")
