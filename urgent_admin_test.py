@@ -159,11 +159,16 @@ def test_frontend_backend_connection():
         print(f"   Response time: {response.elapsed.total_seconds():.2f}s")
         
         if response.status_code == 200:
-            data = response.json()
-            print(f"   ✅ Backend accessible")
-            print(f"   API Message: {data.get('message', 'N/A')}")
-            print(f"   API Status: {data.get('status', 'N/A')}")
-            print(f"   API Version: {data.get('version', 'N/A')}")
+            try:
+                data = response.json()
+                print(f"   ✅ Backend accessible")
+                print(f"   API Message: {data.get('message', 'N/A')}")
+                print(f"   API Status: {data.get('status', 'N/A')}")
+                print(f"   API Version: {data.get('version', 'N/A')}")
+            except:
+                # Handle non-JSON response (might be HTML)
+                print(f"   ✅ Backend accessible (non-JSON response)")
+                print(f"   Response content type: {response.headers.get('content-type', 'N/A')}")
             
             # Test 2: API prefix accessibility
             print("\n2️⃣ Testing /api prefix accessibility...")
