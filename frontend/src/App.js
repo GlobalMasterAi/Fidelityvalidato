@@ -1664,9 +1664,15 @@ const RewardsSection = ({ analytics, profile }) => {
                 <div className="text-2xl font-bold">{redeemedRewards.length}</div>
               </div>
             </div>
+          </>
+        )}
+      </div>
 
-            {/* Tabs */}
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+      {!loading && (
+        <>
+          {/* Tabs */}
+          <div className="bg-white rounded-lg shadow-sm border">
+            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 m-6 mb-0">
               <button
                 onClick={() => setActiveTab('available')}
                 className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -1688,12 +1694,9 @@ const RewardsSection = ({ analytics, profile }) => {
                 Premi Riscattati ({redeemedRewards.length})
               </button>
             </div>
-          </>
-        )}
-      </div>
 
-      {!loading && (
-        <div className="bg-white rounded-lg p-6 shadow-sm border">
+            {/* Rewards Grid */}
+            <div className="p-6">
         {activeTab === 'available' ? (
           <div>
             {availableRewards.length > 0 ? (
