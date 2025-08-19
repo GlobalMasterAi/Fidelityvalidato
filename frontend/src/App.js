@@ -1664,36 +1664,36 @@ const RewardsSection = ({ analytics, profile }) => {
                 <div className="text-2xl font-bold">{redeemedRewards.length}</div>
               </div>
             </div>
-            </>
-        )}
 
-        {/* Tabs */}
-        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-          <button
-            onClick={() => setActiveTab('available')}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'available' 
-                ? 'bg-white text-imagross-orange shadow-sm' 
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Premi Disponibili ({availableRewards.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('redeemed')}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'redeemed' 
-                ? 'bg-white text-imagross-orange shadow-sm' 
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Premi Riscattati ({redeemedRewards.length})
-          </button>
-        </div>
+            {/* Tabs */}
+            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab('available')}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'available' 
+                    ? 'bg-white text-imagross-orange shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Premi Disponibili ({availableRewards.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('redeemed')}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'redeemed' 
+                    ? 'bg-white text-imagross-orange shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Premi Riscattati ({redeemedRewards.length})
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Rewards Grid */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border">
+      {!loading && (
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
         {activeTab === 'available' ? (
           <div>
             {availableRewards.length > 0 ? (
