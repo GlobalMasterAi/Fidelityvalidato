@@ -580,6 +580,144 @@ class RedemptionResponse(BaseModel):
     uses_remaining: int
     admin_notes: Optional[str] = None
 
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime, timedelta
+from typing import Optional
+
+# Password Reset Token Management
+PASSWORD_RESET_TOKENS = {}
+
+def generate_reset_token() -> str:
+    """Generate a secure reset token"""
+    return secrets.token_urlsafe(32)
+
+def store_reset_token(email: str, token: str):
+    """Store reset token with expiration (1 hour)"""
+    expiry = datetime.utcnow() + timedelta(hours=1)
+    PASSWORD_RESET_TOKENS[token] = {
+        "email": email,
+        "expires": expiry
+    }
+
+def validate_reset_token(token: str) -> Optional[str]:
+    """Validate reset token and return email if valid"""
+    if token not in PASSWORD_RESET_TOKENS:
+        return None
+    
+    token_data = PASSWORD_RESET_TOKENS[token]
+    if datetime.utcnow() > token_data["expires"]:
+        # Token expired, remove it
+        del PASSWORD_RESET_TOKENS[token]
+        return None
+    
+    return token_data["email"]
+
+def remove_reset_token(token: str):
+    """Remove used reset token"""
+    if token in PASSWORD_RESET_TOKENS:
+        del PASSWORD_RESET_TOKENS[token]
+
+async def send_reset_email(email: str, token: str):
+    """Send password reset email"""
+    try:
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+        smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+        smtp_username = os.environ.get("SMTP_USERNAME", "")
+        smtp_password = os.environ.get("SMTP_PASSWORD", "")
+        email_from = os.environ.get("EMAIL_FROM", "noreply@fedelissima.net")
+        base_url = os.environ.get("BASE_URL", "https://www.fedelissima.net")
+        
+        if not smtp_username or not smtp_password:
+            print("❌ SMTP credentials not configured - cannot send email")
+            return False
+        
+        reset_url = f"{base_url}/reset-password?token={token}"
+        
+        msg = MIMEMultipart()
+        msg['From'] = email_from
+        msg['To'] = email
+        msg['Subject'] = "Reset della tua password - ImaGross Fidelity"
+        
+        html_body = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Reset Password - ImaGross</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #FF6B35, #F7931E); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                    <h1 style="color: white; margin: 0; font-size: 28px;">ImaGross Fidelity</h1>
+                    <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Il tuo supermercato di fiducia</p>
+                </div>
+                
+                <div style="background: white; padding: 40px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;">
+                    <h2 style="color: #FF6B35; margin-bottom: 20px;">Reset della tua password</h2>
+                    
+                    <p>Ciao,</p>
+                    
+                    <p>Hai richiesto il reset della password per il tuo account ImaGross Fidelity.</p>
+                    
+                    <p>Clicca sul pulsante qui sotto per impostare una nuova password:</p>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{reset_url}" 
+                           style="background: linear-gradient(135deg, #FF6B35, #F7931E); 
+                                  color: white; 
+                                  padding: 15px 30px; 
+                                  text-decoration: none; 
+                                  border-radius: 25px; 
+                                  font-weight: bold;
+                                  display: inline-block;
+                                  text-transform: uppercase;
+                                  letter-spacing: 1px;">
+                            Reset Password
+                        </a>
+                    </div>
+                    
+                    <p style="margin-top: 30px;">Se il pulsante non funziona, copia e incolla questo link nel tuo browser:</p>
+                    <p style="word-break: break-all; color: #666; font-size: 14px;">{reset_url}</p>
+                    
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #FF6B35;">
+                        <p style="margin: 0; font-size: 14px; color: #666;">
+                            <strong>⚠️ Importante:</strong><br>
+                            • Questo link è valido per 1 ora<br>
+                            • Se non hai richiesto tu questo reset, ignora questa email<br>
+                            • Non condividere questo link con nessuno
+                        </p>
+                    </div>
+                    
+                    <p style="margin-top: 30px;">Grazie per essere parte della famiglia ImaGross!</p>
+                    
+                    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+                        Team ImaGross<br>
+                        <a href="https://www.fedelissima.net" style="color: #FF6B35;">www.fedelissima.net</a>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"✅ Password reset email sent to {email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error sending email: {e}")
+        return False
+
 # Helper functions
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
