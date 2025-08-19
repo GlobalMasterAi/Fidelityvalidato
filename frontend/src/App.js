@@ -1639,24 +1639,31 @@ const RewardsSection = ({ analytics, profile }) => {
       <div className="bg-white rounded-lg p-6 shadow-sm border">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Premi & Offerte</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white">
-            <div className="text-sm opacity-90">Bollini Disponibili</div>
-            <div className="text-2xl font-bold">{profile.bollini || 0}</div>
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-imagross-orange"></div>
+            <span className="ml-2">Caricamento premi...</span>
           </div>
-          <div className="bg-gradient-to-r from-imagross-orange to-imagross-red rounded-lg p-4 text-white">
-            <div className="text-sm opacity-90">Livello Fidelity</div>
-            <div className="text-xl font-bold">{analytics.loyalty_level}</div>
-          </div>
-          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white">
-            <div className="text-sm opacity-90">Premi Disponibili</div>
-            <div className="text-2xl font-bold">{availableRewards.length}</div>
-          </div>
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white">
-            <div className="text-sm opacity-90">Premi Riscattati</div>
-            <div className="text-2xl font-bold">{redeemedRewards.length}</div>
-          </div>
-        </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white">
+                <div className="text-sm opacity-90">Bollini Disponibili</div>
+                <div className="text-2xl font-bold">{profile?.bollini || 0}</div>
+              </div>
+              <div className="bg-gradient-to-r from-imagross-orange to-imagross-red rounded-lg p-4 text-white">
+                <div className="text-sm opacity-90">Livello Fidelity</div>
+                <div className="text-xl font-bold">{analytics?.summary?.loyalty_level || 'Bronze'}</div>
+              </div>
+              <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white">
+                <div className="text-sm opacity-90">Premi Disponibili</div>
+                <div className="text-2xl font-bold">{availableRewards.length}</div>
+              </div>
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white">
+                <div className="text-sm opacity-90">Premi Riscattati</div>
+                <div className="text-2xl font-bold">{redeemedRewards.length}</div>
+              </div>
+            </div>
 
         {/* Tabs */}
         <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
