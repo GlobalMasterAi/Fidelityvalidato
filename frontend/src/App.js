@@ -1455,7 +1455,8 @@ const RewardsSection = ({ analytics, profile }) => {
         available: bollini >= 50,
         category: "Sconti",
         validUntil: "2025-12-31",
-        icon: "💰"
+        icon: "💰",
+        status: 'available'
       },
       {
         id: 2,
@@ -1468,7 +1469,8 @@ const RewardsSection = ({ analytics, profile }) => {
         available: bollini >= 100,
         category: "Omaggi",
         validUntil: "2025-12-31",
-        icon: "🎁"
+        icon: "🎁",
+        status: 'available'
       },
       {
         id: 3,
@@ -1481,7 +1483,8 @@ const RewardsSection = ({ analytics, profile }) => {
         available: bollini >= 150 && ['Gold', 'Platinum'].includes(userLevel),
         category: "VIP",
         validUntil: "2025-12-31",
-        icon: "⭐"
+        icon: "⭐",
+        status: 'available'
       },
       {
         id: 4,
@@ -1494,7 +1497,8 @@ const RewardsSection = ({ analytics, profile }) => {
         available: bollini >= 200,
         category: "Buoni",
         validUntil: "2025-12-31",
-        icon: "🎫"
+        icon: "🎫",
+        status: 'available'
       },
       {
         id: 5,
@@ -1507,7 +1511,8 @@ const RewardsSection = ({ analytics, profile }) => {
         available: bollini >= 30,
         category: "Servizi",
         validUntil: "2025-12-31",
-        icon: "🚚"
+        icon: "🚚",
+        status: 'available'
       },
       {
         id: 6,
@@ -1520,7 +1525,8 @@ const RewardsSection = ({ analytics, profile }) => {
         available: bollini >= 300 && userLevel === 'Platinum',
         category: "Eventi",
         validUntil: "2025-12-31",
-        icon: "🎊"
+        icon: "🎊",
+        status: 'available'
       }
     ];
 
@@ -1537,7 +1543,8 @@ const RewardsSection = ({ analytics, profile }) => {
         available: totalSpent < 50,
         category: "Speciali",
         validUntil: "2025-12-31",
-        icon: "👋"
+        icon: "👋",
+        status: 'available'
       },
       {
         id: 101,
@@ -1550,7 +1557,8 @@ const RewardsSection = ({ analytics, profile }) => {
         available: totalSpent > 500,
         category: "Speciali",
         validUntil: "2025-12-31",
-        icon: "💝"
+        icon: "💝",
+        status: 'available'
       }
     ];
 
@@ -1566,27 +1574,33 @@ const RewardsSection = ({ analytics, profile }) => {
         type: "used",
         value: "5%",
         redeemedDate: "2025-01-15",
-        icon: "✅"
+        icon: "✅",
+        status: 'redeemed'
       }
     ]);
   };
 
   const handleRedeemReward = async (reward) => {
     try {
-      // In a real app, this would call an API
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        alert('Errore: non sei autenticato');
+        return;
+      }
+
+      // Call API to redeem reward
+      await axios.post(`${API}/user/rewards/${reward.id}/redeem`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
       alert(`Premio "${reward.title}" riscattato con successo! Controlla la tua email per i dettagli.`);
       
-      // Move reward to redeemed list
-      setRedeemedRewards(prev => [...prev, {
-        ...reward,
-        id: Date.now(),
-        redeemedDate: new Date().toISOString().split('T')[0]
-      }]);
-      
-      // Remove from available rewards
-      setAvailableRewards(prev => prev.filter(r => r.id !== reward.id));
+      // Refresh rewards after successful redemption
+      fetchRewards();
       
     } catch (error) {
+      console.error('Error redeeming reward:', error);
       alert('Errore nel riscatto del premio. Riprova più tardi.');
     }
   };
