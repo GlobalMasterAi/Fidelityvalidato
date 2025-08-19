@@ -107,7 +107,11 @@ def test_store_crud_operations():
         # 2. UPDATE Store using PUT endpoint
         update_data = {
             "name": f"ImaGross Test Store {unique_id} - UPDATED",
+            "code": store_data["code"],  # Include required fields
             "address": "Via Test 456 - UPDATED",
+            "city": store_data["city"],
+            "province": store_data["province"],
+            "phone": store_data["phone"],
             "manager_name": "Test Manager - UPDATED"
         }
         
