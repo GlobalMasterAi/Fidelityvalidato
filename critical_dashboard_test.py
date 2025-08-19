@@ -178,6 +178,7 @@ def test_user_profile_api_fix():
             
             if tessera_response.status_code == 200:
                 tessera_data = tessera_response.json()
+                print(f"DEBUG: Tessera response for {test_card}: {tessera_data}")  # Debug output
                 
                 if tessera_data.get("found"):
                     user_data = tessera_data.get("user", {})
