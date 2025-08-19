@@ -2772,8 +2772,10 @@ const CashierManagement = () => {
 
       {showCreateForm && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-4">Crea Nuova Cassa</h2>
-          <form onSubmit={handleCreateCashier} className="space-y-4">
+          <h2 className="text-xl font-bold mb-4">
+            {editingCashier ? 'Modifica Cassa' : 'Crea Nuova Cassa'}
+          </h2>
+          <form onSubmit={editingCashier ? handleUpdateCashier : handleCreateCashier} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Supermercato</label>
               <select
