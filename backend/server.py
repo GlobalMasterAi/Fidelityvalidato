@@ -2698,7 +2698,7 @@ async def create_cashier(cashier_data: CashierCreate, current_admin = Depends(ge
     # Generate QR code data and image
     qr_data = f"{store['code']}-CASSA{cashier_data.cashier_number}"
     # Generate full URL for QR code
-    base_url = "https://mongo-sync.preview.emergentagent.com"
+    base_url = "https://fedelissima.net"
     qr_url = f"{base_url}/register?qr={qr_data}"
     qr_image = generate_qr_code(qr_url)
     
