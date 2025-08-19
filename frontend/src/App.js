@@ -48,13 +48,45 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (token) {
       fetchProfile();
-    } else if (adminToken) {
-      // Admin is logged in
-      setLoading(false);
-    } else {
+    }
+    
+    // Verify admin token and restore admin data if available
+    if (adminToken) {
+      verifyAdminToken();
+    }
+    
+    if (!token && !adminToken) {
       setLoading(false);
     }
   }, [token, adminToken]);
+
+  const verifyAdminToken = async () => {
+    try {
+      // Try to fetch admin profile using saved token
+      const response = await axios.get(`${API}/admin/profile`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      if (response.data && response.data.admin) {
+        setAdmin(response.data.admin);
+        console.log('Admin token verified and admin data restored');
+      } else {
+        // Invalid token, clear it
+        localStorage.removeItem('adminToken');
+        setAdminToken(null);
+        console.log('Invalid admin token, cleared');
+      }
+    } catch (error) {
+      console.error('Admin token verification failed:', error);
+      // Invalid token, clear it
+      localStorage.removeItem('adminToken');
+      setAdminToken(null);
+    } finally {
+      if (!token) {
+        setLoading(false);
+      }
+    }
+  };
 
   const fetchProfile = async () => {
     try {
