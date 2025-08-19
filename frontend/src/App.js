@@ -1841,6 +1841,356 @@ const RewardsSection = ({ analytics, profile }) => {
   );
 };
 
+const ForgotPassword = () => {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!email) {
+      setError('Inserisci la tua email');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const response = await axios.post(`${API}/forgot-password`, {
+        email: email
+      });
+
+      if (response.data.success) {
+        setMessage(response.data.message);
+        setEmail(''); // Clear form
+      } else {
+        setError('Errore durante l\'invio dell\'email');
+      }
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      setError(error.response?.data?.detail || 'Errore durante l\'invio dell\'email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-imagross-orange via-imagross-red to-red-600 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
+        <div className="text-center mb-8">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-r from-imagross-orange to-imagross-red rounded-full flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Recupera Password</h1>
+          <p className="text-gray-600">Inserisci la tua email per ricevere il link di reset</p>
+        </div>
+
+        {message && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="text-green-700 text-sm">{message}</span>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <span className="text-red-700 text-sm">{error}</span>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-imagross-orange focus:border-transparent outline-none transition"
+              placeholder="La tua email"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-6 rounded-lg font-medium hover:opacity-90 transition duration-300 disabled:opacity-50"
+          >
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Invio in corso...
+              </div>
+            ) : (
+              'Invia Link di Reset'
+            )}
+          </button>
+        </form>
+
+        <div className="mt-8 text-center">
+          <p className="text-gray-600 text-sm mb-4">Ti ricordi la password?</p>
+          <a 
+            href="/login" 
+            className="text-imagross-orange hover:text-imagross-red font-medium transition"
+          >
+            Torna al Login
+          </a>
+        </div>
+
+        <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+          <p className="text-xs text-gray-500">
+            Problemi con il reset? Contatta il nostro{' '}
+            <a href="mailto:support@fedelissima.net" className="text-imagross-orange hover:underline">
+              supporto clienti
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ResetPassword = () => {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [tokenValid, setTokenValid] = useState(null);
+  const [validating, setValidating] = useState(true);
+
+  // Get token from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+
+  useEffect(() => {
+    validateToken();
+  }, []);
+
+  const validateToken = async () => {
+    if (!token) {
+      setError('Token di reset mancante');
+      setTokenValid(false);
+      setValidating(false);
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${API}/validate-reset-token/${token}`);
+      setTokenValid(response.data.valid);
+      
+      if (!response.data.valid) {
+        setError(response.data.message);
+      }
+    } catch (error) {
+      console.error('Token validation error:', error);
+      setTokenValid(false);
+      setError('Errore nella validazione del token');
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!password || !confirmPassword) {
+      setError('Compila tutti i campi');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Le password non coincidono');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('La password deve essere di almeno 6 caratteri');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const response = await axios.post(`${API}/reset-password`, {
+        token: token,
+        new_password: password
+      });
+
+      if (response.data.success) {
+        setMessage(response.data.message);
+        setPassword('');
+        setConfirmPassword('');
+        
+        // Redirect to login after 3 seconds
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 3000);
+      } else {
+        setError('Errore durante l\'aggiornamento della password');
+      }
+    } catch (error) {
+      console.error('Reset password error:', error);
+      setError(error.response?.data?.detail || 'Errore durante l\'aggiornamento della password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (validating) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-imagross-orange via-imagross-red to-red-600 flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-imagross-orange mx-auto mb-4"></div>
+          <p className="text-gray-600">Validazione token in corso...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!tokenValid) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-imagross-orange via-imagross-red to-red-600 flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center mb-6">
+            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Token Non Valido</h1>
+            <p className="text-gray-600 mb-6">{error}</p>
+            
+            <a 
+              href="/forgot-password" 
+              className="inline-block bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-6 rounded-lg font-medium hover:opacity-90 transition"
+            >
+              Richiedi Nuovo Reset
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-imagross-orange via-imagross-red to-red-600 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
+        <div className="text-center mb-8">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-r from-imagross-orange to-imagross-red rounded-full flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Nuova Password</h1>
+          <p className="text-gray-600">Inserisci la tua nuova password</p>
+        </div>
+
+        {message && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <span className="text-green-700 text-sm block">{message}</span>
+                <span className="text-green-600 text-xs">Verrai reindirizzato al login...</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <span className="text-red-700 text-sm">{error}</span>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              Nuova Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-imagross-orange focus:border-transparent outline-none transition"
+              placeholder="Almeno 6 caratteri"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              Conferma Password
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-imagross-orange focus:border-transparent outline-none transition"
+              placeholder="Ripeti la password"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || message}
+            className="w-full bg-gradient-to-r from-imagross-orange to-imagross-red text-white py-3 px-6 rounded-lg font-medium hover:opacity-90 transition duration-300 disabled:opacity-50"
+          >
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Aggiornamento...
+              </div>
+            ) : (
+              'Aggiorna Password'
+            )}
+          </button>
+        </form>
+
+        <div className="mt-8 text-center">
+          <a 
+            href="/login" 
+            className="text-imagross-orange hover:text-imagross-red font-medium transition"
+          >
+            Torna al Login
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState(null);
