@@ -4753,6 +4753,7 @@ def run_all_tests():
         print("✅ User System: WORKING")
         print("✅ User Profile Management API: WORKING")
         print("✅ Super Admin User Profile Editing: WORKING")
+        print("✅ Password Reset System: WORKING")
         return True
     else:
         print(f"\n⚠️  {total - passed} tests failed. Check the issues above.")
