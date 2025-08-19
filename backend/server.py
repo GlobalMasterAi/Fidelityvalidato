@@ -350,6 +350,13 @@ class AdminLogin(BaseModel):
     username: str
     password: str
 
+class PasswordResetRequest(BaseModel):
+    email: str
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str
+
 class UserResponse(BaseModel):
     id: str
     nome: str
