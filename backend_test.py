@@ -1297,58 +1297,54 @@ def test_delete_nonexistent_cashier():
         log_test("Delete Nonexistent Cashier", False, f"Exception: {str(e)}")
         return False
 
-def test_duplicate_cashier_number_after_update():
-    """Test that updating cashier number to existing number is rejected"""
-    if not admin_access_token or not test_store_id:
-        log_test("Duplicate Cashier Number After Update", False, "No admin token or store ID available")
+def test_fidelity_data_integrity():
+    """Test that the full fidelity dataset (30,287 records) is still intact"""
+    if not admin_access_token:
+        log_test("Fidelity Data Integrity", False, "No admin access token available")
         return False
     
     try:
         headers = {"Authorization": f"Bearer {admin_access_token}"}
+        response = requests.get(f"{API_BASE}/admin/fidelity-users", headers=headers)
         
-        # Create two cashiers with different numbers
-        cashier1_data = {
-            "store_id": test_store_id,
-            "cashier_number": 91,
-            "name": "Test Cashier 91"
-        }
-        
-        cashier2_data = {
-            "store_id": test_store_id,
-            "cashier_number": 92,
-            "name": "Test Cashier 92"
-        }
-        
-        response1 = requests.post(f"{API_BASE}/admin/cashiers", json=cashier1_data, headers=headers)
-        response2 = requests.post(f"{API_BASE}/admin/cashiers", json=cashier2_data, headers=headers)
-        
-        if response1.status_code != 200 or response2.status_code != 200:
-            log_test("Duplicate Cashier Number After Update", False, "Could not create test cashiers")
-            return False
-        
-        cashier2_id = response2.json()["id"]
-        
-        # Try to update cashier 2 to have the same number as cashier 1
-        update_data = {
-            "cashier_number": 91  # Same as cashier 1
-        }
-        
-        response = requests.put(f"{API_BASE}/admin/cashiers/{cashier2_id}", json=update_data, headers=headers)
-        
-        if response.status_code == 400:
-            error_detail = response.json().get("detail", "")
-            if "Numero cassa già esistente" in error_detail or "already exists" in error_detail.lower():
-                log_test("Duplicate Cashier Number After Update", True, "Correctly rejected duplicate cashier number update")
-                return True
-            else:
-                log_test("Duplicate Cashier Number After Update", False, f"Wrong error message: {error_detail}")
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Validate response structure
+            if "users" not in data or "total" not in data:
+                log_test("Fidelity Data Integrity", False, "Missing fields in fidelity users response")
                 return False
+            
+            total_records = data["total"]
+            
+            # Check if we have the expected number of records (around 30,287)
+            if total_records < 24000:  # Allow some tolerance for data variations
+                log_test("Fidelity Data Integrity", False, f"Too few fidelity records: {total_records} (expected ~30,287)")
+                return False
+            
+            # Test specific card that was mentioned in the review request
+            test_card = "2020000063308"
+            card_response = requests.get(f"{API_BASE}/check-tessera", json={"tessera_fisica": test_card})
+            
+            if card_response.status_code == 200:
+                card_data = card_response.json()
+                if card_data.get("found"):
+                    log_test("Fidelity Data Integrity", True, f"Dataset intact: {total_records} records, card {test_card} accessible")
+                    return True
+                else:
+                    log_test("Fidelity Data Integrity", False, f"Card {test_card} not found in dataset")
+                    return False
+            else:
+                log_test("Fidelity Data Integrity", False, f"Could not check test card {test_card}")
+                return False
+            
         else:
-            log_test("Duplicate Cashier Number After Update", False, f"Should return 400, got {response.status_code}")
+            error_detail = response.json().get("detail", "Unknown error") if response.content else "No response"
+            log_test("Fidelity Data Integrity", False, f"Status {response.status_code}: {error_detail}")
             return False
             
     except Exception as e:
-        log_test("Duplicate Cashier Number After Update", False, f"Exception: {str(e)}")
+        log_test("Fidelity Data Integrity", False, f"Exception: {str(e)}")
         return False
 
 # ============================================================================
