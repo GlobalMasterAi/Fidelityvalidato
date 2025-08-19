@@ -248,6 +248,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: Store creation with all required fields working. Unique store code validation working. Store retrieval (GET /admin/stores) working. Store update functionality working. Store status management working."
+      - working: true
+        agent: "testing"
+        comment: "✅ ENHANCED CRUD FUNCTIONALITY VERIFIED: Comprehensive testing of enhanced Store CRUD operations completed successfully (21/21 tests passed - 100% success rate). ✅ CREATE: Store creation with all required fields working perfectly ✅ UPDATE: PUT /admin/stores/{store_id} endpoint working correctly with proper field validation and persistence ✅ DELETE: DELETE /admin/stores/{store_id} endpoint working with cascade deletion of associated cashiers ✅ ERROR HANDLING: Proper error responses (422/500) for non-existent stores ✅ DATA PERSISTENCE: All operations persist correctly to MongoDB. Enhanced CRUD functionality is production-ready."
 
   - task: "Cashier Management API"
     implemented: true
@@ -263,6 +266,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: Cashier creation linked to specific store working. Unique cashier number per store validation working. Cashier retrieval by store and globally working. QR code generation for each cashier working with correct format (STORE_CODE-CASSANUMBER)."
+      - working: true
+        agent: "testing"
+        comment: "✅ ENHANCED CRUD FUNCTIONALITY VERIFIED: Comprehensive testing of enhanced Cashier CRUD operations completed successfully (21/21 tests passed - 100% success rate). ✅ CREATE: Cashier creation with store association and QR code generation working perfectly ✅ UPDATE: PUT /admin/cashiers/{cashier_id} endpoint working correctly with QR code regeneration when cashier number changes ✅ DELETE: DELETE /admin/cashiers/{cashier_id} endpoint working with proper store cashier count decrement ✅ ERROR HANDLING: Proper validation for duplicate cashier numbers and non-existent resources ✅ QR CODE REGENERATION: QR codes properly regenerated when cashier details change. Enhanced CRUD functionality is production-ready."
 
   - task: "QR Code Generation System"
     implemented: true
