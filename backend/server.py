@@ -3161,7 +3161,7 @@ async def get_stores_stats(current_admin = Depends(get_current_admin)):
 async def regenerate_all_qr_codes(current_admin = Depends(get_current_admin)):
     """Regenerate all QR codes with full URLs"""
     try:
-        base_url = "https://fedelissima.net"
+        base_url = "https://www.fidelissima.net"
         
         cashiers = await db.cashiers.find().to_list(1000)
         updated_count = 0
