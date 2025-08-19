@@ -5333,15 +5333,32 @@ async def load_fidelity_to_database():
                                                 print(f"📊 Found {objects_found} valid fidelity records...")
                                         
                                     except json.JSONDecodeError:
-                                        # Try to fix malformed escape sequences in this record
+                                        # Try comprehensive JSON preprocessing for malformed escape sequences
                                         try:
-                                            # Apply same fixes as in main JSON repair
-                                            fixed_obj_str = obj_str.replace('"email":"\\","', '"email":"",')
-                                            fixed_obj_str = fixed_obj_str.replace('"email":"\\"', '"email":""')
-                                            fixed_obj_str = fixed_obj_str.replace('"\\","', '"",')
-                                            fixed_obj_str = fixed_obj_str.replace('"\\"', '""')
+                                            # Import regex for advanced pattern matching
+                                            import re
                                             
-                                            # Try parsing with fixes
+                                            # Apply same comprehensive fixes as main parsing
+                                            fixed_obj_str = obj_str
+                                            
+                                            # Fix unterminated strings caused by backslash before quote
+                                            fixed_obj_str = re.sub(r'"([^"]+)":"\\",', r'"\1":"",', fixed_obj_str)
+                                            
+                                            # Fix orphaned backslashes at end of field values
+                                            fixed_obj_str = re.sub(r'":"\\""', r'":""', fixed_obj_str)
+                                            
+                                            # Fix specific email field patterns
+                                            fixed_obj_str = fixed_obj_str.replace('"email":"\\","negozio"', '"email":"","negozio"')
+                                            fixed_obj_str = fixed_obj_str.replace('"email":"\\""', '"email":""')
+                                            fixed_obj_str = fixed_obj_str.replace('"email":"\\"', '"email":""')
+                                            
+                                            # Fix any remaining malformed escapes before field separators
+                                            fixed_obj_str = re.sub(r'\\",([^}])', r'",\1', fixed_obj_str)
+                                            
+                                            # Fix backslashes that aren't valid JSON escape sequences
+                                            fixed_obj_str = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', fixed_obj_str)
+                                            
+                                            # Try parsing with comprehensive fixes
                                             record = json.loads(fixed_obj_str)
                                             
                                             if record.get("card_number"):
@@ -5352,15 +5369,16 @@ async def load_fidelity_to_database():
                                                 
                                                 # Log successful repair for monitoring
                                                 if record.get("card_number") == "2020000063308":
-                                                    print(f"✅ REPAIRED target card 2020000063308: {record.get('nome', '')} {record.get('cognome', '')}")
+                                                    print(f"✅ COMPREHENSIVE REPAIR SUCCESS: target card 2020000063308: {record.get('nome', '')} {record.get('cognome', '')}")
                                                 
                                                 if objects_found % 5000 == 0:
-                                                    print(f"📊 Found {objects_found} valid fidelity records (with repairs)...")
+                                                    print(f"📊 Found {objects_found} valid fidelity records (with comprehensive repairs)...")
                                         
                                         except json.JSONDecodeError:
                                             # Still can't parse, skip this record
                                             if "2020000063308" in obj_str:
-                                                print(f"❌ Failed to repair target card 2020000063308")
+                                                print(f"❌ Failed comprehensive repair for target card 2020000063308")
+                                                print(f"   Problematic JSON snippet: {obj_str[:300]}...")
                                             pass
                                     
                                     buffer = buffer[end+1:]
