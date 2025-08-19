@@ -2617,6 +2617,20 @@ async def admin_login(login_data: AdminLogin):
         admin=admin_data
     )
 
+@api_router.get("/admin/profile")
+async def get_admin_profile(current_admin = Depends(get_current_admin)):
+    """Get current admin profile"""
+    return {
+        "admin": {
+            "id": current_admin["id"],
+            "username": current_admin["username"],
+            "email": current_admin["email"],
+            "role": current_admin["role"],
+            "full_name": current_admin["full_name"],
+            "created_at": current_admin["created_at"]
+        }
+    }
+
 # Super Admin Routes
 @api_router.post("/admin/create", response_model=dict)
 async def create_admin(admin_data: AdminUserCreate, current_admin = Depends(get_super_admin)):
