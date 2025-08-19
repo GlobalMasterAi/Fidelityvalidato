@@ -32,6 +32,27 @@ def log_test(test_name, success, message="", details=None):
         "details": details
     })
 
+def get_admin_token():
+    """Get admin access token for authenticated requests"""
+    try:
+        login_data = {
+            "username": "superadmin",
+            "password": "ImaGross2024!"
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/login", json=login_data)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return data["access_token"]
+        else:
+            print(f"❌ Admin login failed with status {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Admin login error: {str(e)}")
+        return None
+
 def test_missing_card_search():
     """Test Card Search for Missing Card 401004000025 (ARESTA)"""
     print("\n🔍 Testing Missing Card Search (401004000025 - ARESTA)")
