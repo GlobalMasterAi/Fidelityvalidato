@@ -2997,6 +2997,112 @@ async def delete_cashier(cashier_id: str, current_admin = Depends(get_current_ad
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Errore durante la cancellazione: {str(e)}")
 
+@api_router.post("/forgot-password")
+async def forgot_password(request: PasswordResetRequest):
+    """Request password reset - send email with reset token"""
+    try:
+        # Check if user exists
+        db = get_db()
+        user = await db.users.find_one({"email": request.email})
+        
+        if not user:
+            # Don't reveal if email exists or not for security
+            return {
+                "success": True,
+                "message": "Se l'email esiste nel nostro sistema, riceverai un link per il reset della password."
+            }
+        
+        # Generate reset token
+        token = generate_reset_token()
+        store_reset_token(request.email, token)
+        
+        # Send reset email
+        email_sent = await send_reset_email(request.email, token)
+        
+        if email_sent:
+            return {
+                "success": True,
+                "message": "Email di reset inviata! Controlla la tua casella di posta."
+            }
+        else:
+            return {
+                "success": True,
+                "message": "Se l'email esiste nel nostro sistema, riceverai un link per il reset della password."
+            }
+            
+    except Exception as e:
+        print(f"❌ Error in forgot_password: {e}")
+        raise HTTPException(status_code=500, detail="Errore interno del server")
+
+@api_router.post("/reset-password")
+async def reset_password(request: PasswordResetConfirm):
+    """Confirm password reset with token and new password"""
+    try:
+        # Validate token
+        email = validate_reset_token(request.token)
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Token di reset non valido o scaduto")
+        
+        # Validate new password
+        if len(request.new_password) < 6:
+            raise HTTPException(status_code=400, detail="La password deve essere di almeno 6 caratteri")
+        
+        # Update user password
+        db = get_db()
+        hashed_password = hash_password(request.new_password)
+        
+        result = await db.users.update_one(
+            {"email": email},
+            {"$set": {
+                "password": hashed_password,
+                "updated_at": datetime.utcnow()
+            }}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Utente non trovato")
+        
+        # Remove used token
+        remove_reset_token(request.token)
+        
+        print(f"✅ Password reset successful for {email}")
+        
+        return {
+            "success": True,
+            "message": "Password aggiornata con successo! Ora puoi effettuare il login con la nuova password."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error in reset_password: {e}")
+        raise HTTPException(status_code=500, detail="Errore interno del server")
+
+@api_router.get("/validate-reset-token/{token}")
+async def validate_reset_token_endpoint(token: str):
+    """Validate if reset token is still valid"""
+    try:
+        email = validate_reset_token(token)
+        
+        if email:
+            return {
+                "valid": True,
+                "message": "Token valido"
+            }
+        else:
+            return {
+                "valid": False,
+                "message": "Token non valido o scaduto"
+            }
+            
+    except Exception as e:
+        print(f"❌ Error validating token: {e}")
+        return {
+            "valid": False,
+            "message": "Errore nella validazione del token"
+        }
+
 # User Management Routes
 @api_router.get("/admin/fidelity-users")
 async def get_fidelity_users(
