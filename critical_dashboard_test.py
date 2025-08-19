@@ -181,10 +181,10 @@ def test_user_profile_api_fix():
                 print(f"DEBUG: Tessera response for {test_card}: {tessera_data}")  # Debug output
                 
                 if tessera_data.get("found"):
-                    user_data = tessera_data.get("user", {})
+                    user_data = tessera_data.get("user_data", {})  # Changed from "user" to "user_data"
                     nome = user_data.get("nome", "")
                     bollini = user_data.get("bollini", 0)
-                    spesa = user_data.get("prog_spesa", 0)
+                    spesa = user_data.get("progressivo_spesa", 0)  # This field name is correct
                     
                     if nome and (bollini > 0 or spesa > 0):
                         log_test("MongoDB Fidelity Integration", True, f"Fidelity data accessible: {nome}, {bollini} bollini, €{spesa} spent")
