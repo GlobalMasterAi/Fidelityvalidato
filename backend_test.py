@@ -11,22 +11,8 @@ import uuid
 from datetime import datetime
 import sys
 
-# Get backend URL from frontend .env
-def get_backend_url():
-    try:
-        with open('/app/frontend/.env', 'r') as f:
-            for line in f:
-                if line.startswith('REACT_APP_BACKEND_URL='):
-                    return line.split('=', 1)[1].strip()
-    except Exception as e:
-        print(f"Error reading backend URL: {e}")
-        return None
-
-BASE_URL = get_backend_url()
-if not BASE_URL:
-    print("❌ Could not get backend URL from frontend/.env")
-    sys.exit(1)
-
+# Use local backend URL for testing
+BASE_URL = "http://localhost:8001"
 API_BASE = f"{BASE_URL}/api"
 print(f"🔗 Testing API at: {API_BASE}")
 
