@@ -2611,6 +2611,65 @@ const CashierManagement = () => {
     }
   };
 
+  const handleEditCashier = (cashier) => {
+    setEditingCashier(cashier);
+    setFormData({
+      store_id: cashier.store_id,
+      cashier_number: cashier.cashier_number.toString(),
+      name: cashier.name
+    });
+    setShowCreateForm(true);
+  };
+
+  const handleUpdateCashier = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/admin/cashiers/${editingCashier.id}`, {
+        ...formData,
+        cashier_number: parseInt(formData.cashier_number)
+      }, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      
+      setFormData({
+        store_id: '',
+        cashier_number: '',
+        name: ''
+      });
+      setShowCreateForm(false);
+      setEditingCashier(null);
+      fetchCashiers();
+      alert('Cassa aggiornata con successo!');
+    } catch (error) {
+      alert('Errore nell\'aggiornamento della cassa: ' + error.response?.data?.detail);
+    }
+  };
+
+  const handleDeleteCashier = async (cashier) => {
+    if (window.confirm(`Sei sicuro di voler cancellare la cassa "${cashier.name}"?`)) {
+      try {
+        await axios.delete(`${API}/admin/cashiers/${cashier.id}`, {
+          headers: { Authorization: `Bearer ${adminToken}` }
+        });
+        
+        fetchCashiers();
+        alert('Cassa cancellata con successo!');
+      } catch (error) {
+        alert('Errore nella cancellazione della cassa: ' + error.response?.data?.detail);
+      }
+    }
+  };
+
+  const handleCancelEditCashier = () => {
+    setEditingCashier(null);
+    setShowCreateForm(false);
+    setFormData({
+      store_id: '',
+      cashier_number: '',
+      name: ''
+    });
+  };
+
   const printQR = (cashier) => {
     const printWindow = window.open('', '_blank');
     const qrUrl = `${window.location.origin}/register?qr=${cashier.qr_code}`;
