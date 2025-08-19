@@ -4831,6 +4831,9 @@ const AuthRoutes = () => {
         element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} 
       />
       
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      
       <Route 
         path="/admin/login" 
         element={isAdminAuthenticated ? <Navigate to="/admin" /> : <AdminLoginPage />} 
