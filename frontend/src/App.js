@@ -2421,11 +2421,11 @@ const StoreManagement = ({ setActiveTab }) => {
                 type="submit"
                 className="bg-imagross-orange text-white px-4 py-2 rounded hover:bg-imagross-red transition"
               >
-                Crea Supermercato
+                {editingStore ? 'Aggiorna Supermercato' : 'Crea Supermercato'}
               </button>
               <button
                 type="button"
-                onClick={() => setShowCreateForm(false)}
+                onClick={editingStore ? handleCancelEdit : () => setShowCreateForm(false)}
                 className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
               >
                 Annulla
