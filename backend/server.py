@@ -1289,7 +1289,7 @@ async def get_user_personal_analytics(current_user = Depends(get_current_user)):
         fidelity_record = await db.fidelity_data.find_one({"tessera_fisica": tessera_fisica})
         
         if not user_transactions and not fidelity_record:
-            # Return empty analytics for users without transaction history
+            # Return empty analytics for users without any data
             return {
                 "summary": {
                     "total_spent": 0,
@@ -1318,11 +1318,19 @@ async def get_user_personal_analytics(current_user = Depends(get_current_user)):
         from collections import defaultdict, Counter
         import calendar
         
-        # Calculate summary metrics
-        total_spent = sum(float(t.get('IMPORTO_SCONTRINO', 0)) for t in user_transactions)
-        total_transactions = len(user_transactions)
-        total_bollini = sum(float(t.get('N_BOLLINI', 0)) for t in user_transactions)
-        avg_transaction = total_spent / total_transactions if total_transactions > 0 else 0
+        # Initialize metrics from transactions if available, otherwise from fidelity record
+        if user_transactions:
+            # Calculate summary metrics from transactions
+            total_spent = sum(float(t.get('IMPORTO_SCONTRINO', 0)) for t in user_transactions)
+            total_transactions = len(user_transactions)
+            total_bollini = sum(float(t.get('N_BOLLINI', 0)) for t in user_transactions)
+        else:
+            # Use fidelity record data when no transactions
+            total_spent = safe_float_convert(fidelity_record.get('prog_spesa', '0')) if fidelity_record else 0
+            total_transactions = 0
+            total_bollini = safe_float_convert(fidelity_record.get('bollini', '0')) if fidelity_record else 0
+        
+        avg_transaction = total_spent / total_transactions if total_transactions > 0 else total_spent
         
         # Get last transaction date
         latest_date = None
