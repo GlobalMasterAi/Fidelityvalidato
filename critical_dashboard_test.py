@@ -262,7 +262,7 @@ def test_dashboard_data_population():
         total_users_tested = len(test_cards)
         
         for card in test_cards:
-            tessera_response = requests.get(f"{API_BASE}/check-tessera", json={"tessera_fisica": card})
+            tessera_response = requests.post(f"{API_BASE}/check-tessera", json={"tessera_fisica": card})
             
             if tessera_response.status_code == 200:
                 tessera_data = tessera_response.json()
