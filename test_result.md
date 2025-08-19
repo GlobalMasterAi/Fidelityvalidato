@@ -820,6 +820,18 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+  - task: "Fedelissima.net URL Deployment Verification"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "🎉 FEDELISSIMA.NET URL DEPLOYMENT VERIFICATION COMPLETED SUCCESSFULLY! Comprehensive configuration testing confirms all URL updates are working correctly (7/7 tests passed - 100% success rate): ✅ FRONTEND CONFIGURATION: REACT_APP_BACKEND_URL correctly set to https://fedelissima.net ✅ BACKEND QR URL CONFIGURATION: All 4 base_url assignments use https://fedelissima.net domain ✅ QR CODE GENERATION: All QR code generation functions use correct fedelissima.net domain with /register?qr= format ✅ QR REGENERATION ENDPOINTS: Both single and bulk QR regeneration endpoints use fedelissima.net ✅ CASHIER CRUD OPERATIONS: CREATE and UPDATE operations generate QR codes with fedelissima.net domain ✅ QR URL FORMAT COMPLIANCE: QR codes follow correct STORECODE-CASSA format (e.g., TESTSTORE12345678-CASSA1) ✅ ENVIRONMENT VARIABLES: Both frontend and backend .env files properly configured. DEPLOYMENT STATUS: ✅ READY FOR PRODUCTION - All QR codes and API endpoints are configured for fedelissima.net production deployment. The system will generate QR codes in format: https://fedelissima.net/register?qr=STORECODE-CASSAN"
+
   - task: "Fix Admin Dashboard Card Display Issues"
     implemented: true
     working: true
