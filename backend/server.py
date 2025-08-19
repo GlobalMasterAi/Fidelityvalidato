@@ -2743,6 +2743,83 @@ async def get_all_cashiers(current_admin = Depends(get_current_admin)):
     
     return result
 
+@api_router.put("/admin/cashiers/{cashier_id}", response_model=Cashier)
+async def update_cashier(cashier_id: str, cashier_data: CashierCreate, current_admin = Depends(get_current_admin)):
+    """Update a cashier"""
+    try:
+        # Check if cashier exists
+        cashier = await db.cashiers.find_one({"id": cashier_id})
+        if not cashier:
+            raise HTTPException(status_code=404, detail="Cassa non trovata")
+        
+        # Verify store exists
+        store = await db.stores.find_one({"id": cashier_data.store_id})
+        if not store:
+            raise HTTPException(status_code=404, detail="Supermercato non trovato")
+        
+        # Check if cashier number already exists for this store (excluding current cashier)
+        existing_cashier = await db.cashiers.find_one({
+            "store_id": cashier_data.store_id,
+            "cashier_number": cashier_data.cashier_number,
+            "id": {"$ne": cashier_id}
+        })
+        if existing_cashier:
+            raise HTTPException(status_code=400, detail="Numero cassa già esistente per questo supermercato")
+        
+        # Generate new QR code if store or cashier number changed
+        qr_data = f"{store['code']}-CASSA{cashier_data.cashier_number}"
+        base_url = "https://mongo-sync.preview.emergentagent.com"
+        qr_url = f"{base_url}/register?qr={qr_data}"
+        qr_image = generate_qr_code(qr_url)
+        
+        # Update cashier data
+        update_data = {
+            "store_id": cashier_data.store_id,
+            "cashier_number": cashier_data.cashier_number,
+            "name": cashier_data.name,
+            "qr_code": qr_data,
+            "qr_code_image": qr_image,
+            "updated_at": datetime.utcnow()
+        }
+        
+        # Update in database
+        await db.cashiers.update_one({"id": cashier_id}, {"$set": update_data})
+        updated_cashier = await db.cashiers.find_one({"id": cashier_id})
+        
+        return Cashier(**updated_cashier)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore durante l'aggiornamento: {str(e)}")
+
+@api_router.delete("/admin/cashiers/{cashier_id}")
+async def delete_cashier(cashier_id: str, current_admin = Depends(get_current_admin)):
+    """Delete a cashier"""
+    try:
+        # Check if cashier exists
+        cashier = await db.cashiers.find_one({"id": cashier_id})
+        if not cashier:
+            raise HTTPException(status_code=404, detail="Cassa non trovata")
+        
+        # Delete the cashier
+        delete_result = await db.cashiers.delete_one({"id": cashier_id})
+        
+        if delete_result.deleted_count == 0:
+            raise HTTPException(status_code=500, detail="Errore durante la cancellazione della cassa")
+        
+        # Update store total cashiers count
+        await db.stores.update_one(
+            {"id": cashier["store_id"]},
+            {"$inc": {"total_cashiers": -1}}
+        )
+        
+        return {
+            "success": True,
+            "message": f"Cassa '{cashier['name']}' cancellata con successo"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Errore durante la cancellazione: {str(e)}")
+
 # User Management Routes
 @api_router.get("/admin/fidelity-users")
 async def get_fidelity_users(
