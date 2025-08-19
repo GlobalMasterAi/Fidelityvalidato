@@ -203,7 +203,7 @@ def test_wait_for_reload_completion():
                         
                         print(f"   Fidelity status: {fidelity_status}")
                         
-                        if fidelity_status in ["completed", "database_loaded_complete"]:
+                        if fidelity_status in ["completed", "database_loaded_complete", "database_loaded_real"]:
                             elapsed_time = time.time() - start_time
                             log_test("Wait for Reload", True, f"Data loading completed ({elapsed_time:.1f}s)")
                             return True
