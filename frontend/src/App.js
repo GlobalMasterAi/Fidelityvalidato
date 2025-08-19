@@ -1664,6 +1664,8 @@ const RewardsSection = ({ analytics, profile }) => {
                 <div className="text-2xl font-bold">{redeemedRewards.length}</div>
               </div>
             </div>
+            </>
+        )}
 
         {/* Tabs */}
         <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
