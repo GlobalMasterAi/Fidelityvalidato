@@ -2469,12 +2469,26 @@ const StoreManagement = ({ setActiveTab }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{store.total_cashiers}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button 
-                      onClick={() => goToCashiers(store.id)}
-                      className="text-imagross-orange hover:text-imagross-red"
-                    >
-                      Gestisci Casse
-                    </button>
+                    <div className="flex space-x-2">
+                      <button 
+                        onClick={() => goToCashiers(store.id)}
+                        className="text-imagross-orange hover:text-imagross-red"
+                      >
+                        Gestisci Casse
+                      </button>
+                      <button 
+                        onClick={() => handleEditStore(store)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        Modifica
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteStore(store)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Elimina
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
