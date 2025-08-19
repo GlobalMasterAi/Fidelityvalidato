@@ -1,0 +1,100 @@
+{
+  "timestamp": "2025-08-19T14:04:44.575879",
+  "backend_url": "http://localhost:8001",
+  "backend_ready": false,
+  "test_results": [
+    {
+      "test": "Health Check",
+      "success": true,
+      "message": "Status: healthy",
+      "response_time": 6.326198577880859,
+      "timestamp": "2025-08-19T14:04:32.023334"
+    },
+    {
+      "test": "Readiness Check",
+      "success": true,
+      "message": "Status: ready",
+      "response_time": 3.009796142578125,
+      "timestamp": "2025-08-19T14:04:32.026528"
+    },
+    {
+      "test": "Startup Status",
+      "success": true,
+      "message": "Status: unknown",
+      "response_time": 2.4733543395996094,
+      "timestamp": "2025-08-19T14:04:32.029155"
+    },
+    {
+      "test": "Super Admin Login",
+      "success": true,
+      "message": "Authentication successful",
+      "response_time": 830.9173583984375,
+      "timestamp": "2025-08-19T14:04:32.860199"
+    },
+    {
+      "test": "Fidelity Data Access",
+      "success": false,
+      "message": "Insufficient records: 19,437",
+      "response_time": 519.1860198974609,
+      "timestamp": "2025-08-19T14:04:33.379768"
+    },
+    {
+      "test": "Store CRUD",
+      "success": true,
+      "message": "22 stores accessible",
+      "response_time": 253.8299560546875,
+      "timestamp": "2025-08-19T14:04:33.633857"
+    },
+    {
+      "test": "Cashier CRUD",
+      "success": true,
+      "message": "22 cashiers with QR codes",
+      "response_time": 7752.286195755005,
+      "timestamp": "2025-08-19T14:04:41.386466"
+    },
+    {
+      "test": "Performance - Admin Dashboard",
+      "success": true,
+      "message": "Good: 2792.6ms",
+      "response_time": 2792.560338973999,
+      "timestamp": "2025-08-19T14:04:44.179215"
+    },
+    {
+      "test": "Performance - Fidelity Users (Limited)",
+      "success": true,
+      "message": "Good: 259.8ms",
+      "response_time": 259.7661018371582,
+      "timestamp": "2025-08-19T14:04:44.439141"
+    },
+    {
+      "test": "Performance - Health Check",
+      "success": true,
+      "message": "Good: 2.7ms",
+      "response_time": 2.6824474334716797,
+      "timestamp": "2025-08-19T14:04:44.441954"
+    },
+    {
+      "test": "Backend Configuration",
+      "success": true,
+      "message": "Backend properly configured",
+      "response_time": 2.099275588989258,
+      "timestamp": "2025-08-19T14:04:44.444173"
+    },
+    {
+      "test": "QR Endpoint Configuration",
+      "success": true,
+      "message": "QR endpoints operational",
+      "response_time": 131.35671615600586,
+      "timestamp": "2025-08-19T14:04:44.575566"
+    }
+  ],
+  "critical_failures": [
+    {
+      "test": "Fidelity Data Access",
+      "success": false,
+      "message": "Insufficient records: 19,437",
+      "response_time": 519.1860198974609,
+      "timestamp": "2025-08-19T14:04:33.379768"
+    }
+  ]
+}
