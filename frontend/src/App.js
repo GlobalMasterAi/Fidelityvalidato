@@ -2303,11 +2303,8 @@ const StoreManagement = ({ setActiveTab }) => {
   };
 
   const goToCashiers = (storeId) => {
-    // Update the activeTab to cashiers and add store filter to URL
     setActiveTab('cashiers');
-    // Update URL with parameters
-    const newUrl = `${window.location.pathname}?tab=cashiers&store=${storeId}`;
-    window.history.pushState(null, '', newUrl);
+    window.history.pushState({}, '', `?store=${storeId}`);
   };
 
   if (loading) {
