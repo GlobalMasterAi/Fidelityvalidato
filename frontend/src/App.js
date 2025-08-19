@@ -2820,11 +2820,11 @@ const CashierManagement = () => {
                 type="submit"
                 className="bg-imagross-orange text-white px-4 py-2 rounded hover:bg-imagross-red transition"
               >
-                Crea Cassa
+                {editingCashier ? 'Aggiorna Cassa' : 'Crea Cassa'}
               </button>
               <button
                 type="button"
-                onClick={() => setShowCreateForm(false)}
+                onClick={editingCashier ? handleCancelEditCashier : () => setShowCreateForm(false)}
                 className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
               >
                 Annulla
