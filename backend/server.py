@@ -3121,8 +3121,11 @@ async def get_fidelity_users(
         raise HTTPException(status_code=401, detail="Token non valido")
     
     try:
-        # Query MongoDB fidelity_data collection directly (24,958+ records)
-        print("🔍 Querying fidelity_data collection from MongoDB...")
+        # Get database connection
+        db = get_db()
+        
+        # Query MongoDB fidelity_data collection directly (30,287+ records)
+        print("🔍 Querying fidelity_data collection from MongoDB loyalty_production...")
         
         # Build search query if provided
         query = {}
@@ -3140,7 +3143,7 @@ async def get_fidelity_users(
         
         # Get total count for pagination
         total = await db.fidelity_data.count_documents(query)
-        print(f"🔍 Found {total} fidelity clients matching query")
+        print(f"🔍 Found {total} fidelity clients matching query in loyalty_production")
         
         # Get paginated results
         skip = (page - 1) * limit
