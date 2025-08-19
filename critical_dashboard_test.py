@@ -69,9 +69,15 @@ def test_missing_card_search():
                 log_test("Missing Card Confirmation", True, f"Card {missing_card} confirmed NOT in database")
                 
                 # Now search for ARESTA cards to provide alternatives
+                admin_token = get_admin_token()
+                if not admin_token:
+                    log_test("ARESTA Search", False, "Could not get admin token")
+                    return False
+                
                 try:
                     # Search for ARESTA surname in fidelity data
-                    search_response = requests.get(f"{API_BASE}/admin/fidelity-users?search=ARESTA&limit=50")
+                    headers = {"Authorization": f"Bearer {admin_token}"}
+                    search_response = requests.get(f"{API_BASE}/admin/fidelity-users?search=ARESTA&limit=50", headers=headers)
                     
                     if search_response.status_code == 200:
                         search_data = search_response.json()
