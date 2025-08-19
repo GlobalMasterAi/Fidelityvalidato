@@ -13,8 +13,8 @@ import json
 import sys
 from datetime import datetime
 
-# Use production URL from frontend/.env
-BASE_URL = "https://www.fedelissima.net"
+# Use local backend URL for testing
+BASE_URL = "http://localhost:8001"
 API_BASE = f"{BASE_URL}/api"
 print(f"🔗 Testing Critical Dashboard Fixes at: {API_BASE}")
 
