@@ -17,13 +17,18 @@ from pathlib import Path
 
 # Read REACT_APP_BACKEND_URL from frontend/.env
 frontend_env_path = Path(__file__).parent / "frontend" / ".env"
-BACKEND_URL = "https://mongo-sync.emergent.host"  # Default fallback
+BACKEND_URL = "http://localhost:8001"  # Default to local backend for testing
 
 if frontend_env_path.exists():
     with open(frontend_env_path, 'r') as f:
         for line in f:
             if line.startswith('REACT_APP_BACKEND_URL='):
-                BACKEND_URL = line.split('=', 1)[1].strip()
+                env_url = line.split('=', 1)[1].strip()
+                # If it's fedelissima.net (production), use local backend for testing
+                if "fedelissima.net" in env_url:
+                    BACKEND_URL = "http://localhost:8001"
+                else:
+                    BACKEND_URL = env_url
                 break
 
 BASE_URL = BACKEND_URL
