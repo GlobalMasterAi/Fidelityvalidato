@@ -233,6 +233,7 @@ def test_cashier_crud_operations():
         
         # 2. UPDATE Cashier using PUT endpoint (change name, cashier number)
         update_data = {
+            "store_id": test_store_id,  # Include required fields
             "name": "Test Cashier 1 - UPDATED",
             "cashier_number": 2  # Change number to trigger QR regeneration
         }
