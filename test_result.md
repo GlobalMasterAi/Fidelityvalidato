@@ -146,7 +146,7 @@ agent_communication:
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Sistema scalabile Super Admin Dashboard per gestione completa raccolta punti ImaGross con QR code per casse supermercati, gestione stores, cashiers e import dati Excel + Advanced Rewards Management System"
+user_problem_statement: "🚨 URGENT ADMIN DASHBOARD ISSUE - Superadmin cannot see users in database. User reports that when logging into superadmin, they cannot see the users from the database. This is a critical issue for managing thousands of live users."
 
 backend:
   - task: "MongoDB Atlas Data Migration Verification"
