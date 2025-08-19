@@ -974,6 +974,17 @@ const LoginPage = () => {
             </button>
           </div>
 
+          {isLogin && (
+            <div className="text-center mt-4">
+              <a 
+                href="/forgot-password"
+                className="text-sm text-gray-500 hover:text-imagross-orange transition duration-200"
+              >
+                Password dimenticata?
+              </a>
+            </div>
+          )}
+
           <div className="text-center mt-6">
             <a 
               href="/admin/login"
