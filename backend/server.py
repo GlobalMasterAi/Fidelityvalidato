@@ -1281,13 +1281,14 @@ async def get_user_personal_analytics(current_user = Depends(get_current_user)):
         user_data = current_user["data"]
         tessera_fisica = user_data.tessera_fisica
         
-        # Get user transactions from scontrini data
-        user_transactions = []
-        for transaction in SCONTRINI_DATA:
-            if transaction.get('CODICE_CLIENTE', '') == tessera_fisica:
-                user_transactions.append(transaction)
+        # Get user transactions from MongoDB scontrini_data collection
+        db = get_db()
+        user_transactions = await db.scontrini_data.find({"CODICE_CLIENTE": tessera_fisica}).to_list(length=10000)
         
-        if not user_transactions:
+        # Get fidelity data from MongoDB
+        fidelity_record = await db.fidelity_data.find_one({"tessera_fisica": tessera_fisica})
+        
+        if not user_transactions and not fidelity_record:
             # Return empty analytics for users without transaction history
             return {
                 "summary": {
