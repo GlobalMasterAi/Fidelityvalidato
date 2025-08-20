@@ -628,7 +628,7 @@ async def send_reset_email(email: str, token: str):
         smtp_username = os.environ.get("SMTP_USERNAME", "")
         smtp_password = os.environ.get("SMTP_PASSWORD", "")
         email_from = os.environ.get("EMAIL_FROM", "noreply@fedelissima.net")
-        base_url = os.environ.get("BASE_URL", "https://www.fedelissima.net")
+        base_url = os.environ.get("BASE_URL", "https://fedelissima.net")
         
         if not smtp_username or not smtp_password:
             print("❌ SMTP credentials not configured - cannot send email")
