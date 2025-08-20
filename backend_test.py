@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
-ImaGross Loyalty System Backend API Tests
-Tests all backend endpoints for the loyalty system
+🚨 EMERGENCY SUPERADMIN LOGIN ISSUE + User credentials lookup
+URGENT BACKEND API TESTS for Critical Production Issues
+
+This test focuses on the specific issues reported:
+1. Superadmin login failure on production www.fedelissima.net
+2. User credentials lookup for tessera 2020000208785
 """
 
 import requests
@@ -10,6 +14,7 @@ import base64
 import uuid
 from datetime import datetime
 import sys
+import time
 
 # Use production backend URL from frontend .env for testing
 import os
@@ -24,17 +29,17 @@ if frontend_env_path.exists():
         for line in f:
             if line.startswith('REACT_APP_BACKEND_URL='):
                 env_url = line.split('=', 1)[1].strip()
-                # If it's fedelissima.net (production), use local backend for testing
-                if "fedelissima.net" in env_url:
-                    BACKEND_URL = "http://localhost:8001"
-                else:
-                    BACKEND_URL = env_url
+                # Use the actual URL from .env for testing
+                BACKEND_URL = env_url
                 break
 
 BASE_URL = BACKEND_URL
 API_BASE = f"{BASE_URL}/api"
+print(f"🚨 EMERGENCY TESTING - Critical Production Issues")
 print(f"🔗 Testing API at: {API_BASE}")
 print(f"📍 Using backend URL from frontend/.env: {BACKEND_URL}")
+print(f"🎯 Focus: Superadmin login + User tessera 2020000208785 lookup")
+print("=" * 80)
 
 # Test data - realistic Italian data for ImaGross
 TEST_USER_DATA = {
